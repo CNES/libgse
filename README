@@ -1,0 +1,39 @@
+Introduction
+------------
+
+This piece of software is an implementation of the Generic Stream Encapsulation
+(GSE) standard defined by ETSI for Linux (or other Unix-compatible OS). The
+library may be used to add GSE encapsulation/de-encapsulation capabilities to an
+application.
+
+License
+-------
+
+Proprietary license.
+
+
+Library
+-------
+
+The sources are in the src subdirectory. The sources build an unique library
+that handle both encapsulation and de-encapsulation. See the INSTALL file to
+learn how to build the libraries.
+
+
+Non-regression tests
+--------------------
+
+The test subdirectory contains a test application. See the header of the test.c
+file for details. See the INSTALL file to learn how to use the non-regression
+tool.
+
+
+References
+----------
+
+ETSI TS 102 606      Digital Video Broadcasting (DVB)
+                     Generic Stream Encapsulation (GSE) Protocol
+
+DVB Document A134    Generic Stream Encapsulation (GSE)
+                     Implementation Guidelines
+

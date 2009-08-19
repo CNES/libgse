@@ -1,0 +1,50 @@
+Library
+-------
+
+Configure the library:
+
+ $ ./autogen.sh --prefix=/path/to/installation/directory
+
+Build the library:
+
+ $ make all
+
+Install the library:
+
+ $ make install
+
+The libraries are now located in the /path/to/installation/directory/lib
+directory and the header files in the /path/to/installation/directory/include
+directory.
+
+Documentation
+-------------
+
+HTML documentation can be generated from the source code thanks to Doxygen:
+
+ $ make doc
+
+Open the ./doc/html/index.html file in your favorite web browser.
+
+If you want to clean the documentation:
+
+ $ make clean-doc
+
+
+Non-regression tool
+-------------------
+
+Run the non-regression tool:
+
+ $ ./test/test <source PCAP file>
+
+The application:
+ - outputs the results (status & logs) on stdout,
+ - optionally outputs the GSE packets in a PCAP file,
+ - optionally compares the generated GSE packets with IP packets given as
+   input.
+
+For usage details, run:
+
+ $ ./test/test -h
+
