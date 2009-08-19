@@ -40,9 +40,7 @@ Run the non-regression tool:
 
 The application:
  - outputs the results (status & logs) on stdout,
- - optionally outputs the GSE packets in a PCAP file,
- - optionally compares the generated GSE packets with IP packets given as
-   input.
+ - compares the generated GSE packets with IP packets given as input.
 
 For usage details, run:
 
