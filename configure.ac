@@ -39,6 +39,7 @@ AM_DEP_TRACK
 AC_CONFIG_FILES([Makefile \
                  src/Makefile \
                  src/common/Makefile \
+                 src/common/test/Makefile \
                  src/encap/Makefile \
                  src/deencap/Makefile \
                  gse.pc \

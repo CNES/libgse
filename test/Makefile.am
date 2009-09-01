@@ -11,7 +11,7 @@ INCLUDES = \
 	-I../src/encap \
 	-I../src/deencap
 
-AM_LDFLAGS = -L../src/.libs
+AM_LDFLAGS = -L../src/
 
 test_SOURCES = test.c
 

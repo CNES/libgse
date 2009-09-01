@@ -6,5 +6,5 @@ includedir=@includedir@
 Name: Generic Stream Encapsulation (GSE)
 Description: Efficient library that implements the GSE protocol
 Version: @VERSION@
-Libs: -L${libdir} -lrohc_common -lrohc_comp -lrohc_decomp -lm
+Libs: -L${libdir} -lgse
 Cflags: -I${includedir}

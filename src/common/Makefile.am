@@ -4,9 +4,13 @@
 #	Description: create the GSE common convenience library
 ################################################################################
 
+SUBDIRS = . test
+
 noinst_LTLIBRARIES = libgse_common.la
 
-sources = 
+sources = \
+	gse_virtual_buffer.c \
+	gse_common.c 
 
 libgse_common_la_SOURCES = $(sources)
 
