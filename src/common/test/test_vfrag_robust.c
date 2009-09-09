@@ -111,7 +111,7 @@ static int test_vfrag_robust(int verbose)
   data = malloc(sizeof(unsigned char) * BAD_DATA_LENGTH);
 
   // Create data
-  for (i = 0 ; i < BAD_DATA_LENGTH ; i++)
+  for(i = 0 ; i < BAD_DATA_LENGTH ; i++)
   {
     data[i] = i;
   }
@@ -129,7 +129,7 @@ static int test_vfrag_robust(int verbose)
       goto failure;
     }
   }
-  
+
   DEBUG(verbose, "\n***********************************************************\n\n");
 
   /*******************************TEST_ROBUST_2*******************************/
@@ -154,7 +154,7 @@ static int test_vfrag_robust(int verbose)
   DEBUG(verbose, "\n***********************************************************\n\n");
 
   // Create new data
-  for (i = 0 ; i < DATA_LENGTH ; i++)
+  for(i = 0 ; i < DATA_LENGTH ; i++)
   {
     data[i] = DATA_LENGTH - i;
   }

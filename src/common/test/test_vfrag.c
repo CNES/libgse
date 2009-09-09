@@ -111,7 +111,7 @@ static int test_vfrag(int verbose)
   DEBUG(verbose, "The original data are '");
 
   // Create data
-  for (i = 0 ; i < DATA_LENGTH ; i++)
+  for(i = 0 ; i < DATA_LENGTH ; i++)
   {
     data[i] = i;
     DEBUG(verbose, "%x", data[i]);
@@ -129,7 +129,7 @@ static int test_vfrag(int verbose)
   }
 
   DEBUG(verbose, "\nThe fragment data are '");
-  for (i = 0 ; i < vfrag->length ; i++)
+  for(i = 0 ; i < vfrag->length ; i++)
   {
     DEBUG(verbose, "%x", vfrag->start[i]);
   }
@@ -158,7 +158,7 @@ static int test_vfrag(int verbose)
   }
 
   DEBUG(verbose, "A duplicated fragment is created...\nThe duplicated fragment data are '");
-  for (i = 0 ; i < dup_vfrag->length ; i++)
+  for(i = 0 ; i < dup_vfrag->length ; i++)
   {
     DEBUG(verbose, "%x", dup_vfrag->start[i]);
   }
@@ -178,7 +178,7 @@ static int test_vfrag(int verbose)
           vfrag->length);
 
   DEBUG(verbose, "Its data are now '");
-  for (i = 0 ; i < vfrag->length ; i++)
+  for(i = 0 ; i < vfrag->length ; i++)
   {
     DEBUG(verbose, "%x", vfrag->start[i]);
   }
@@ -201,7 +201,7 @@ static int test_vfrag(int verbose)
   DEBUG(verbose, "New data are written into virtual fragment:\n'");
 
   // Create new data
-  for (i = 0 ; i < DATA_LENGTH ; i++)
+  for(i = 0 ; i < DATA_LENGTH ; i++)
   {
     data[i] = DATA_LENGTH - i;
     DEBUG(verbose, "%x", data[i]);
@@ -217,7 +217,7 @@ static int test_vfrag(int verbose)
   }
 
   DEBUG(verbose, "\nThe virtual fragment data are now '");
-  for (i = 0 ; i < vfrag->length ; i++)
+  for(i = 0 ; i < vfrag->length ; i++)
   {
     DEBUG(verbose, "%x", vfrag->start[i]);
   }
@@ -226,7 +226,7 @@ static int test_vfrag(int verbose)
   DEBUG(verbose, "\n***********************************************************\n\n");
 
   /********************************TEST_FUNC_4********************************/
-  
+
   //Create a fragment from virtual fragment data
   status = gse_create_vfrag_with_data(&created_vfrag, CREATED_LENGTH,
                                       vfrag->start, CREATED_LENGTH);
@@ -238,7 +238,7 @@ static int test_vfrag(int verbose)
 
   DEBUG(verbose, "Create a new fragment with a part of the virtual fragment...\n"
          "The created fragment data are '");
-  for (i = 0 ; i < created_vfrag->length ; i++)
+  for(i = 0 ; i < created_vfrag->length ; i++)
   {
     DEBUG(verbose, "%x", created_vfrag->start[i]);
   }
@@ -259,7 +259,7 @@ static int test_vfrag(int verbose)
          vfrag->length);
 
   DEBUG(verbose, "Its data are still '");
-  for (i = 0 ; i < vfrag->length ; i++)
+  for(i = 0 ; i < vfrag->length ; i++)
   {
     DEBUG(verbose, "%x", vfrag->start[i]);
   }
@@ -270,7 +270,7 @@ static int test_vfrag(int verbose)
   /* Fill the virtual fragment with 0 and check the data in the created vfrag */
   DEBUG(verbose, "The virtual fragment is filled with '0':\n"
          "Its data are now '");
- for (i = 0 ; i < DATA_LENGTH ; i++)
+ for(i = 0 ; i < DATA_LENGTH ; i++)
   {
     data[i] = 0x0;
   }
@@ -280,14 +280,14 @@ static int test_vfrag(int verbose)
     DEBUG(verbose, "Error %d when copying data in the virtual fragment\n", status);
   }
 
-  for (i = 0 ; i < DATA_LENGTH ; i++)
+  for(i = 0 ; i < DATA_LENGTH ; i++)
   {
   DEBUG(verbose, "%x", vfrag->start[i]);
   }
   DEBUG(verbose, "'.\n");
 
   DEBUG(verbose, "Created vfrag data are still '");
-  for (i = 0 ; i < created_vfrag->length ; i++)
+  for(i = 0 ; i < created_vfrag->length ; i++)
   {
     DEBUG(verbose, "%x", created_vfrag->start[i]);
   }
@@ -307,7 +307,7 @@ static int test_vfrag(int verbose)
 
   DEBUG(verbose, "A new duplicated fragment is created...\n"
          "The duplicated fragment data are '");
-  for (i = 0 ; i < dup_vfrag->length ; i++)
+  for(i = 0 ; i < dup_vfrag->length ; i++)
   {
     DEBUG(verbose, "%x", dup_vfrag->start[i]);
   }

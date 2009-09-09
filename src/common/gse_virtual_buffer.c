@@ -61,15 +61,14 @@ status_t gse_create_vfrag(vfrag_t **vfrag, size_t max_length)
   status = gse_create_vbuf(&vbuf, length_buf);
   if(status != STATUS_OK)
   {
-    *vfrag = NULL;
-    goto errout;
+    goto error;
   }
 
   *vfrag = malloc(sizeof(vfrag_t));
   if(*vfrag == NULL)
   {
     status = ERR_MALLOC_FAILED;
-    goto errout;
+    goto error;
   }
   (*vfrag)->vbuf = vbuf;
   (*vfrag)->start = ((*vfrag)->vbuf->start + MAX_HEADER_LENGTH),
@@ -77,11 +76,15 @@ status_t gse_create_vfrag(vfrag_t **vfrag, size_t max_length)
   status = gse_shift_pointer(&(*vfrag)->end, &(*vfrag)->start, 0);
   if(status != STATUS_OK)
   {
-    goto errout;
+    goto free_vfrag;
   }
   vbuf->vfrag_count++;
 
-errout:
+  return status;
+free_vfrag:
+  free(*vfrag);
+error:
+  *vfrag = NULL;
   return status;
 }
 
@@ -94,18 +97,19 @@ status_t gse_create_vfrag_with_data(vfrag_t **vfrag, size_t max_length,
   status = gse_create_vfrag(vfrag, max_length);
   if(status != STATUS_OK)
   {
-    gse_free_vfrag(*vfrag);
-    goto errout;
+    goto error;
   }
 
   status = gse_copy_data((*vfrag), data, data_length);
   if(status != STATUS_OK)
   {
-    gse_free_vfrag(*vfrag);
-    goto errout;
+    goto free_vfrag;
   }
 
-errout:
+  return status;
+free_vfrag:
+  gse_free_vfrag(*vfrag);
+error:
   return status;
 }
 
@@ -113,18 +117,18 @@ status_t gse_copy_data(vfrag_t *vfrag, unsigned char const* data,
                        size_t data_length)
 {
   status_t status = STATUS_OK;
-  
+
   /* If there is more than one virtual fragment in buffer, don't overwrite data */
   if(gse_get_vfrag_nbr(vfrag) > 1)
   {
     status = ERR_MULTIPLE_VBUF_ACCESS;
-    goto errout;
+    goto error;
   }
   /* Check if there is enough space in buffer */
   if((vfrag->vbuf->length - (MAX_HEADER_LENGTH + CRC_LENGTH)) < data_length)
   {
     status = ERR_DATA_TOO_LONG;
-    goto errout;
+    goto error;
   }
   /* Copy data in vfrag and update vfrag structure */
   vfrag->start = memcpy((vfrag->vbuf->start + MAX_HEADER_LENGTH),
@@ -133,12 +137,12 @@ status_t gse_copy_data(vfrag_t *vfrag, unsigned char const* data,
   status = gse_shift_pointer(&vfrag->end, &vfrag->start, vfrag->length);
   if(status != STATUS_OK)
   {
-    goto errout;
+    goto error;
   }
 
   assert((vfrag->end) <= (vfrag->vbuf->end));
 
-errout:
+error:
   return status;
 }
 
@@ -149,7 +153,7 @@ status_t gse_free_vfrag(vfrag_t *vfrag)
   if(gse_get_vfrag_nbr(vfrag) <= 0)
   {
     status = ERR_FRAG_NBR;
-    goto errout;
+    goto error;
   }
 
   vfrag->vbuf->vfrag_count--;
@@ -157,11 +161,15 @@ status_t gse_free_vfrag(vfrag_t *vfrag)
   if(gse_get_vfrag_nbr(vfrag) == 0)
   {
     status = gse_free_vbuf(vfrag->vbuf);
+    if(status != STATUS_OK)
+    {
+      goto free_vfrag;
+    }
   }
 
+free_vfrag:
   free(vfrag);
-
-errout:
+error:
   return status;
 }
 
@@ -173,8 +181,7 @@ status_t gse_duplicate_vfrag(vfrag_t **vfrag, vfrag_t *father, size_t length)
   if(father->length == 0)
   {
     status = EMPTY_FRAG;
-    *vfrag = NULL;
-    goto errout;
+    goto error;
   }
 
   /* There can be only two access to virtual buffer to avoid multiple access
@@ -182,15 +189,14 @@ status_t gse_duplicate_vfrag(vfrag_t **vfrag, vfrag_t *father, size_t length)
   if(gse_get_vfrag_nbr(father) >= 2)
   {
     status = ERR_FRAG_NBR;
-    *vfrag = NULL;
-    goto errout;
+    goto error;
   }
 
   *vfrag = malloc(sizeof(vfrag_t));
   if(*vfrag == NULL)
   {
     status = ERR_MALLOC_FAILED;
-    goto errout;
+    goto error;
   }
 
   (*vfrag)->vbuf = father->vbuf;
@@ -199,26 +205,25 @@ status_t gse_duplicate_vfrag(vfrag_t **vfrag, vfrag_t *father, size_t length)
   status = gse_shift_pointer(&(*vfrag)->end, &(*vfrag)->start, (*vfrag)->length);
   if(status != STATUS_OK)
   {
-    *vfrag = NULL;
-    goto errout;
+    goto free_vfrag;
   }
 
   assert(((*vfrag)->end) <= ((*vfrag)->vbuf->end));
   (*vfrag)->vbuf->vfrag_count++;
 
-errout:
+  return status;
+free_vfrag:
+  free(*vfrag);
+error:
+  *vfrag = NULL;
   return status;
 }
 
-status_t gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift)
+void gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift)
 {
-  status_t status = STATUS_OK;
-
   vfrag->start += start_shift;
   vfrag->end += end_shift;
   vfrag->length = vfrag->end - vfrag->start;
-
-  return status;
 }
 
 status_t gse_shift_pointer(unsigned char **pointer, unsigned char **origin, size_t shift)
@@ -249,26 +254,31 @@ status_t gse_create_vbuf(vbuf_t **vbuf, size_t length)
   if(*vbuf == NULL)
   {
     status = ERR_MALLOC_FAILED;
-    goto errout;
+    goto error;
   }
 
   (*vbuf)->start = malloc(sizeof(unsigned char) * length);
   if((*vbuf)->start == NULL)
   {
     status = ERR_MALLOC_FAILED;
-    goto errout;
+    goto free_vbuf;
   }
   (*vbuf)->length = length;
   status = gse_shift_pointer(&(*vbuf)->end, &(*vbuf)->start, (*vbuf)->length);
   if(status != STATUS_OK)
   {
-    free((*vbuf)->start);
-    free(vbuf);
-    goto errout;
+    goto free_vbuf_start;
   }
   (*vbuf)->vfrag_count = 0;
 
-errout:
+  return status;
+
+free_vbuf:
+  free((*vbuf)->start);
+free_vbuf_start:
+  free(vbuf);
+error:
+  vbuf = NULL;
   return status;
 }
 
@@ -279,12 +289,12 @@ status_t gse_free_vbuf(vbuf_t *vbuf)
   if(vbuf->vfrag_count != 0)
   {
     status = ERR_FRAG_NBR;
-    goto errout;
+    goto error;
   }
   free(vbuf->start);
   free(vbuf);
 
-errout:
+error:
   return status;
 }
 

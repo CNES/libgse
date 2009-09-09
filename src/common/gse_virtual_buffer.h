@@ -114,9 +114,8 @@ status_t gse_duplicate_vfrag(vfrag_t **vfrag, vfrag_t *father, size_t length);
  *  @param   start_shift  The shift value to apply on the beginning of the
  *                        fragment
  *  @param   end_shift    The shift value to apply on the end of the fragment
- *  @return  status code
  */
-status_t gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift);
+void gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift);
 
 /**
  *  @brief   Shift a pointer

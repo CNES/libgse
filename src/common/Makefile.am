@@ -10,7 +10,8 @@ noinst_LTLIBRARIES = libgse_common.la
 
 sources = \
 	gse_virtual_buffer.c \
-	gse_common.c 
+	gse_common.c \
+  crc.c	
 
 libgse_common_la_SOURCES = $(sources)
 

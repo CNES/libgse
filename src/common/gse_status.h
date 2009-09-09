@@ -28,7 +28,7 @@
 /** Error return codes */
 typedef enum
 {
-  
+
   STATUS_OK = 0,            /**< There is no error or warning */
   ERR_MALLOC_FAILED,        /**< Error when calling malloc function */
 
@@ -43,10 +43,12 @@ typedef enum
   ERR_DATA_TOO_LONG,        /**< Data length is greater than fragment length */
 
   /** FIFO status */
-  FIFO_FULL,                /**< FIFO is full, no more context can be 
+  FIFO_FULL,                /**< FIFO is full, no more context can be
                                  created */
   FIFO_EMPTY,               /**< The FIFO is empty, try to get packet
                                  from another one */
+  ERR_FIFO_SIZE_NULL,           /**< The FIFO size is 0 */
+  ERR_QOS_NBR_NULL,         /**< There is no FIFO */
 
   /** Length parameters status */
   ERR_PDU_LENGTH,           /**< PDU length is greater than maximum PDU size */
@@ -57,7 +59,7 @@ typedef enum
   /** Header status */
   ERR_INVALID_LT,           /**< Label Type is not supported */
   ERR_INVALID_GSE_LENGTH,   /**< The GSE length field is incorrect */
-  ERR_INVALID_QOS,          /**< The FragID field does not correspond to 
+  ERR_INVALID_QOS,          /**< The FragID field does not correspond to
                                  the wanted QoS value */
 } status_t;
 

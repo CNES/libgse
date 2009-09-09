@@ -28,18 +28,24 @@
 #include <arpa/inet.h>
 
 #include "gse_status.h"
+#include "crc.h"
 
-#define MAX_PDU_LENGTH 65535       /**< Maximum length of a PDU (in Bytes) */
-#define MAX_GSE_PACKET_LENGTH 4096 /**< Maximum length of a GSE packet (in Bytes) */
-#define MIN_GSE_PACKET_LENGTH 14   /**< Minimum length of a GSE packet (in Bytes) */
-#define MAX_HEADER_LENGTH 13       /**< Maximum length of GSE header (in Bytes) */
+/** Limits length */
+#define MAX_PDU_LENGTH 65535         /**< Maximum length of a PDU (in Bytes) */
+#define MAX_GSE_PACKET_LENGTH 4095+2
+/**< Maximum length of a GSE packet (in Bytes) \
+     4095 corresponds to the maximum for GSE length field \
+     2 corresponds to the bytes which are not counted in GSE length field */
+#define MIN_GSE_PACKET_LENGTH 14     /**< Minimum length of a GSE packet (in Bytes) */
+#define MAX_HEADER_LENGTH 13         /**< Maximum length of GSE header (in Bytes) */
+
 /** Header field length */
-#define MANDATORY_FIELDS_LENGTH 2  /**< Length of the mandatory fields (in Bytes) \
-                                        (E, S, LT, GSE_Length) */
-#define FRAG_ID_LENGTH 1           /**< Length of Frag ID field (in Bytes) */
-#define TOTAL_LENGTH_LENGTH 2      /**< Length of Total length field (in Bytes) */
-#define PROTOCOL_TYPE_LENGTH 2     /**< Length of Protocol type field (in Bytes) */
-#define CRC_LENGTH 4               /**< Length of CRC32 (in Bytes) */
+#define MANDATORY_FIELDS_LENGTH 2    /**< Length of the mandatory fields (in Bytes) \
+                                          (E, S, LT, GSE_Length) */
+#define FRAG_ID_LENGTH 1             /**< Length of Frag ID field (in Bytes) */
+#define TOTAL_LENGTH_LENGTH 2        /**< Length of Total length field (in Bytes) */
+#define PROTOCOL_TYPE_LENGTH 2       /**< Length of Protocol type field (in Bytes) */
+#define CRC_LENGTH 4                 /**< Length of CRC32 (in Bytes) */
 
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
@@ -61,17 +67,19 @@ typedef union
 typedef struct
 {
 #if __BYTE_ORDER == __BIG_ENDIAN
-  unsigned int s:1;             /** Start Indicator field */
-  unsigned int e:1;             /** End Indicator field */
-  unsigned int lt:2;            /** Label Type field */
-  unsigned int gse_length:12;   /** Gse Length field */
+  unsigned int s:1;             /**< Start Indicator field */
+  unsigned int e:1;             /**< End Indicator field */
+  unsigned int lt:2;            /**< Label Type field */
+  unsigned int gse_length_hi:4; /**< GSE Length field MSB */
+  unsigned int gse_length_lo:8; /**< Gse Length field LSB*/
 #elif __BYTE_ORDER == __LITTLE_ENDIAN
-  unsigned int gse_length:12;   /** Gse Length field */
-  unsigned int lt:2;            /** Label Type field */
-  unsigned int e:1;             /** End Indicator field */
-  unsigned int s:1;             /** Start Indicator field */
+  unsigned int gse_length_hi:4; /**< GSE Length field MSB */
+  unsigned int lt:2;            /**< Label Type field */
+  unsigned int e:1;             /**< End Indicator field */
+  unsigned int s:1;             /**< Start Indicator field */
+  unsigned int gse_length_lo:8; /**< Gse Length field LSB */
 #else
-# error "Please fix <bits/endian.h>"
+#error "Please fix <bits/endian.h>"
 #endif
 
   union
@@ -84,16 +92,16 @@ typedef struct
       uint16_t total_length;        /**< Total Length field */
       uint16_t protocol_type;       /**< Protocol Type field */
       gse_label_t label;            /**< Label field */
-    } first;                      /**< First fragment of PDU */
+    } __attribute__((packed)) first;                      /**< First fragment of PDU */
 
     struct
     {
       uint16_t protocol_type;        /**< Protocol Type field */
       gse_label_t label;             /**< Label field */
-    } complete;                   /**< Complete PDU */
+    } __attribute__((packed)) complete;                   /**< Complete PDU */
 
   } opt;                        /**< Optionnal fields depending on payload type*/
-} gse_header_t;
+} __attribute__((packed)) gse_header_t;
 
 /** Type of payload carried bye the GSE packet */
 typedef enum
@@ -126,14 +134,5 @@ int gse_get_label_length(uint8_t label_type);
  */
 size_t gse_compute_header_length(payload_type_t payload_type,
                                   uint8_t label_type);
-
-/**
- *  @brief   Compute CRC32
- *
- *  @param   data    The data
- *  @param   length  Length of the data
- *  @return  CRC32
- */
-uint32_t gse_compute_crc(unsigned char const *data, size_t length);
 
 #endif
