@@ -31,8 +31,8 @@
  *  @param   length      Length of the GSE packet
  */
 static void gse_encap_create_header(payload_type_t payload_type,
-                                        gse_encap_ctx_t *const encap_ctx,
-                                        size_t length);
+                                    gse_encap_ctx_t *const encap_ctx,
+                                    size_t length);
 
 /**
  *  @brief   Compute GSE packet Total Length header field
@@ -69,7 +69,7 @@ static size_t gse_encap_compute_packet_length(size_t length,
  *  @brief   Compute CRC32
  *
  *  @pram    vfrag   Virtual fragment
- *  @return  GSE packet length
+ *  @return  CRC32
  */
 static uint32_t gse_encap_compute_crc(vfrag_t *vfrag);
 
@@ -118,7 +118,12 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
     status = ERR_INVALID_LT;
     goto free_vfrag;
   }
-/**@todo check protocol */
+  //Check if protocol value is correct
+  if(protocol < MIN_ETHER_TYPE)
+  {
+    status = EXTENSION_NOT_SUPPORTED;
+    goto free_vfrag;
+  }
   if(qos > gse_encap_get_qos_nbr(encap))
   {
     status = ERR_INVALID_QOS;
@@ -141,14 +146,13 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
     goto free_vfrag;
   }
   encap_ctx->label_type = label_type;
-  memcpy(encap_ctx->label, label, label_length);
+  memcpy(&(encap_ctx->label), label, label_length);
   encap_ctx->frag_nbr = 0;
   encap_ctx->total_length = gse_encap_compute_total_length(encap_ctx);
 
   return status;
 free_vfrag:
     gse_free_vfrag(pdu);
-    pdu = NULL;
     return status;
 }
 
@@ -272,7 +276,7 @@ void gse_encap_create_header(payload_type_t payload_type,
       gse_header->e = 0x1;
       gse_header->lt = encap_ctx->label_type;
       gse_header->opt.complete.protocol_type = encap_ctx->protocol_type;
-      memcpy(gse_header->opt.complete.label.six_bytes_label, encap_ctx->label,
+      memcpy(&(gse_header->opt.complete.label), &(encap_ctx->label),
              gse_get_label_length(encap_ctx->label_type));
       break;
     /* GSE packet carrying a first fragment of PDU */
@@ -283,7 +287,7 @@ void gse_encap_create_header(payload_type_t payload_type,
       gse_header->opt.first.frag_id = encap_ctx->qos;
       gse_header->opt.first.total_length = encap_ctx->total_length;
       gse_header->opt.first.protocol_type = encap_ctx->protocol_type;
-      memcpy(gse_header->opt.first.label.six_bytes_label, encap_ctx->label,
+      memcpy(&(gse_header->opt.first.label), &(encap_ctx->label),
              gse_get_label_length(encap_ctx->label_type));
 
       crc = gse_encap_compute_crc(encap_ctx->vfrag);
@@ -441,8 +445,6 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
       payload_type = SUBS_FRAG;
     }
   }
-
-  assert(header_length);
 
   *length = gse_encap_compute_packet_length(*length, remaining_data_length,
                                            header_length);

@@ -83,8 +83,8 @@ status_t gse_create_vfrag(vfrag_t **vfrag, size_t max_length)
   return status;
 free_vfrag:
   free(*vfrag);
-error:
   *vfrag = NULL;
+error:
   return status;
 }
 
@@ -272,13 +272,12 @@ status_t gse_create_vbuf(vbuf_t **vbuf, size_t length)
   (*vbuf)->vfrag_count = 0;
 
   return status;
-
-free_vbuf:
-  free((*vbuf)->start);
 free_vbuf_start:
-  free(vbuf);
+  free((*vbuf)->start);
+free_vbuf:
+  free(*vbuf);
+  *vbuf = NULL;
 error:
-  vbuf = NULL;
   return status;
 }
 

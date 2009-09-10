@@ -38,6 +38,7 @@
      2 corresponds to the bytes which are not counted in GSE length field */
 #define MIN_GSE_PACKET_LENGTH 14     /**< Minimum length of a GSE packet (in Bytes) */
 #define MAX_HEADER_LENGTH 13         /**< Maximum length of GSE header (in Bytes) */
+#define MIN_ETHER_TYPE 1536          /**< Minimum value for EtherTypes */
 
 /** Header field length */
 #define MANDATORY_FIELDS_LENGTH 2    /**< Length of the mandatory fields (in Bytes) \
@@ -133,6 +134,6 @@ int gse_get_label_length(uint8_t label_type);
  *  @return  header length
  */
 size_t gse_compute_header_length(payload_type_t payload_type,
-                                  uint8_t label_type);
+                                 uint8_t label_type);
 
 #endif

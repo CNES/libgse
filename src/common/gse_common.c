@@ -73,6 +73,8 @@ size_t gse_compute_header_length(payload_type_t payload_type,
       header_length = MANDATORY_FIELDS_LENGTH +
                       FRAG_ID_LENGTH;
       break;
+    default:
+      assert(0);
   }
   return header_length;
 }

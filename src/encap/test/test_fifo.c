@@ -1,8 +1,9 @@
 /****************************************************************************/
 /**
- * @file    test.c
- * @brief   The GSE test program
+ * @file    test_fifo.c
+ * @brief   The GSE FIFO test
  * @author  Didier Barvaux / Viveris Technologies
+ * @author  Julien Bernard / Viveris Technologies
  */
 /****************************************************************************/
 
@@ -58,6 +59,7 @@ usage: test [-verbose] cmp_file flow\n\
 
 #define FIFO_SIZE 100
 #define FRAG_LENGTH 39
+#define PROTOCOL 9029
 
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
@@ -152,6 +154,7 @@ quit:
  * @brief Test the GSE library with a flow of IP or GSE packets to encapsulate
  *
  * @param verbose       0 for no debug messages, 1 for debug
+ * @param qos_nbr       The number of FIFO
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @param cmp_filename  The name of the PCAP file that contains the reference packets
  *                      used for comparison
@@ -273,7 +276,7 @@ static int test_encap(int verbose, uint8_t qos_nbr,
       DEBUG(verbose, "Error %d when creating virtual fragment\n", status);
       goto release_lib;
     }
-    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(0), qos);
+    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(PROTOCOL), qos);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %d when encapsulating pdu\n", status);

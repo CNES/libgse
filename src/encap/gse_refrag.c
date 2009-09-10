@@ -188,8 +188,6 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
   /* Second paquet is always a subsequent fragment or a last fragment */
   header_length = gse_compute_header_length(SUBS_FRAG, header.lt);
 
-  assert(header_length);
-
   if(payload_type == COMPLETE)
   {
     crc = gse_refrag_compute_crc(packet1, init_data_length,
@@ -331,6 +329,8 @@ size_t gse_refrag_compute_header_length(payload_type_t payload_type,
     case LAST_FRAG:
       header_length = gse_compute_header_length(SUBS_FRAG, label_type);
       break;
+    default:
+      assert(0);
   }
   return header_length;
 }

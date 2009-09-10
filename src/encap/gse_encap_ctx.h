@@ -34,9 +34,9 @@ typedef struct
   uint8_t qos;            /**< QoS value of the context : used as FragID value */
   vfrag_t *vfrag;         /**< Virtual fragment containing the PDU */
   uint16_t total_length;  /**< Total length field value */
-  uint8_t protocol_type;  /**< Protocol type field value */
+  uint16_t protocol_type;  /**< Protocol type field value */
   uint8_t label_type;     /**< Label type field value */
-  uint8_t label[6];       /**< Label field value */
+  gse_label_t label;      /**< Label field value */
   unsigned int frag_nbr;  /**< Number of fragment */
 } gse_encap_ctx_t;
 

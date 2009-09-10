@@ -1,8 +1,9 @@
 /****************************************************************************/
 /**
- * @file    test.c
- * @brief   The GSE test program
+ * @file    test_refrag.c
+ * @brief   The GSE refragmentation test
  * @author  Didier Barvaux / Viveris Technologies
+ * @author  Julien Bernard / Viveris Technologies
  */
 /****************************************************************************/
 

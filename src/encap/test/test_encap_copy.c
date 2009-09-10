@@ -1,8 +1,9 @@
 /****************************************************************************/
 /**
- * @file    test.c
- * @brief   The GSE test program
+ * @file    test_encap_copy.c
+ * @brief   The GSE encapsulation with copy test
  * @author  Didier Barvaux / Viveris Technologies
+ * @author  Julien Bernard / Viveris Technologies
  */
 /****************************************************************************/
 
@@ -59,6 +60,7 @@ usage: test [-verbose] cmp_file flow\n\
 #define QOS_NBR 1
 #define FIFO_SIZE 100
 #define PKT_MAX 5
+#define PROTOCOL 9029
 
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
@@ -287,7 +289,7 @@ static int test_encap(int verbose, size_t frag_length,
       goto release_lib;
     }
 
-    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(0), qos);
+    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(PROTOCOL), qos);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %d when encapsulating pdu\n", status);
