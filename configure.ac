@@ -43,6 +43,7 @@ AC_CONFIG_FILES([Makefile \
                  src/encap/Makefile \
                  src/encap/test/Makefile \
                  src/deencap/Makefile \
+                 src/deencap/test/Makefile \
                  gse.pc \
                  test/Makefile])
 
