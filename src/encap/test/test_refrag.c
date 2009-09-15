@@ -25,8 +25,6 @@
 #include <pcap.h>
 
 /* GSE includes */
-#include "gse_encap_fct.h"
-#include "gse_encap.h"
 #include "gse_refrag.h"
 
 /****************************************************************************
@@ -41,26 +39,19 @@
 /** A very simple minimum macro */
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
-/** The program version */
-#define TEST_VERSION  	"GSE test application, version 0.1\n"
-
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
 usage: test [-verbose] cmp_file flow\n\
   verbose         Print DEBUG information\n\
+  frag_length     length of first refragmented GSE packet\n\
   cmp_file        compare the generated packets with the reference packets\n\
                   stored in cmp_file (PCAP format)\n\
-  flow            flow of Ethernet frames to (de-)encapsulate (PCAP format)\n"
+  flow            flow of Ethernet frames to fragment and refragment (PCAP format)\n"
 
 
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
-
-#define QOS_NBR 1
-#define FIFO_SIZE 100
-#define FRAG_LENGTH 0
-#define REFRAG_LENGTH 39
 
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
@@ -75,9 +66,8 @@ usage: test [-verbose] cmp_file flow\n\
  *
  *****************************************************************************/
 
-static int test_encap(int verbose,
-                              char *src_filename,
-                              char *cmp_filename);
+static int test_refrag(int verbose, size_t frag_length,
+                      char *src_filename, char *cmp_filename);
 static int compare_packets(int verbose,
                            unsigned char *pkt1, int pkt1_size,
                            unsigned char *pkt2, int pkt2_size);
@@ -103,51 +93,34 @@ int main(int argc, char *argv[])
 {
   char *src_filename = NULL;
   char *cmp_filename = NULL;
+  char *frag_length = NULL;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
-  if((argc < 3) || (argc > 4))
+  if((argc < 4) || (argc > 5))
   {
     printf(TEST_USAGE);
     goto quit;
   }
 
-  if(argc == 3)
-  {
-    if(cmp_filename == NULL)
-    {
-      /* get the name of the file where the reference packets used for
-         comparison are stored */
-      cmp_filename = argv[1];
-    }
-    if(src_filename == NULL)
-    {
-      /* get the name of the file that contains the packets to
-         (de-)encapsulate */
-      src_filename = argv[2];
-    }
-    failure = test_encap(0, src_filename, cmp_filename);
-  }
   if(argc == 4)
+  {
+    frag_length = argv[1];
+    cmp_filename = argv[2];
+    src_filename = argv[3];
+    failure = test_refrag(0, atoi(frag_length), src_filename, cmp_filename);
+  }
+  if(argc == 5)
   {
     if(strcmp(argv[1], "verbose"))
     {
       printf(TEST_USAGE);
       goto quit;
     }
-    if(cmp_filename == NULL)
-    {
-      /* get the name of the file where the reference packets used for
-         comparison are stored */
-      cmp_filename = argv[2];
-    }
-    if(src_filename == NULL)
-    {
-      /* get the name of the file that contains the packets to
-         (de-)encapsulate */
-      src_filename = argv[3];
-    }
-    failure = test_encap(1, src_filename, cmp_filename);
+    frag_length = argv[2];
+    cmp_filename = argv[3];
+    src_filename = argv[4];
+    failure = test_refrag(1, atoi(frag_length), src_filename, cmp_filename);
   }
 
 quit:
@@ -163,17 +136,17 @@ quit:
 
 
 /**
- * @brief Test the GSE library with a flow of IP or GSE packets to encapsulate
+ * @brief Test the GSE library with a flow of IP or GSE packets to refragment
  *
  * @param verbose       0 for no debug messages, 1 for debug
+ * @param frag_length   The length of the first refragment packet
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @param cmp_filename  The name of the PCAP file that contains the reference packets
  *                      used for comparison
  * @return              0 in case of success, 1 otherwise
  */
-static int test_encap(int verbose,
-                      char *src_filename,
-                      char *cmp_filename)
+static int test_refrag(int verbose, size_t frag_length,
+                      char *src_filename, char *cmp_filename)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_t *handle;
@@ -188,11 +161,8 @@ static int test_encap(int verbose,
   unsigned char *cmp_packet;
   int is_failure = 1;
   unsigned long counter;
-  gse_encap_t *encap = NULL;
   vfrag_t *vfrag = NULL;
   vfrag_t *vfrag_pkt = NULL;
-  uint8_t label[6];
-  int i;
   int status;
   uint8_t qos = 0;
 
@@ -250,14 +220,6 @@ static int test_encap(int verbose,
   else /* DLT_RAW */
     link_len_cmp = 0;
 
-  /* Initialize the GSE library */
-  status = gse_encap_init(QOS_NBR, FIFO_SIZE, &encap);
-  if(status != STATUS_OK)
-  {
-    DEBUG(verbose, "Error %d when initializing library\n", status);
-    goto close_comparison;
-  }
-
   /* for each packet in the dump */
   counter = 0;
   while((packet = (unsigned char *) pcap_next(handle, &header)) != NULL)
@@ -272,35 +234,33 @@ static int test_encap(int verbose,
     {
       DEBUG(verbose, "packet #%lu: bad PCAP packet (len = %d, caplen = %d)\n",
              counter, header.len, header.caplen);
-      goto release_lib;
+      goto close_comparison;
     }
 
     in_packet = packet + link_len_src;
     in_size = header.len - link_len_src;
 
     /* Create a fragment containing a GSE packet */
-    for(i=0 ; i<6 ; i++)
-      label[i] = i;
     status = gse_create_vfrag_with_data(&vfrag, in_size, in_packet, in_size);
     if(status != STATUS_OK)
     {
-      DEBUG(verbose, "Error %d when creating virtual fragment\n", status);
-      goto release_lib;
+      DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
+      goto close_comparison;
     }
 
     /* Refragment the GSE packet */
-    status = gse_refrag_packet(vfrag, &vfrag_pkt, qos, REFRAG_LENGTH);
+    status = gse_refrag_packet(vfrag, &vfrag_pkt, qos, frag_length);
     if((status != STATUS_OK))
     {
-      DEBUG(verbose, "Error %d when refragment packet\n", status);
-      goto release_lib;
+      DEBUG(verbose, "Error %#.4x when refragment packet (%s)\n", status, gse_get_status(status));
+      goto free_vfrag;
     }
 
     cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
     if(cmp_packet == NULL)
     {
       DEBUG(verbose, "packet #%lu: no packet available for comparison\n", counter);
-      goto release_lib;
+      goto free_packets;
     }
 
     /* compare the first output packets with the ones given by the user */
@@ -308,25 +268,25 @@ static int test_encap(int verbose,
     {
       DEBUG(verbose, "packet #%lu: packet available for comparison but too small\n",
             counter);
-      goto release_lib;
+      goto free_packets;
     }
 
     if(!compare_packets(verbose, vfrag->start, vfrag->length,
                         cmp_packet + link_len_cmp, cmp_header.caplen - link_len_cmp))
     {
       DEBUG(verbose, "packet #%lu: generated packet is not as attended\n", counter);
-      goto release_lib;
+      goto free_packets;
     }
     else
     {
-      DEBUG(verbose, "Packet 1 : OK\n");
+      DEBUG(verbose, "Packet #%lu - Fragment 1 : OK\n", counter);
     }
 
     cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
     if(cmp_packet == NULL)
     {
       DEBUG(verbose, "packet #%lu: no packet available for comparison\n", counter);
-      goto release_lib;
+      goto free_packets;
     }
 
     /* compare the second output packets with the ones given by the user */
@@ -334,38 +294,40 @@ static int test_encap(int verbose,
     {
       DEBUG(verbose, "packet #%lu: packet available for comparison but too small\n",
             counter);
-      goto release_lib;
+      goto free_packets;
     }
 
     if(!compare_packets(verbose, vfrag_pkt->start, vfrag_pkt->length,
                         cmp_packet + link_len_cmp, cmp_header.caplen - link_len_cmp))
     {
       DEBUG(verbose, "packet #%lu: generated packet is not as attended\n", counter);
-      goto release_lib;
+      goto free_packets;
     }
     else
     {
-      DEBUG(verbose, "Packet 2 : OK\n");
+      DEBUG(verbose, "Packet #%lu - Fragment 2 : OK\n", counter);
     }
 
     // Free packets
     if(vfrag != NULL)
     {
       status = gse_free_vfrag(vfrag);
-      if((status != STATUS_OK) && (status != FIFO_EMPTY))
+      if(status != STATUS_OK)
       {
-        DEBUG(verbose, "Error %d when destroying packet\n", status);
-        goto release_lib;
+        DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
+        goto free_packets;
       }
+      vfrag = NULL;
     }
     if(vfrag_pkt != NULL)
     {
       status = gse_free_vfrag(vfrag_pkt);
-      if((status != STATUS_OK) && (status != FIFO_EMPTY))
+      if(status != STATUS_OK)
       {
-        DEBUG(verbose, "Error %d when destroying packet\n", status);
-        goto release_lib;
+        DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
+        goto close_comparison;
       }
+      vfrag_pkt = NULL;
     }
   }
 
@@ -373,12 +335,28 @@ static int test_encap(int verbose,
   /* everything went fine */
   is_failure = 0;
 
-release_lib:
-  status = gse_encap_release(encap);
-  if(status != STATUS_OK)
+free_packets:
+  // Free packets
+  if(vfrag_pkt != NULL)
   {
-    is_failure = 1;
-    DEBUG(verbose, "Error %d when releasing library\n", status);
+    status = gse_free_vfrag(vfrag_pkt);
+    if(status != STATUS_OK)
+    {
+      DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
+      is_failure = 1;
+    }
+    vfrag_pkt = NULL;
+  }
+free_vfrag:
+  if(vfrag != NULL)
+  {
+    status = gse_free_vfrag(vfrag);
+    if(status != STATUS_OK)
+    {
+      DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
+      is_failure = 1;
+    }
+    vfrag = NULL;
   }
 close_comparison:
   pcap_close(cmp_handle);

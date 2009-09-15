@@ -367,30 +367,30 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
   gse_encap_ctx_t* encap_ctx;
   payload_type_t payload_type;
 
-  /* Check parameters */
-  /* If length = 0, the default value is used */
+  if(gse_get_elt_nbr_fifo(&encap->fifo[qos]) == 0)
+  {
+    status = FIFO_EMPTY;
+    goto error;
+  }
+  //Check parameters
+  if(qos > gse_encap_get_qos_nbr(encap))
+  {
+    status = ERR_INVALID_QOS;
+    goto error;
+  }
+  //If length = 0, the default value is used
   if(*length == 0)
   {
     *length = MAX_GSE_PACKET_LENGTH;
   }
   if(*length > MAX_GSE_PACKET_LENGTH)
   {
-    status = ERR_FRAG_LENGTH;
+    status = LENGTH_TOO_HIGH;
     goto error;
   }
   if(*length < MIN_GSE_PACKET_LENGTH)
   {
-    status = LENGTH_TO_SMALL;
-    goto error;
-  }
-  if(gse_get_elt_nbr_fifo(&encap->fifo[qos]) == 0)
-  {
-    status = FIFO_EMPTY;
-    goto error;
-  }
-  if(qos > gse_encap_get_qos_nbr(encap))
-  {
-    status = ERR_INVALID_QOS;
+    status = LENGTH_TOO_SMALL;
     goto error;
   }
   fifo_elt = encap->fifo[qos].first;
@@ -416,10 +416,10 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
   }
 
   header_length = gse_compute_header_length(COMPLETE, encap_ctx->label_type);
-  /* This is a complete PDU */
+  //This is a complete PDU 
   if(gse_get_frag_number(encap_ctx) == 0)
   {
-    /* Can the PDU be completly encapsulated ? */
+    //Can the PDU be completly encapsulated ?
     if(*length >= (remaining_data_length + header_length))
     {
       payload_type = COMPLETE;
@@ -435,15 +435,28 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
   else
   {
     header_length = gse_compute_header_length(SUBS_FRAG, encap_ctx->label_type);
-    // Is this the last fragment ?
+    //Is this the last fragment ?
     if(*length >= (remaining_data_length + header_length))
     {
       payload_type = LAST_FRAG;
+      //Check if wanted length allow 1 bit of data
+      //For last fragment CRC should not be forgotten
+      if((header_length + 1 + CRC_LENGTH) > *length)
+      {
+        status = LENGTH_TOO_SMALL;
+        goto error;
+      }
     }
     else
     {
       payload_type = SUBS_FRAG;
     }
+  }
+  //Check if wanted length allow 1 bit of data
+  if((header_length + 1) > *length)
+  {
+    status = LENGTH_TOO_SMALL;
+    goto error;
   }
 
   *length = gse_encap_compute_packet_length(*length, remaining_data_length,

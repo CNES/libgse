@@ -9,8 +9,6 @@
  *          Module name: VIRTUAL BUFFER
  *
  *   @brief         Virtual buffer and fragments mangement
- *                  A virtual buffer is a structure related to a buffer
- *                  A virtual fragment is another type of virtual buffer
  *
  *   @author        Julien BERNARD / Viveris Technologies
  *
@@ -109,6 +107,7 @@ status_t gse_create_vfrag_with_data(vfrag_t **vfrag, size_t max_length,
   return status;
 free_vfrag:
   gse_free_vfrag(*vfrag);
+  *vfrag = NULL;
 error:
   return status;
 }

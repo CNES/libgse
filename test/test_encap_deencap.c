@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
- * @file    test_deencap.c
- * @brief   The GSE deencapsulation test
+ * @file    test_encap_copy.c
+ * @brief   The GSE encapsulation with copy test
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */
@@ -25,7 +25,9 @@
 #include <pcap.h>
 
 /* GSE includes */
+#include "gse_encap_fct.h"
 #include "gse_deencap_fct.h"
+#include "gse_encap.h"
 #include "gse_deencap.h"
 
 /****************************************************************************
@@ -45,17 +47,18 @@
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
 usage: test [-verbose] cmp_file flow\n\
   verbose         Print DEBUG information\n\
-  cmp_file        compare the generated packets with the reference packets\n\
-                  stored in cmp_file (PCAP format)\n\
-  flow            flow of Ethernet frames to deencapsulate (PCAP format)\n"
+  frag_length     maximum length of the GSE packets\n\
+  flow            flow of Ethernet frames (PCAP format)\n"
 
 
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
 
-#define QOS_NBR 5
-#define LABEL_TYPE 0x0
-#define PROTOCOL 0x2345
+#define QOS_NBR 1
+#define FIFO_SIZE 100
+#define PKT_MAX 1000
+#define PROTOCOL 9029
+
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
   do { \
@@ -69,7 +72,7 @@ usage: test [-verbose] cmp_file flow\n\
  *
  *****************************************************************************/
 
-static int test_deencap(int verbose, char *src_filename, char *cmp_filename);
+static int test_encap(int verbose, size_t frag_length, char *filename);
 static int compare_packets(int verbose,
                            unsigned char *pkt1, int pkt1_size,
                            unsigned char *pkt2, int pkt2_size);
@@ -93,8 +96,8 @@ static int compare_packets(int verbose,
  */
 int main(int argc, char *argv[])
 {
-  char *src_filename = NULL;
-  char *cmp_filename = NULL;
+  char *filename = NULL;
+  char *frag_length = 0;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
@@ -106,13 +109,9 @@ int main(int argc, char *argv[])
 
   if(argc == 3)
   {
-    /* get the name of the file where the reference packets used for
-       comparison are stored */
-    cmp_filename = argv[1];
-    /* get the name of the file that contains the packets to
-       (de-)encapsulate */
-    src_filename = argv[2];
-    failure = test_deencap(0, src_filename, cmp_filename);
+    frag_length = argv[1];
+    filename = argv[2];
+    failure = test_encap(0, atoi(frag_length), filename);
   }
   if(argc == 4)
   {
@@ -121,13 +120,9 @@ int main(int argc, char *argv[])
       printf(TEST_USAGE);
       goto quit;
     }
-    /* get the name of the file where the reference packets used for
-       comparison are stored */
-    cmp_filename = argv[2];
-    /* get the name of the file that contains the packets to
-       (de-)encapsulate */
-    src_filename = argv[3];
-    failure = test_deencap(1, src_filename, cmp_filename);
+    frag_length = argv[2];
+    filename = argv[3];
+    failure = test_encap(1, atoi(frag_length), filename);
   }
 
 quit:
@@ -140,16 +135,15 @@ quit:
  *
  *****************************************************************************/
 
+
 /**
- * @brief Test the GSE library with a flow of IP or GSE packets to deencapsulate
+ * @brief Test the GSE library with a flow of IP or GSE packets to encapsulate
  *
  * @param verbose       0 for no debug messages, 1 for debug
- * @param src_filename  The name of the PCAP file that contains the source packets
- * @param cmp_filename  The name of the PCAP file that contains the reference packets
- *                      used for comparison
+ * @param filename      The name of the PCAP file
  * @return              0 in case of success, 1 otherwise
  */
-static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
+static int test_encap(int verbose, size_t frag_length, char *filename)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_t *handle;
@@ -164,18 +158,23 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
   unsigned char *cmp_packet;
   int is_failure = 1;
   unsigned long counter;
+  gse_encap_t *encap = NULL;
   gse_deencap_t *deencap = NULL;
-  vfrag_t *gse_packet = NULL;
+  vfrag_t **vfrag_pkt = NULL;
+  int pkt_nbr = 0;
+  int rcv_pkt_nbr = 0;
   uint8_t label[6];
   vfrag_t *pdu = NULL;
+  vfrag_t *rcv_pdu = NULL;
+  uint8_t rcv_label[6];
   uint8_t label_type;
   uint16_t protocol;
-  int status;
   int i;
-  int pkt_nbr = 0;
+  int status;
+  uint8_t qos = 0;
 
   /* open the source dump file */
-  handle = pcap_open_offline(src_filename, errbuf);
+  handle = pcap_open_offline(filename, errbuf);
   if(handle == NULL)
   {
     DEBUG(verbose, "failed to open the source pcap file: %s\n", errbuf);
@@ -202,7 +201,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     link_len_src = 0;
 
   /* open the comparison dump file */
-  cmp_handle = pcap_open_offline(cmp_filename, errbuf);
+  cmp_handle = pcap_open_offline(filename, errbuf);
   if(cmp_handle == NULL)
   {
     DEBUG(verbose, "failed to open the comparison pcap file: %s\n", errbuf);
@@ -229,12 +228,20 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     link_len_cmp = 0;
 
   /* Initialize the GSE library */
+  status = gse_encap_init(QOS_NBR, FIFO_SIZE, &encap);
+  if(status != STATUS_OK)
+  {
+    DEBUG(verbose, "Error %#.4x when initializing encapsulation (%s)\n", status, gse_get_status(status));
+    goto close_comparison;
+  }
   status = gse_deencap_init(QOS_NBR, &deencap);
   if(status != STATUS_OK)
   {
-    DEBUG(verbose, "Error %#.4x when initializing library (%s)\n", status, gse_get_status(status));
-    goto close_comparison;
+    DEBUG(verbose, "Error %#.4x when initializing deencapsulation (%s)\n", status, gse_get_status(status));
+    goto release_encap;
   }
+
+  vfrag_pkt = malloc(sizeof(vfrag_t*) * PKT_MAX);
 
   /* for each packet in the dump */
   counter = 0;
@@ -243,7 +250,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     unsigned char *in_packet;
     size_t in_size;
 
-    pkt_nbr++;
+    counter++;
 
     /* check Ethernet frame length */
     if(header.len <= link_len_src || header.len != header.caplen)
@@ -258,89 +265,140 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
 
     /* Encapsulate the input packets, use in_packet and in_size as
        input */
-    status = gse_create_vfrag_with_data(&gse_packet, in_size, in_packet, in_size);
+    for(i=0 ; i<6 ; i++)
+      label[i] = i;
+    status = gse_create_vfrag_with_data(&pdu, in_size, in_packet, in_size);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto release_lib;
     }
 
-    /* get next GSE packet from the comparison dump file */
-    /* The following might be done several times in case of fragmentation */
-    status = gse_deencap_packet(gse_packet, deencap, &label_type, label,
-                                &protocol, &pdu);
-    if((status != STATUS_OK) && (status != PDU))
+    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(PROTOCOL), qos);
+    if(status != STATUS_OK)
     {
-      DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
+      DEBUG(verbose, "Error %#.4x when receiving pdu (%s)\n", status, gse_get_status(status));
+      goto release_lib;
+    }
+    qos++;
+  }
+
+  for(i = 0 ; i < QOS_NBR ; i++)
+  {
+    pkt_nbr = 0;
+    rcv_pkt_nbr = 0;
+
+    do{
+      status = gse_encap_get_packet_copy(&vfrag_pkt[pkt_nbr], encap, frag_length, i);
+      if(status == STATUS_OK)
+      {
+        pkt_nbr++;
+      }
+      if((status != STATUS_OK) && (status != FIFO_EMPTY))
+      {
+        DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
+        goto free_packets;
+      }
+    }while(status != FIFO_EMPTY);
+
+    DEBUG(verbose, "PDU #%lu: %d packets copied in FIFO %d\n", counter, pkt_nbr, i);
+
+    do{
+      status = gse_deencap_packet(vfrag_pkt[rcv_pkt_nbr], deencap, &label_type, rcv_label,
+                                  &protocol, &rcv_pdu);
+      rcv_pkt_nbr++;
+      if((status != STATUS_OK) && (status != PDU))
+      {
+        DEBUG(verbose, "Error %#.4x when deencapsulating packet (%s)\n", status, gse_get_status(status));
+        goto free_packets;
+      }
+      vfrag_pkt[rcv_pkt_nbr - 1] = NULL;
+    }while((status != PDU) || (rcv_pkt_nbr < pkt_nbr));
+
+    cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
+    if(cmp_packet == NULL)
+    {
+      DEBUG(verbose, "packet #%lu: no packet available for comparison\n", counter);
       goto free_pdu;
     }
 
-    if(status == PDU)
+    /* compare the output packets with the ones given by the user */
+    if(cmp_header.caplen <= link_len_cmp)
     {
-      counter++;
-      DEBUG(verbose, "%d packet received\n", pkt_nbr);
-      pkt_nbr = 0;
-      cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
-      if(cmp_packet == NULL)
-      {
-        DEBUG(verbose, "PDU #%lu: no PDU available for comparison\n", counter);
-        goto free_pdu;
-      }
-
-      /* compare the output packets with the ones given by the user */
-      if(cmp_header.caplen <= link_len_cmp)
-      {
-        DEBUG(verbose, "PDU #%lu: PDU available for comparison but too small\n",
-              counter);
-        goto free_pdu;
-      }
-
-      if(!compare_packets(verbose, pdu->start, pdu->length,
-                          cmp_packet + link_len_cmp, cmp_header.caplen - link_len_cmp))
-      {
-        DEBUG(verbose, "PDU #%lu: generated PDU is not as attended\n", counter);
-        goto free_pdu;
-      }
-      DEBUG(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
-            counter, label_type, protocol, label[0]);
-      for(i = 1 ; i < gse_get_label_length(label_type) ; i++)
-      {
-        DEBUG(verbose, ":%.2d", label[i]);
-      }
-      DEBUG(verbose, " (in hexa)\n");
-
-      if(pdu != NULL)
-      {
-        status = gse_free_vfrag(pdu);
-        if(status != STATUS_OK)
-        {
-          DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
-          goto release_lib;
-        }
-        pdu = NULL;
-      }
+      DEBUG(verbose, "packet #%lu: packet available for comparison but too small\n",
+            counter);
+      goto free_pdu;
     }
+
+    if(!compare_packets(verbose, rcv_pdu->start, rcv_pdu->length,
+                        cmp_packet + link_len_cmp, cmp_header.caplen - link_len_cmp))
+    {
+      DEBUG(verbose, "packet #%lu: generated packet is not as attended\n", counter);
+      goto free_pdu;
+    }
+    DEBUG(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
+          counter, label_type, protocol, label[0]);
+    for(i = 1 ; i < gse_get_label_length(label_type) ; i++)
+    {
+      DEBUG(verbose, ":%.2d", label[i]);
+    }
+    DEBUG(verbose, " (in hexa)\n");
+
+    if(rcv_pdu != NULL)
+    {
+      status = gse_free_vfrag(rcv_pdu);
+      if(status != STATUS_OK)
+      {
+        DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
+        goto free_pdu;
+      }
+      rcv_pdu = NULL;
+    } 
   }
 
   /* everything went fine */
   is_failure = 0;
 
 free_pdu:
-  if(pdu != NULL)
+  if(rcv_pdu != NULL)
   {
-    status = gse_free_vfrag(pdu);
+    status = gse_free_vfrag(rcv_pdu);
     if(status != STATUS_OK)
     {
       is_failure = 1;
       DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
     }
   }
+free_packets:
+  for(i = rcv_pkt_nbr ; i < pkt_nbr ; i++)
+  {
+    if(vfrag_pkt[i] != NULL)
+    {
+      status = gse_free_vfrag(vfrag_pkt[i]);
+      if((status != STATUS_OK) && (status != FIFO_EMPTY))
+      {
+        DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
+        is_failure = 1;
+      }
+    }
+  }
 release_lib:
+  if(vfrag_pkt != NULL)
+  {
+    free(vfrag_pkt);
+  }
   status = gse_deencap_release(deencap);
   if(status != STATUS_OK)
   {
     is_failure = 1;
-    DEBUG(verbose, "Error %#.4x when releasing library (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when releasing deencapsulation (%s)\n", status, gse_get_status(status));
+  }
+release_encap:
+  status = gse_encap_release(encap);
+  if(status != STATUS_OK)
+  {
+    is_failure = 1;
+    DEBUG(verbose, "Error %#.4x when releasing encapsulation (%s)\n", status, gse_get_status(status));
   }
 close_comparison:
   pcap_close(cmp_handle);
@@ -370,7 +428,7 @@ static int compare_packets(int verbose,
   char str1[4][7], str2[4][7];
   char sep1, sep2;
 
-  min_size = MIN(pkt1_size, pkt2_size);
+  min_size = pkt1_size > pkt2_size ? pkt2_size : pkt1_size;
 
   /* do not compare more than 180 bytes to avoid huge output */
   min_size = MIN(180, min_size);
@@ -386,7 +444,7 @@ static int compare_packets(int verbose,
 
   if(pkt1_size != pkt2_size)
   {
-    DEBUG(verbose, "PDU have different sizes (%d != %d), compare only the %d "
+    DEBUG(verbose, "packets have different sizes (%d != %d), compare only the %d "
            "first bytes\n", pkt1_size, pkt2_size, min_size);
   }
 
@@ -433,7 +491,7 @@ static int compare_packets(int verbose,
     }
   }
 
-  DEBUG(verbose, "----------------------- PDU are different -----------------------\n");
+  DEBUG(verbose, "----------------------- packets are different -----------------------\n");
 
 skip:
   return valid;

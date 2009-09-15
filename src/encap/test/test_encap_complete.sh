@@ -4,5 +4,5 @@
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_encap 0 ./output/encap_mult_complete.pcap ./input/encap_mult_complete.pcap || ./test_encap 0 verbose ./output/encap_mult_complete.pcap ./input/encap_mult_complete.pcap
+./test_encap 0 ./output/encap_mult_complete.pcap ./input/encap_mult_complete.pcap || ./test_encap verbose 0 ./output/encap_mult_complete.pcap ./input/encap_mult_complete.pcap
 

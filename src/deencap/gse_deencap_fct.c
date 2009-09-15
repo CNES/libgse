@@ -92,10 +92,25 @@ status_t gse_deencap_packet (vfrag_t *packet, gse_deencap_t *deencap,
   size_t header_length;
   uint16_t gse_length;
   uint16_t data_length;
+  int label_length;
+  unsigned int i;
+  unsigned int sum_label = 0; 
 
   *pdu = NULL;
 
-  memcpy(&header, packet->start, sizeof(gse_header_t));
+  //Check packet validity
+  if(packet->length > MAX_GSE_PACKET_LENGTH)
+  {
+    status = LENGTH_TOO_HIGH;
+    goto free_packet;
+  }
+  if(packet->length < MIN_GSE_PACKET_LENGTH)
+  {
+    status = LENGTH_TOO_SMALL;
+    goto free_packet;
+  }
+
+  memcpy(&header, packet->start, MIN(sizeof(gse_header_t), packet->length));
 
   if((header.s == 0x0) && (header.e == 0x0) && (header.lt == 0x0))
   {
@@ -115,7 +130,6 @@ status_t gse_deencap_packet (vfrag_t *packet, gse_deencap_t *deencap,
     status = ERR_INVALID_LT;
     goto free_packet;
   }
-/**@todo label (il faudrait une liste de label) */
 
   if(header.s == 0x1)
   {
@@ -141,10 +155,22 @@ status_t gse_deencap_packet (vfrag_t *packet, gse_deencap_t *deencap,
   }
 
   header_length = gse_compute_header_length(payload_type, header.lt);
+  if(header_length > packet->length)
+  {
+    status = ERR_INVALID_HEADER;
+    goto free_packet;
+  }
 
   data_length = packet->length - header_length;
 
   gse_shift_vfrag(packet, header_length, 0);
+
+  label_length = gse_get_label_length(header.lt);
+  if(label_length < 0)
+  {
+    status = ERR_INVALID_LT;
+    goto free_packet;
+  }
 
   switch(payload_type)
   {
@@ -156,8 +182,25 @@ status_t gse_deencap_packet (vfrag_t *packet, gse_deencap_t *deencap,
         goto free_packet;
       }
       *label_type = header.lt;
+      if(*label_type != 0x0)
+      {
+        status = ERR_INVALID_LT;
+        goto free_packet;
+      }
       memcpy(label, header.opt.complete.label.six_bytes_label,
-             gse_get_label_length(header.lt));
+             label_length);
+      if(label_length == 6)
+      {
+        for(i = 0 ; i < 6 ; i++)
+        {
+          sum_label += label[i];
+        }
+        if(sum_label == 0)
+        {
+          status = ERR_INVALID_LABEL;
+          goto free_packet;
+        }
+      }
       *protocol = ntohs(header.opt.complete.protocol_type);
       *pdu = packet;
       status = PDU;
@@ -230,9 +273,11 @@ status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
                                 gse_header_t header)
 {
   status_t status = STATUS_OK;
-  gse_deencap_ctx_t *ctx;
+  gse_deencap_ctx_t *ctx = NULL;
   uint16_t pdu_length;
   size_t offset;
+  unsigned int i;
+  unsigned int sum_label = 0;
 
   if(header.opt.first.frag_id >= gse_deencap_get_qos_nbr(deencap))
   {
@@ -252,6 +297,11 @@ status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
     ctx->vfrag = NULL;
   }
   ctx->label_type = header.lt;
+  if(ctx->label_type != 0x0)
+  {
+    status = ERR_INVALID_LT;
+    goto free_data;
+  }
   ctx->total_length = ntohs(header.opt.first.total_length);
   pdu_length = gse_deencap_compute_pdu_length(ctx->total_length, header.lt);
   if((data->vbuf->length - MAX_HEADER_LENGTH) < pdu_length)
@@ -267,6 +317,7 @@ status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
              gse_get_label_length(header.lt);
     memcpy(ctx->vfrag->start - offset, data->start - offset, offset);
     gse_free_vfrag(data);
+    data = NULL;
   }
   else
   {
@@ -275,8 +326,31 @@ status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
   ctx->protocol_type = ntohs(header.opt.first.protocol_type);
   memcpy(&(ctx->label), &(header.opt.first.label),
          gse_get_label_length(header.lt));
+  if(gse_get_label_length(header.lt) == 6)
+  {
+    for(i = 0 ; i < 6 ; i++)
+    {
+      sum_label += ctx->label.six_bytes_label[i];
+    }
+    if(sum_label == 0)
+    {
+      status = ERR_INVALID_LABEL;
+      goto free_vfrag;
+    }
+  }
   ctx->bbframe_nbr = 0;
   
+  return status;
+free_vfrag:
+  if(ctx != NULL)
+  {
+    gse_free_vfrag(ctx->vfrag);
+    ctx->vfrag = NULL;
+    if(data != NULL)
+    {
+      gse_free_vfrag(data);
+    }
+  }
   return status;
 free_data:
   gse_free_vfrag(data);
@@ -303,12 +377,17 @@ status_t gse_deencap_add_frag(vfrag_t *data, gse_deencap_t *deencap,
   ctx = &(deencap->deencap_ctx[header.opt.first.frag_id]);
   if(ctx->vfrag == NULL)
   {
-    status = ERR_UNINITIALIZED_CTX;
+    status = ERR_CTX_NOT_INIT;
     goto free_data;
   }
   if(ctx->bbframe_nbr > 255)
   {
     status = TIMEOUT;
+    goto free_ctx;
+  }
+  if((ctx->vfrag->end + data->length) > ctx->vfrag->vbuf->end)
+  {
+    status = ERR_PACKET_TOO_LONG;
     goto free_ctx;
   }
   memcpy(ctx->vfrag->end, data->start, data->length);
@@ -349,18 +428,23 @@ status_t gse_deencap_add_last_frag(vfrag_t *data, gse_deencap_t *deencap,
      != ctx->vfrag->length)
   {
     status = ERR_INVALID_DATA_LENGTH;
-    goto error;
+    goto free_vfrag;
   }
 
   memcpy(&rcv_crc, data->end, CRC_LENGTH);
-  gse_free_vfrag(data);
   calc_crc = gse_deencap_compute_crc(ctx->vfrag, ctx->label_type);
   if(rcv_crc != calc_crc)
   {
     status = ERR_INVALID_CRC;
-    goto error;
+    goto free_vfrag;
   }
+  gse_free_vfrag(data);
 
+  return status;
+free_vfrag:
+  gse_free_vfrag(ctx->vfrag);
+  ctx->vfrag = NULL;
+  gse_free_vfrag(data);
 error:
   return status;
 }

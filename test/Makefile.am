@@ -4,7 +4,11 @@
 #	Description: create the GSE test program
 ################################################################################
 
-noinst_PROGRAMS = test
+noinst_PROGRAMS = \
+	test_encap_deencap
+
+TESTS = \
+	test_encap_deencap.sh
 
 INCLUDES = \
 	-I../src/common \
@@ -13,9 +17,8 @@ INCLUDES = \
 
 AM_LDFLAGS = -L../src/
 
-test_SOURCES = test.c
-
-test_LDADD = \
+test_encap_deencap_SOURCES = test_encap_deencap.c
+test_encap_deencap_LDADD = \
 	-lpcap \
 	-lgse
 

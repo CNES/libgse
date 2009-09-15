@@ -36,7 +36,7 @@
 /**< Maximum length of a GSE packet (in Bytes) \
      4095 corresponds to the maximum for GSE length field \
      2 corresponds to the bytes which are not counted in GSE length field */
-#define MIN_GSE_PACKET_LENGTH 14     /**< Minimum length of a GSE packet (in Bytes) */
+#define MIN_GSE_PACKET_LENGTH 3      /**< Minimum length of a GSE packet (in Bytes) */
 #define MAX_HEADER_LENGTH 13         /**< Maximum length of GSE header (in Bytes) */
 #define MIN_ETHER_TYPE 1536          /**< Minimum value for EtherTypes */
 

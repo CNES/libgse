@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
- * @file    test.c
- * @brief   The GSE test program
+ * @file    test_vfrag_robust.c
+ * @brief   Virtual fragment robustness tests
  * @author  Didier Barvaux / Viveris Technologies
  */
 /****************************************************************************/
@@ -123,7 +123,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, data, BAD_DATA_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when creating fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status, gse_get_status(status));
     if(status != ERR_DATA_TOO_LONG)
     {
       goto failure;
@@ -139,7 +139,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, data, DATA_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when creating fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status, gse_get_status(status));
     goto failure;
   }
 
@@ -147,7 +147,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when duplicating fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status, gse_get_status(status));
     goto failure;
   }
 
@@ -165,7 +165,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_copy_data(vfrag, data, DATA_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when copying data in fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when copying data in fragment (%s)\n", status, gse_get_status(status));
     if(status != ERR_MULTIPLE_VBUF_ACCESS)
     {
       goto failure;
@@ -182,7 +182,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_duplicate_vfrag(&dup_vfrag_2, vfrag, DUP_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when duplicating fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status, gse_get_status(status));
     if(status != ERR_FRAG_NBR)
     {
       goto failure;
@@ -195,7 +195,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_free_vfrag(vfrag);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when destroying the virtual fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when destroying the virtual fragment (%s)\n", status, gse_get_status(status));
     goto failure;
   }
 
@@ -203,7 +203,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_free_vfrag(dup_vfrag);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when destroying the dumplicated fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when destroying the dumplicated fragment (%s)\n", status, gse_get_status(status));
     goto failure;
   }
   DEBUG(verbose, "The fragments and the buffer are destroyed\n");
@@ -217,7 +217,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_create_vfrag(&vfrag, VFRAG_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when creating fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status, gse_get_status(status));
     goto failure;
   }
 
@@ -225,7 +225,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when duplicating fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status, gse_get_status(status));
     if(status != EMPTY_FRAG)
     {
       goto failure;
@@ -235,7 +235,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_free_vfrag(vfrag);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %d when destroying the virtual fragment\n", status);
+    DEBUG(verbose, "Error %#.4x when destroying the virtual fragment (%s)\n", status, gse_get_status(status));
     goto failure;
   }
   DEBUG(verbose, "\nThe fragment and the buffer are destroyed\n");

@@ -116,12 +116,12 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
 
   if(length > MAX_GSE_PACKET_LENGTH)
   {
-    status = ERR_FRAG_LENGTH;
+    status = LENGTH_TOO_HIGH;
     goto error;
   }
   if(length < MIN_GSE_PACKET_LENGTH)
   {
-    status = LENGTH_TO_SMALL;
+    status = LENGTH_TOO_SMALL;
     goto error;
   }
   if(length >= packet1->length)
@@ -130,7 +130,7 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     goto error;
   }
 
-  memcpy(&header, packet1->start, sizeof(gse_header_t));
+  memcpy(&header, packet1->start, MIN(sizeof(gse_header_t), packet1->length));
 
   gse_length = ((uint16_t)header.gse_length_hi << 8) | header.gse_length_lo;
   if(gse_length != packet1->length - MANDATORY_FIELDS_LENGTH)
@@ -149,10 +149,12 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     if(header.e == 0x1)
     {
       payload_type = COMPLETE;
+      header_length = gse_compute_header_length(COMPLETE, header.lt);
     }
     else
     {
       payload_type = FIRST_FRAG;
+      header_length = gse_compute_header_length(FIRST_FRAG, header.lt);
     }
   }
   else
@@ -160,11 +162,31 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     if(header.e == 0x1)
     {
       payload_type = LAST_FRAG;
+      header_length = gse_compute_header_length(LAST_FRAG, header.lt);
+      //Check if wanted length allow 1 bit of data
+      //For first fragment CRC should not be forgotten
+      if((header_length + 1 + CRC_LENGTH) > length)
+      {
+        status = LENGTH_TOO_SMALL;
+        goto error;
+      }
     }
     else
     {
       payload_type = SUBS_FRAG;
+      header_length = gse_compute_header_length(SUBS_FRAG, header.lt);
     }
+  }
+  //Check if wanted length allow 1 bit of data
+  if((header_length + 1) > length)
+  {
+    status = LENGTH_TOO_SMALL;
+    goto error;
+  }
+  if(header_length > packet1->length)
+  {
+    status = ERR_INVALID_HEADER;
+    goto error;
   }
 
   init_data_length = packet1->length -
