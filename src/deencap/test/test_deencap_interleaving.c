@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
- * @file    test_deencap.c
- * @brief   The GSE deencapsulation test
+ * @file    test_deencap_interleaving.c
+ * @brief   The GSE deencapsulation interleaving test
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */
@@ -167,17 +167,20 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
   gse_deencap_t *deencap = NULL;
   vfrag_t *gse_packet = NULL;
   uint8_t label[6];
-  uint8_t ref_label[6];
+  uint8_t ref_label[3][6];
   vfrag_t *pdu = NULL;
   uint8_t label_type;
   uint16_t protocol;
   uint16_t gse_length;
   int status;
   int i;
-  int pkt_nbr = 0;
 
   for(i=0 ; i<6 ; i++)
-    ref_label[i] = i;
+  {
+    ref_label[0][i] = 5 - i;
+    ref_label[1][i] = i;
+    ref_label[2][i] = 5 - i;
+  }
 
   /* open the source dump file */
   handle = pcap_open_offline(src_filename, errbuf);
@@ -248,7 +251,6 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     unsigned char *in_packet;
     size_t in_size;
 
-    pkt_nbr++;
 
     /* check Ethernet frame length */
     if(header.len <= link_len_src || header.len != header.caplen)
@@ -279,13 +281,10 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
       DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
       goto free_pdu;
     }
-    DEBUG(verbose, "GSE packet #%d received, GSE Length = %d\n", pkt_nbr, gse_length);
 
     if(status == PDU)
     {
       counter++;
-      DEBUG(verbose, "%d packet received\n", pkt_nbr);
-      pkt_nbr = 0;
       cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
       if(cmp_packet == NULL)
       {
@@ -323,10 +322,10 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
       }
       for(i = 0 ; i < gse_get_label_length(label_type) ; i++)
       {
-        if(label[i] != ref_label[i])
+        if(label[i] != ref_label[counter - 1][i])
         {
           DEBUG(verbose, "---------- BAD PARAMETERS VALUE ----------\n");
-          DEBUG(verbose, "Reference label octet %d = %.2d\n", i, ref_label[i]);
+          DEBUG(verbose, "Reference label octet %d = %.2d\n", i, ref_label[counter - 1][i]);
           goto free_pdu;
         }
       }

@@ -16,14 +16,6 @@ fi
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_deencap_fault 0x0502 ./input/deencap_bad_gse_length.pcap || ./test_deencap_fault verbose 0x0502 ./input/deencap_bad_gse_length.pcap
-if [ "$?" -ne "0" ]; then
-  exit 1
-fi
-./test_deencap_timeout 0x0602 ./input/deencap_frag.pcap || ./test_deencap_timeout verbose 0x0602 ./input/deencap_frag.pcap
-if [ "$?" -ne "0" ]; then
-  exit 1
-fi
 ./test_deencap_fault 0x0505 ./input/deencap_invalid_label.pcap || ./test_deencap_fault verbose 0x0505 ./input/deencap_invalid_label.pcap
 if [ "$?" -ne "0" ]; then
   exit 1
@@ -48,9 +40,9 @@ fi
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_deencap_fault 0x0402 ./input/deencap_too_small.pcap || ./test_deencap_fault verbose 0x0402 ./input/deencap_too_small.pcap
+./test_deencap_fault 0x0606 ./input/deencap_too_small.pcap || ./test_deencap_fault verbose 0x0606 ./input/deencap_too_small.pcap
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_deencap_fault 0x0403 ./input/deencap_too_long.pcap || ./test_deencap_fault verbose 0x0403 ./input/deencap_too_long.pcap
+./test_deencap_fault 0x0503 ./input/deencap_bad_frag_id.pcap || ./test_deencap_fault verbose 0x0503 ./input/deencap_bad_frag_id.pcap
 

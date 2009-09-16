@@ -32,7 +32,7 @@
  *  @return  status code
  */
 static status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
-                                gse_header_t header);
+                                       gse_header_t header);
 
 /**
  *  @brief   Fill Deencapsulation context with fragments
@@ -43,7 +43,7 @@ static status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
  *  @return  status code
  */
 static status_t gse_deencap_add_frag(vfrag_t *data, gse_deencap_t *deencap,
-                              gse_header_t header);
+                                     gse_header_t header);
 
 /**
  *  @brief   Complete Deencapsulation context with a last fragment
@@ -54,7 +54,7 @@ static status_t gse_deencap_add_frag(vfrag_t *data, gse_deencap_t *deencap,
  *  @return  status code
  */
 static status_t gse_deencap_add_last_frag(vfrag_t *data, gse_deencap_t *deencap,
-                                   gse_header_t header);
+                                          gse_header_t header);
 
 /**
  *  @brief   Compute PDU length from total length field
@@ -64,7 +64,7 @@ static status_t gse_deencap_add_last_frag(vfrag_t *data, gse_deencap_t *deencap,
  *  @return  PDU Length
  */
 static size_t gse_deencap_compute_pdu_length(uint16_t total_length,
-                                               uint8_t label_type);
+                                             uint8_t label_type);
 
 /**
  *  @brief   Compute CRC32
@@ -81,48 +81,56 @@ static uint32_t gse_deencap_compute_crc(vfrag_t *vfrag, uint8_t label_type);
  *
  ****************************************************************************/
 
-status_t gse_deencap_packet (vfrag_t *packet, gse_deencap_t *deencap,
-                           uint8_t *label_type, uint8_t label[6],
-                           uint16_t *protocol, vfrag_t **pdu)
+status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
+                            uint8_t *label_type, uint8_t label[6],
+                            uint16_t *protocol, vfrag_t **pdu,
+                            uint16_t *gse_length)
 {
   status_t status = STATUS_OK;
 
   gse_header_t header;
   payload_type_t payload_type;
   size_t header_length;
-  uint16_t gse_length;
   uint16_t data_length;
   int label_length;
   unsigned int i;
-  unsigned int sum_label = 0; 
+  unsigned int sum_label = 0;
+  vfrag_t *packet;
 
   *pdu = NULL;
 
-  //Check packet validity
-  if(packet->length > MAX_GSE_PACKET_LENGTH)
+  if(data->length < MIN_GSE_PACKET_LENGTH)
   {
-    status = LENGTH_TOO_HIGH;
-    goto free_packet;
-  }
-  if(packet->length < MIN_GSE_PACKET_LENGTH)
-  {
-    status = LENGTH_TOO_SMALL;
-    goto free_packet;
+    status = ERR_PACKET_TOO_SMALL;
+    goto free_data;
   }
 
-  memcpy(&header, packet->start, MIN(sizeof(gse_header_t), packet->length));
+  memcpy(&header, data->start, MIN(sizeof(gse_header_t), data->length));
 
   if((header.s == 0x0) && (header.e == 0x0) && (header.lt == 0x0))
   {
     status = PADDING_DETECTED;
-    goto free_packet;
+    goto free_data;
   }
-
-  // Check packet validity
-  gse_length = ((uint16_t)header.gse_length_hi << 8) | header.gse_length_lo;
-  if(gse_length != packet->length - MANDATORY_FIELDS_LENGTH)
+  //Limit received data to GSE packet
+  *gse_length = ((uint16_t)header.gse_length_hi << 8) | header.gse_length_lo;
+  if((size_t)(*gse_length + MANDATORY_FIELDS_LENGTH) > data->length)
   {
     status = ERR_INVALID_GSE_LENGTH;
+    goto free_data;
+  }
+  //Create the packet from data
+  status = gse_duplicate_vfrag(&packet, data,
+                               (*gse_length + MANDATORY_FIELDS_LENGTH));
+  if(status != STATUS_OK)
+  {
+    goto free_data;
+  }
+  gse_free_vfrag(data);
+
+  if(packet->length < MIN_GSE_PACKET_LENGTH)
+  {
+    status = ERR_PACKET_TOO_SMALL;
     goto free_packet;
   }
   if(gse_get_label_length(header.lt) < 0)
@@ -246,6 +254,9 @@ status_t gse_deencap_packet (vfrag_t *packet, gse_deencap_t *deencap,
       assert(0);
   }
 
+  return status;
+free_data:
+  gse_free_vfrag(data);
   return status;
 free_packet:
   gse_free_vfrag(packet);
@@ -387,7 +398,7 @@ status_t gse_deencap_add_frag(vfrag_t *data, gse_deencap_t *deencap,
   }
   if((ctx->vfrag->end + data->length) > ctx->vfrag->vbuf->end)
   {
-    status = ERR_PACKET_TOO_LONG;
+    status = ERR_NO_SPACE_IN_BUFF;
     goto free_ctx;
   }
   memcpy(ctx->vfrag->end, data->start, data->length);

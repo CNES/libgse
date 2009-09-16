@@ -13,4 +13,8 @@ if [ "$?" -ne "0" ]; then
   exit 1
 fi
 ./test_encap_robust 0x0401 0 ./input/encap_pdu_too_long.pcap || ./test_encap_robust verbose 0x0401 0 ./input/encap_pdu_too_long.pcap
+if [ "$?" -ne "0" ]; then
+  exit 1
+fi
+./test_encap_bad_zero_copy 0x0201 60 ./input/encap_complete.pcap || ./test_encap_bad_zero_copy verbose 0x0201 60 ./input/encap_complete.pcap
 

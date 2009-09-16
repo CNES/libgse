@@ -151,6 +151,7 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
   vfrag_t *pdu = NULL;
   uint8_t label_type;
   uint16_t protocol;
+  uint16_t gse_length;
   int status;
   int i;
 
@@ -219,7 +220,7 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
 
     /* get next GSE packet */
     status = gse_deencap_packet(gse_packet, deencap, &label_type, label,
-                                &protocol, &pdu);
+                                &protocol, &pdu, &gse_length);
     if((status != STATUS_OK) && (status != PDU))
     {
       DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));

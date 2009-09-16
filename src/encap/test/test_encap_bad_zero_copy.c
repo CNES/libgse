@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
- * @file    test_deencap_fault.c
- * @brief   The GSE deencapsulation fault tolerance test
+ * @file    test_encap_robust.c
+ * @brief   GSE encapsulation robustness tests
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */
@@ -25,8 +25,8 @@
 #include <pcap.h>
 
 /* GSE includes */
-#include "gse_deencap_fct.h"
-#include "gse_deencap.h"
+#include "gse_encap_fct.h"
+#include "gse_encap.h"
 
 /****************************************************************************
  *
@@ -46,15 +46,16 @@
 usage: test [-verbose] output_value flow\n\
   verbose         Print DEBUG information\n\
   output_value    Attended output error value (see status)\n\
-  flow            flow of Ethernet frames to deencapsulate (PCAP format)\n"
-
+  frag_length     Maximal length of GSE fragments\n\
+  flow            flow of Ethernet frames to encapsulate (PCAP format)\n"
 
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
 
-#define QOS_NBR 5
-#define LABEL_TYPE 0x0
-#define PROTOCOL 0x2345
+#define QOS_NBR 1
+#define FIFO_SIZE 5
+#define PROTOCOL 9029
+
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
   do { \
@@ -68,7 +69,8 @@ usage: test [-verbose] output_value flow\n\
  *
  *****************************************************************************/
 
-static int test_deencap(int verbose, int output_value, char *src_filename);
+static int test_encap(int verbose, int output_value, size_t frag_length,
+                      char *src_filename);
 
 /****************************************************************************
  *
@@ -90,22 +92,24 @@ int main(int argc, char *argv[])
 {
   char *src_filename = NULL;
   unsigned int output_value = 0;
+  size_t frag_length = 0;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
-  if((argc < 3) || (argc > 4))
+  if((argc < 4) || (argc > 5))
   {
     printf(TEST_USAGE);
     goto quit;
   }
 
-  if(argc == 3)
+  if(argc == 4)
   {
     output_value = strtol(argv[1], NULL, 16);
-    src_filename = argv[2];
-    failure = test_deencap(0, output_value, src_filename);
+    frag_length = atoi(argv[2]);
+    src_filename = argv[3];
+    failure = test_encap(0, output_value, frag_length, src_filename);
   }
-  if(argc == 4)
+  if(argc == 5)
   {
     if(strcmp(argv[1], "verbose"))
     {
@@ -113,8 +117,9 @@ int main(int argc, char *argv[])
       goto quit;
     }
     output_value = strtoul(argv[2], NULL, 16);
-    src_filename = argv[3];
-    failure = test_deencap(1, output_value, src_filename);
+    frag_length = atoi(argv[3]);
+    src_filename = argv[4];
+    failure = test_encap(1, output_value, frag_length, src_filename);
   }
 
 quit:
@@ -128,14 +133,16 @@ quit:
  *****************************************************************************/
 
 /**
- * @brief Test the GSE library with a flow of IP or GSE packets to deencapsulate
+ * @brief Test the GSE library with a flow of IP or GSE packets to encapsulate
  *
  * @param verbose       0 for no debug messages, 1 for debug
  * @param output_value  The status code attended
+ * @param frag_length   Maximum length of fragments
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @return              0 in case of success, 1 otherwise
  */
-static int test_deencap(int verbose, int output_value, char *src_filename)
+static int test_encap(int verbose, int output_value, size_t frag_length,
+                      char *src_filename)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_t *handle;
@@ -145,16 +152,19 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
   unsigned char *packet;
   int is_failure = 1;
   unsigned long counter;
-  gse_deencap_t *deencap = NULL;
-  vfrag_t *gse_packet = NULL;
+  gse_encap_t *encap = NULL;
+  vfrag_t *vfrag_pkt[2];
   uint8_t label[6];
   vfrag_t *pdu = NULL;
-  uint8_t label_type;
-  uint16_t protocol;
-  uint16_t gse_length;
+  int i;
   int status;
+  uint8_t qos = 0;
+  int pkt_nbr;
 
-  DEBUG(verbose, "Tested status is %#.4x (%s)\n", output_value, gse_get_status(output_value));
+  vfrag_pkt[0] = NULL;
+  vfrag_pkt[1] = NULL;
+
+  DEBUG(verbose, "Tested output status %#.4x (%s)\n", output_value, gse_get_status(output_value));
   /* open the source dump file */
   handle = pcap_open_offline(src_filename, errbuf);
   if(handle == NULL)
@@ -183,7 +193,7 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
     link_len_src = 0;
 
   /* Initialize the GSE library */
-  status = gse_deencap_init(QOS_NBR, &deencap);
+  status = gse_encap_init(QOS_NBR, FIFO_SIZE, &encap);
   if(status != STATUS_OK)
   {
     DEBUG(verbose, "Error %#.4x when initializing library (%s)\n", status, gse_get_status(status));
@@ -196,6 +206,8 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
   {
     unsigned char *in_packet;
     size_t in_size;
+
+    counter++;
 
     /* check Ethernet frame length */
     if(header.len <= link_len_src || header.len != header.caplen)
@@ -210,34 +222,46 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
 
     /* Encapsulate the input packets, use in_packet and in_size as
        input */
-    status = gse_create_vfrag_with_data(&gse_packet, in_size, in_packet, in_size);
+    for(i=0 ; i<6 ; i++)
+      label[i] = i;
+    status = gse_create_vfrag_with_data(&pdu, in_size, in_packet, in_size);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto check_status;
     }
-
-    /* get next GSE packet */
-    status = gse_deencap_packet(gse_packet, deencap, &label_type, label,
-                                &protocol, &pdu, &gse_length);
-    if((status != STATUS_OK) && (status != PDU))
+    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(PROTOCOL), qos);
+    if(status != STATUS_OK)
     {
-      DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
+      DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status, gse_get_status(status));
       goto check_status;
     }
-    if(pdu != NULL)
-    {
-      status = gse_free_vfrag(pdu);
-      if(status != STATUS_OK)
-      {
-        goto check_status;
-      }
-    }
   }
+
+  /* get next GSE packet from the comparison dump file */
+  /* The following might be done several times in case of fragmentation */
+  pkt_nbr = 0;
+  do{
+    status = gse_encap_get_packet(&vfrag_pkt[pkt_nbr], encap, frag_length, qos);
+    if((status != STATUS_OK) && (status != FIFO_EMPTY))
+    {
+      DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
+      goto free_vfrag;
+    }
+    pkt_nbr++;
+  }while((status != FIFO_EMPTY) && (pkt_nbr < 2));
 
   /* everything went fine */
   is_failure = 0;
 
+free_vfrag:
+  for(i = 0 ; i < pkt_nbr ; i++)
+  {
+    if(vfrag_pkt[i] != NULL)
+    {
+      gse_free_vfrag(vfrag_pkt[i]);
+    }
+  }
 check_status:
   if(status == output_value)
   {
@@ -247,7 +271,7 @@ check_status:
   {
     is_failure = 1;
   }
-  status = gse_deencap_release(deencap);
+  status = gse_encap_release(encap);
   if(status != STATUS_OK)
   {
     is_failure = 1;

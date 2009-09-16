@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
- * @file    test_encap_copy.c
- * @brief   The GSE encapsulation with copy test
+ * @file    test_encap_deencap.c
+ * @brief   GSE encapsulation and deencapsulation test
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */
@@ -137,9 +137,10 @@ quit:
 
 
 /**
- * @brief Test the GSE library with a flow of IP or GSE packets to encapsulate
+ * @brief Test the GSE library with a flow of IP or GSE packets
  *
  * @param verbose       0 for no debug messages, 1 for debug
+ * @param frag_length   Maximum length of fragments
  * @param filename      The name of the PCAP file
  * @return              0 in case of success, 1 otherwise
  */
@@ -169,6 +170,7 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
   uint8_t rcv_label[6];
   uint8_t label_type;
   uint16_t protocol;
+  uint16_t gse_length;
   int i;
   int status;
   uint8_t qos = 0;
@@ -305,13 +307,14 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
 
     do{
       status = gse_deencap_packet(vfrag_pkt[rcv_pkt_nbr], deencap, &label_type, rcv_label,
-                                  &protocol, &rcv_pdu);
+                                  &protocol, &rcv_pdu, &gse_length);
       rcv_pkt_nbr++;
       if((status != STATUS_OK) && (status != PDU))
       {
         DEBUG(verbose, "Error %#.4x when deencapsulating packet (%s)\n", status, gse_get_status(status));
         goto free_packets;
       }
+      DEBUG(verbose, "GSE packet #%d received, GSE Length = %d\n", rcv_pkt_nbr - 1, gse_length);
       vfrag_pkt[rcv_pkt_nbr - 1] = NULL;
     }while((status != PDU) || (rcv_pkt_nbr < pkt_nbr));
 
@@ -337,12 +340,25 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
       goto free_pdu;
     }
     DEBUG(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
-          counter, label_type, protocol, label[0]);
+          counter, label_type, protocol, rcv_label[0]);
     for(i = 1 ; i < gse_get_label_length(label_type) ; i++)
     {
-      DEBUG(verbose, ":%.2d", label[i]);
+      DEBUG(verbose, ":%.2d", rcv_label[i]);
     }
     DEBUG(verbose, " (in hexa)\n");
+    if((label_type != 0) && (protocol != PROTOCOL))
+    {
+      DEBUG(verbose, "---------- BAD PARAMETERS VALUE ----------\n");
+      goto free_pdu;
+    }
+    for(i = 0 ; i < gse_get_label_length(label_type) ; i++)
+    {
+      if(rcv_label[i] != label[i])
+      {
+        DEBUG(verbose, "---------- BAD PARAMETERS VALUE ----------\n");
+        goto free_pdu;
+      }
+    }
 
     if(rcv_pdu != NULL)
     {

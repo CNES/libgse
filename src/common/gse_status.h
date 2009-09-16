@@ -72,8 +72,9 @@ typedef enum
                                          256 BBFrames */
   PDU = 0x0603,                     /**< A PDU and useful information are returned */
   PADDING_DETECTED = 0x0604,        /**< Padding is received */
-  ERR_PACKET_TOO_LONG = 0x0605,     /**< The packet is too long for the deencapsulation
+  ERR_NO_SPACE_IN_BUFF = 0x0605,    /**< The packet is too long for the deencapsulation
                                          buffer */
+  ERR_PACKET_TOO_SMALL = 0x0606,    /**< The packet is to small for a GSE packet */
 
   /** Received PDU status */
   ERR_INVALID_DATA_LENGTH = 0x0701, /**< DATA length are different from PDU length

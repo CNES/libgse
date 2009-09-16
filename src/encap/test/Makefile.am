@@ -9,6 +9,7 @@ noinst_PROGRAMS = \
 	test_encap_copy \
 	test_encap_robust \
 	test_encap_length_min \
+	test_encap_bad_zero_copy \
 	test_fifo \
 	test_refrag \
 	test_refrag_robust
@@ -51,6 +52,12 @@ test_encap_robust_LDADD = \
 
 test_encap_length_min_SOURCES = test_encap_length_min.c
 test_encap_length_min_LDADD = \
+	-lpcap \
+	../libgse_encap.la \
+	$(top_builddir)/src/common/libgse_common.la
+
+test_encap_bad_zero_copy_SOURCES = test_encap_bad_zero_copy.c
+test_encap_bad_zero_copy_LDADD = \
 	-lpcap \
 	../libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
