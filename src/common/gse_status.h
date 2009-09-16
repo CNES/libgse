@@ -39,9 +39,12 @@ typedef enum
   ERR_MULTIPLE_VBUF_ACCESS = 0x0203,/**< The data can't be modified in fragment because
                                          another fragment has access to the buffer */
   ERR_DATA_TOO_LONG = 0x0204,       /**< Data length is greater than fragment length */
+  ERR_PTR_OUTSIDE_BUFF = 0x0205,    /**< Virtual fragments pointers are outside allocated
+                                         memory */
+  ERR_FRAG_PTRS = 0x0206,           /**< Fragments pointers are erroneous */
 
   /** FIFO status */
-  FIFO_FULL = 0x0301,                /**< FIFO is full, no more context can be
+  FIFO_FULL = 0x0301,               /**< FIFO is full, no more context can be
                                          created */
   FIFO_EMPTY = 0x0302,              /**< The FIFO is empty, try to get packet
                                          from another one */
@@ -68,7 +71,7 @@ typedef enum
   /** Deencapsulation context status */
   ERR_CTX_NOT_INIT = 0x0601,        /**< The deencapsulation context does not exist
                                          while receiving a subsequent fragment of PDU */
-  TIMEOUT = 0x0602,                 /**< The PDU was not completly received in 
+  TIMEOUT = 0x0602,                 /**< The PDU was not completly received in
                                          256 BBFrames */
   PDU = 0x0603,                     /**< A PDU and useful information are returned */
   PADDING_DETECTED = 0x0604,        /**< Padding is received */

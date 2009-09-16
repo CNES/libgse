@@ -101,7 +101,7 @@ static uint32_t gse_refrag_compute_crc(vfrag_t *const packet1, size_t length,
  ****************************************************************************/
 
 status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
-                           uint8_t qos, size_t length)
+                           uint8_t qos, size_t max_length)
 {
   status_t status = STATUS_OK;
 
@@ -114,17 +114,17 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
   uint32_t crc;
   uint16_t gse_length;
 
-  if(length > MAX_GSE_PACKET_LENGTH)
+  if(max_length > MAX_GSE_PACKET_LENGTH)
   {
     status = LENGTH_TOO_HIGH;
     goto error;
   }
-  if(length < MIN_GSE_PACKET_LENGTH)
+  if(max_length < MIN_GSE_PACKET_LENGTH)
   {
     status = LENGTH_TOO_SMALL;
     goto error;
   }
-  if(length >= packet1->length)
+  if(max_length >= packet1->length)
   {
     status = REFRAG_UNNECESSARY;
     goto error;
@@ -165,7 +165,7 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
       header_length = gse_compute_header_length(LAST_FRAG, header.lt);
       //Check if wanted length allow 1 bit of data
       //For first fragment CRC should not be forgotten
-      if((header_length + 1 + CRC_LENGTH) > length)
+      if((header_length + 1 + CRC_LENGTH) > max_length)
       {
         status = LENGTH_TOO_SMALL;
         goto error;
@@ -178,7 +178,7 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     }
   }
   //Check if wanted length allow 1 bit of data
-  if((header_length + 1) > length)
+  if((header_length + 1) > max_length)
   {
     status = LENGTH_TOO_SMALL;
     goto error;
@@ -194,9 +194,13 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
 
   header_shift = gse_refrag_compute_header_shift(payload_type);
 
-  remaining_length = packet1->length - length - header_shift;
+  remaining_length = packet1->length - max_length - header_shift;
 
-  gse_shift_vfrag(packet1, header_shift, remaining_length * -1);
+  status = gse_shift_vfrag(packet1, header_shift, remaining_length * -1);
+  if(status != STATUS_OK)
+  {
+    goto error;
+  }
 
   gse_refrag_modify_header(packet1, header, qos, init_data_length, payload_type);
 
@@ -214,14 +218,14 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
   {
     crc = gse_refrag_compute_crc(packet1, init_data_length,
                                  gse_get_label_length(header.lt));
-    if(status != STATUS_OK)
-    {
-      goto error;
-    }
 
     memcpy((*packet2)->end, &crc, CRC_LENGTH);
 
-    gse_shift_vfrag(*packet2, header_length * -1, CRC_LENGTH);
+    status = gse_shift_vfrag(*packet2, header_length * -1, CRC_LENGTH);
+    if(status != STATUS_OK)
+    {
+      goto free_packet;
+    }
 
     // Add CRC length to remaining length
     remaining_length += CRC_LENGTH;
@@ -232,14 +236,20 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     if(header.opt.frag_id != qos)
     {
       status = ERR_INVALID_QOS;
-      goto error;
+      goto free_packet;
     }
-    gse_shift_vfrag(*packet2, header_length * -1, 0);
+    status = gse_shift_vfrag(*packet2, header_length * -1, 0);
+    if(status != STATUS_OK)
+    {
+      goto free_packet;
+    }
   }
 
   gse_refrag_create_header(*packet2, payload_type, header, qos, remaining_length);
 
   return status;
+free_packet:
+  gse_free_vfrag(*packet2);
 error:
   *packet2 = NULL;
   return status;

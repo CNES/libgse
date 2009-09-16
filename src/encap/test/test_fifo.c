@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
  * @file    test_fifo.c
- * @brief   The GSE FIFO test
+ * @brief   GSE FIFO test
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */

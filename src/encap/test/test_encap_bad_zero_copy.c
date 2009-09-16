@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
- * @file    test_encap_robust.c
- * @brief   GSE encapsulation robustness tests
+ * @file    test_encap_bad_zero_copy.c
+ * @brief   GSE encapsulation bad zero copy usage test
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */

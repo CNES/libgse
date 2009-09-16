@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
  * @file    test_deencap.c
- * @brief   The GSE deencapsulation test
+ * @brief   GSE deencapsulation tests
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */

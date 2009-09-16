@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
  * @file    test_deencap_interleaving.c
- * @brief   The GSE deencapsulation interleaving test
+ * @brief   GSE deencapsulation interleaving test
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */

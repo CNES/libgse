@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
  * @file    test_encap_copy.c
- * @brief   The GSE encapsulation with copy test
+ * @brief   GSE encapsulation with copy tests
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */

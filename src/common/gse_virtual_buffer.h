@@ -114,8 +114,9 @@ status_t gse_duplicate_vfrag(vfrag_t **vfrag, vfrag_t *father, size_t length);
  *  @param   start_shift  The shift value to apply on the beginning of the
  *                        fragment
  *  @param   end_shift    The shift value to apply on the end of the fragment
+ *  @return  status code
  */
-void gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift);
+status_t gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift);
 
 /**
  *  @brief   Shift a pointer
@@ -126,10 +127,9 @@ void gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift);
  *  @param   pointer      The pointer to shift
  *  @param   origin       The original adress
  *  @param   shift        The shift value to apply on the pointer
- *  @return  status code
  */
-status_t gse_shift_pointer(unsigned char **pointer, unsigned char **origin,
-                           size_t shift);
+void gse_shift_pointer(unsigned char **pointer, unsigned char *origin,
+                       size_t shift);
 
 /**
  *  @brief   Get the number of fragments in a virtual buffer related to a

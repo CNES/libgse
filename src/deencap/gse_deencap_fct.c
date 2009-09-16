@@ -171,7 +171,11 @@ status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
 
   data_length = packet->length - header_length;
 
-  gse_shift_vfrag(packet, header_length, 0);
+  status = gse_shift_vfrag(packet, header_length, 0);
+  if(status != STATUS_OK)
+  {
+    goto free_packet;
+  }
 
   label_length = gse_get_label_length(header.lt);
   if(label_length < 0)
@@ -324,7 +328,7 @@ status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
       goto free_data;
     }
     // Copy useful fields for CRC computation before data
-    offset = TOTAL_LENGTH_LENGTH + PROTOCOL_TYPE_LENGTH + 
+    offset = TOTAL_LENGTH_LENGTH + PROTOCOL_TYPE_LENGTH +
              gse_get_label_length(header.lt);
     memcpy(ctx->vfrag->start - offset, data->start - offset, offset);
     gse_free_vfrag(data);
@@ -350,7 +354,7 @@ status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
     }
   }
   ctx->bbframe_nbr = 0;
-  
+
   return status;
 free_vfrag:
   if(ctx != NULL)
@@ -402,7 +406,11 @@ status_t gse_deencap_add_frag(vfrag_t *data, gse_deencap_t *deencap,
     goto free_ctx;
   }
   memcpy(ctx->vfrag->end, data->start, data->length);
-  gse_shift_vfrag(ctx->vfrag, 0, data->length);
+  status = gse_shift_vfrag(ctx->vfrag, 0, data->length);
+  if(status != STATUS_OK)
+  {
+    goto free_ctx;
+  }
 
   // don't free data if this is the last fragment because data contain CRC
   if(header.e != 0x1)
@@ -427,7 +435,11 @@ status_t gse_deencap_add_last_frag(vfrag_t *data, gse_deencap_t *deencap,
   uint32_t rcv_crc;
   uint32_t calc_crc;
 
-  gse_shift_vfrag(data, 0, CRC_LENGTH * -1);
+  status = gse_shift_vfrag(data, 0, CRC_LENGTH * -1);
+  if(status != STATUS_OK)
+  {
+    goto error;
+  }
 
   status = gse_deencap_add_frag(data, deencap, header);
   if(status != STATUS_OK)

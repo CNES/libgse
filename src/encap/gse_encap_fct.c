@@ -140,11 +140,6 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
   encap_ctx->vfrag = pdu;
   encap_ctx->qos = qos;
   encap_ctx->protocol_type = protocol;
-  if(label_length < 0)
-  {
-    status = ERR_INVALID_LT;
-    goto free_vfrag;
-  }
   encap_ctx->label_type = label_type;
   memcpy(&(encap_ctx->label), label, label_length);
   encap_ctx->frag_nbr = 0;
@@ -180,7 +175,11 @@ status_t gse_encap_get_packet(vfrag_t **packet, gse_encap_t *encap,
   }
   encap_ctx->frag_nbr++;
   /* Remove duplicated data from the initial fragment */
-  gse_shift_vfrag(encap_ctx->vfrag, (*packet)->length, 0);
+  status = gse_shift_vfrag(encap_ctx->vfrag, (*packet)->length, 0);
+  if(status != STATUS_OK)
+  {
+    goto error;
+  }
 
   if(encap_ctx->vfrag->length <= 0)
   {
@@ -229,7 +228,11 @@ status_t gse_encap_get_packet_copy(vfrag_t **packet,
   }
   encap_ctx->frag_nbr++;
   /* Remove copied data from the initial fragment */
-  gse_shift_vfrag(encap_ctx->vfrag, (*packet)->length, 0);
+  status = gse_shift_vfrag(encap_ctx->vfrag, (*packet)->length, 0);
+  if(status != STATUS_OK)
+  {
+    goto error;
+  }
 
   if(encap_ctx->vfrag->length <= 0)
   {
@@ -416,7 +419,7 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
   }
 
   header_length = gse_compute_header_length(COMPLETE, encap_ctx->label_type);
-  //This is a complete PDU 
+  //This is a complete PDU
   if(gse_get_frag_number(encap_ctx) == 0)
   {
     //Can the PDU be completly encapsulated ?
@@ -464,11 +467,19 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
 
   if(payload_type == FIRST_FRAG)
   {
-    gse_shift_vfrag(encap_ctx->vfrag, header_length * -1, CRC_LENGTH);
+    status = gse_shift_vfrag(encap_ctx->vfrag, header_length * -1, CRC_LENGTH);
+    if(status != STATUS_OK)
+    {
+      goto error;
+    }
   }
   else
   {
-    gse_shift_vfrag(encap_ctx->vfrag, header_length * -1, 0);
+    status = gse_shift_vfrag(encap_ctx->vfrag, header_length * -1, 0);
+    if(status != STATUS_OK)
+    {
+      goto error;
+    }
   }
 
   gse_encap_create_header(payload_type, encap_ctx, *length);

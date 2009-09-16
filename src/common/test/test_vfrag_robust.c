@@ -139,7 +139,8 @@ static int test_vfrag_robust(int verbose)
   status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, data, DATA_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status,
+          gse_get_status(status));
     goto failure;
   }
 
@@ -147,9 +148,49 @@ static int test_vfrag_robust(int verbose)
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status,
+          gse_get_status(status));
     goto failure;
   }
+
+
+  DEBUG(verbose, "\n***********************************************************\n\n");
+
+  DEBUG(verbose, "Move the fragments pointers outside the memory\n\tStart pointer:\n");
+  status = gse_shift_vfrag(dup_vfrag, DATA_LENGTH + 5, 0);
+  if(status > 0)
+  {
+    DEBUG(verbose, "Error %#.4x when moving start of fragment (%s)\n", status,
+          gse_get_status(status));
+    if(status != ERR_PTR_OUTSIDE_BUFF)
+    {
+      goto failure;
+    }
+  }
+  DEBUG(verbose, "\tEnd pointer:\n");
+  status = gse_shift_vfrag(dup_vfrag, 0, DATA_LENGTH + 5);
+  if(status > 0)
+  {
+    DEBUG(verbose, "Error %#.4x when moving end of fragment (%s)\n", status,
+          gse_get_status(status));
+    if(status != ERR_PTR_OUTSIDE_BUFF)
+    {
+      goto failure;
+    }
+  }
+  DEBUG(verbose, "Move the start pointer behind the end pointer\n");
+  status = gse_shift_vfrag(dup_vfrag, DUP_LENGTH + 1, 0);
+  if(status > 0)
+  {
+    DEBUG(verbose, "Error %#.4x when moving start of fragment behind end of it (%s)\n",
+          status, gse_get_status(status));
+    if(status != ERR_FRAG_PTRS)
+    {
+      goto failure;
+    }
+  }
+
+  /*******************************TEST_ROBUST_3*******************************/
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
@@ -165,7 +206,8 @@ static int test_vfrag_robust(int verbose)
   status = gse_copy_data(vfrag, data, DATA_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when copying data in fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when copying data in fragment (%s)\n", status,
+          gse_get_status(status));
     if(status != ERR_MULTIPLE_VBUF_ACCESS)
     {
       goto failure;
@@ -174,7 +216,7 @@ static int test_vfrag_robust(int verbose)
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  /*******************************TEST_ROBUST_3*******************************/
+  /*******************************TEST_ROBUST_4*******************************/
 
   DEBUG(verbose, "Duplicate fragment while buffer contains %d fragments...\n",
           vfrag->vbuf->vfrag_count);
@@ -182,7 +224,8 @@ static int test_vfrag_robust(int verbose)
   status = gse_duplicate_vfrag(&dup_vfrag_2, vfrag, DUP_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status,
+          gse_get_status(status));
     if(status != ERR_FRAG_NBR)
     {
       goto failure;
@@ -195,7 +238,8 @@ static int test_vfrag_robust(int verbose)
   status = gse_free_vfrag(vfrag);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when destroying the virtual fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when destroying the virtual fragment (%s)\n", status,
+        gse_get_status(status));
     goto failure;
   }
 
@@ -203,21 +247,23 @@ static int test_vfrag_robust(int verbose)
   status = gse_free_vfrag(dup_vfrag);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when destroying the dumplicated fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when destroying the dumplicated fragment (%s)\n", status,
+          gse_get_status(status));
     goto failure;
   }
   DEBUG(verbose, "The fragments and the buffer are destroyed\n");
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  /*******************************TEST_ROBUST_4*******************************/
+  /*******************************TEST_ROBUST_5*******************************/
 
   // Create a fragment with no data
   DEBUG(verbose, "Create a fragment with no data and duplicate it...\n");
   status = gse_create_vfrag(&vfrag, VFRAG_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status,
+          gse_get_status(status));
     goto failure;
   }
 
@@ -225,7 +271,8 @@ static int test_vfrag_robust(int verbose)
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when duplicating fragment (%s)\n", status,
+          gse_get_status(status));
     if(status != EMPTY_FRAG)
     {
       goto failure;
@@ -235,7 +282,8 @@ static int test_vfrag_robust(int verbose)
   status = gse_free_vfrag(vfrag);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when destroying the virtual fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when destroying the virtual fragment (%s)\n", status,
+          gse_get_status(status));
     goto failure;
   }
   DEBUG(verbose, "\nThe fragment and the buffer are destroyed\n");

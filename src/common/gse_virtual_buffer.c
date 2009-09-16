@@ -71,18 +71,13 @@ status_t gse_create_vfrag(vfrag_t **vfrag, size_t max_length)
   (*vfrag)->vbuf = vbuf;
   (*vfrag)->start = ((*vfrag)->vbuf->start + MAX_HEADER_LENGTH),
   (*vfrag)->length = 0;
-  status = gse_shift_pointer(&(*vfrag)->end, &(*vfrag)->start, 0);
-  if(status != STATUS_OK)
-  {
-    goto free_vfrag;
-  }
+  gse_shift_pointer(&(*vfrag)->end, (*vfrag)->start, 0);
+  assert((*vfrag)->end <= (*vfrag)->vbuf->end);
   vbuf->vfrag_count++;
 
   return status;
-free_vfrag:
-  free(*vfrag);
-  *vfrag = NULL;
 error:
+  *vfrag = NULL;
   return status;
 }
 
@@ -133,11 +128,7 @@ status_t gse_copy_data(vfrag_t *vfrag, unsigned char const* data,
   vfrag->start = memcpy((vfrag->vbuf->start + MAX_HEADER_LENGTH),
                         data, data_length);
   vfrag->length = data_length;
-  status = gse_shift_pointer(&vfrag->end, &vfrag->start, vfrag->length);
-  if(status != STATUS_OK)
-  {
-    goto error;
-  }
+  gse_shift_pointer(&vfrag->end, vfrag->start, vfrag->length);
 
   assert((vfrag->end) <= (vfrag->vbuf->end));
 
@@ -201,37 +192,49 @@ status_t gse_duplicate_vfrag(vfrag_t **vfrag, vfrag_t *father, size_t length)
   (*vfrag)->vbuf = father->vbuf;
   (*vfrag)->start = father->start;
   (*vfrag)->length = MIN(length, father->length);
-  status = gse_shift_pointer(&(*vfrag)->end, &(*vfrag)->start, (*vfrag)->length);
-  if(status != STATUS_OK)
-  {
-    goto free_vfrag;
-  }
+  gse_shift_pointer(&(*vfrag)->end, (*vfrag)->start, (*vfrag)->length);
 
   assert(((*vfrag)->end) <= ((*vfrag)->vbuf->end));
   (*vfrag)->vbuf->vfrag_count++;
 
   return status;
-free_vfrag:
-  free(*vfrag);
 error:
   *vfrag = NULL;
   return status;
 }
 
-void gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift)
+status_t gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift)
 {
+  status_t status = STATUS_OK;
+  if(((vfrag->start + start_shift) < vfrag->vbuf->start) || ((vfrag->start + start_shift) > vfrag->vbuf->end))
+  {
+    status = ERR_PTR_OUTSIDE_BUFF;
+    goto error;
+  }
+
+  if(((vfrag->end + end_shift) < vfrag->vbuf->start) || ((vfrag->end + end_shift) > vfrag->vbuf->end))
+  {
+    status = ERR_PTR_OUTSIDE_BUFF;
+    goto error;
+  }
+
   vfrag->start += start_shift;
   vfrag->end += end_shift;
   vfrag->length = vfrag->end - vfrag->start;
+
+  if(vfrag->start > vfrag->end)
+  {
+    status = ERR_FRAG_PTRS;
+    goto error;
+  }
+
+error:
+  return status;
 }
 
-status_t gse_shift_pointer(unsigned char **pointer, unsigned char **origin, size_t shift)
+void gse_shift_pointer(unsigned char **pointer, unsigned char *origin, size_t shift)
 {
-  status_t status = STATUS_OK;
-
-  *pointer = *origin + shift;
-
-  return status;
+  *pointer = origin + shift;
 }
 
 int gse_get_vfrag_nbr(vfrag_t *vfrag)
@@ -263,16 +266,10 @@ status_t gse_create_vbuf(vbuf_t **vbuf, size_t length)
     goto free_vbuf;
   }
   (*vbuf)->length = length;
-  status = gse_shift_pointer(&(*vbuf)->end, &(*vbuf)->start, (*vbuf)->length);
-  if(status != STATUS_OK)
-  {
-    goto free_vbuf_start;
-  }
+  gse_shift_pointer(&(*vbuf)->end, (*vbuf)->start, (*vbuf)->length);
   (*vbuf)->vfrag_count = 0;
 
   return status;
-free_vbuf_start:
-  free((*vbuf)->start);
 free_vbuf:
   free(*vbuf);
   *vbuf = NULL;

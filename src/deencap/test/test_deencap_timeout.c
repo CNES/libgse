@@ -1,7 +1,7 @@
 /****************************************************************************/
 /**
- * @file    test_deencap_fault.c
- * @brief   The GSE deencapsulation fault tolerance test
+ * @file    test_deencap_timeout.c
+ * @brief   GSE deencapsulation timeout test
  * @author  Didier Barvaux / Viveris Technologies
  * @author  Julien Bernard / Viveris Technologies
  */
