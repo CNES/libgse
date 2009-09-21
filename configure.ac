@@ -45,7 +45,57 @@ AC_CONFIG_FILES([Makefile \
                  src/deencap/Makefile \
                  src/deencap/test/Makefile \
                  gse.pc \
-                 test/Makefile])
+                 test/Makefile \
+                 test/samples/Makefile \
+                 test/samples/ipv4/Makefile \
+                 test/samples/ipv4/icmp/Makefile \
+                 test/samples/ipv4/icmp+tcp/Makefile \
+                 test/samples/ipv4/ipv4/Makefile \
+                 test/samples/ipv4/ipv4/icmp/Makefile \
+                 test/samples/ipv4/ipv4/udp/Makefile \
+                 test/samples/ipv4/ipv4/udplite/Makefile \
+                 test/samples/ipv4/ipv4/udp/rtp/Makefile \
+                 test/samples/ipv4/ipv4/udp/rtp/mp3/Makefile \
+                 test/samples/ipv4/ipv4/udp/rtp/video1/Makefile \
+                 test/samples/ipv4/ipv4/udp/rtp/video2/Makefile \
+                 test/samples/ipv4/ipv6/Makefile \
+                 test/samples/ipv4/ipv6/icmp/Makefile \
+                 test/samples/ipv4/ipv6/udp/Makefile \
+                 test/samples/ipv4/ipv6/udp/rtp/Makefile \
+                 test/samples/ipv4/ipv6/udp/rtp/video1/Makefile \
+                 test/samples/ipv4/ipv6/udp/rtp/video1/extension/Makefile \
+                 test/samples/ipv4/ipv6/udp/rtp/video2/Makefile \
+                 test/samples/ipv4/ipv6/udplite/Makefile \
+                 test/samples/ipv4/udp/Makefile \
+                 test/samples/ipv4/udp/rtp/Makefile \
+                 test/samples/ipv4/udp/rtp/h323/Makefile \
+                 test/samples/ipv4/udp/rtp/misc/Makefile \
+                 test/samples/ipv4/udp/rtp/mp3/Makefile \
+                 test/samples/ipv4/udp/rtp/rtp_rtp_icmp/Makefile \
+                 test/samples/ipv4/udp/rtp/video1/Makefile \
+                 test/samples/ipv4/udp/rtp/video2/Makefile \
+                 test/samples/ipv4/udp/rtp/video3/Makefile \
+                 test/samples/ipv4/udp/rtp/voip/Makefile \
+                 test/samples/ipv4/udp/rtp/voip+video/Makefile \
+                 test/samples/ipv4/udplite/Makefile \
+                 test/samples/ipv6/Makefile \
+                 test/samples/ipv6/icmp/Makefile \
+                 test/samples/ipv6/icmp/extension/Makefile \
+                 test/samples/ipv6/ipv6/Makefile \
+                 test/samples/ipv6/ipv6/icmp/Makefile \
+                 test/samples/ipv6/ipv6/icmp/extension/Makefile \
+                 test/samples/ipv6/ipv6/udp/Makefile \
+                 test/samples/ipv6/ipv6/udplite/Makefile \
+                 test/samples/ipv6/udp/Makefile \
+                 test/samples/ipv6/udp/extension/Makefile \
+                 test/samples/ipv6/udp/rtp/Makefile \
+                 test/samples/ipv6/udp/rtp/audio_vlc/Makefile \
+                 test/samples/ipv6/udp/rtp/audio_vlc/extension/Makefile \
+                 test/samples/ipv6/udp/rtp/video1/Makefile \
+                 test/samples/ipv6/udp/rtp/video2/Makefile \
+                 test/samples/ipv6/udplite/Makefile \
+                 test/samples/ipv4fragmented/Makefile \
+                 ])
 
 AC_OUTPUT
 
