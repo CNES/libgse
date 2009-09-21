@@ -27,8 +27,6 @@
 /* GSE includes */
 #include "gse_encap_fct.h"
 #include "gse_deencap_fct.h"
-#include "gse_encap.h"
-#include "gse_deencap.h"
 
 /****************************************************************************
  *
@@ -54,9 +52,10 @@ usage: test [-verbose] cmp_file flow\n\
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
 
-#define QOS_NBR 1
+#define QOS_NBR 4
 #define FIFO_SIZE 100
-#define PKT_MAX 1000
+#define PKT_MAX 100
+#define PDU_MAX 10
 #define PROTOCOL 9029
 
 /** DEBUG macro */
@@ -165,15 +164,17 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
   int pkt_nbr = 0;
   int rcv_pkt_nbr = 0;
   uint8_t label[6];
-  vfrag_t *pdu = NULL;
+  vfrag_t **pdu = NULL;
   vfrag_t *rcv_pdu = NULL;
   uint8_t rcv_label[6];
   uint8_t label_type;
   uint16_t protocol;
   uint16_t gse_length;
   int i;
+  int qos_idx;
   int status;
   uint8_t qos = 0;
+  unsigned long pdu_counter;
 
   /* open the source dump file */
   handle = pcap_open_offline(filename, errbuf);
@@ -243,10 +244,12 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
     goto release_encap;
   }
 
-  vfrag_pkt = malloc(sizeof(vfrag_t*) * PKT_MAX);
+  vfrag_pkt = malloc(sizeof(vfrag_t*) * PKT_MAX * PDU_MAX);
+  pdu = malloc(sizeof(vfrag_t*) * PDU_MAX);
 
   /* for each packet in the dump */
   counter = 0;
+  pdu_counter = 0;
   while((packet = (unsigned char *) pcap_next(handle, &header)) != NULL)
   {
     unsigned char *in_packet;
@@ -269,29 +272,32 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
        input */
     for(i=0 ; i<6 ; i++)
       label[i] = i;
-    status = gse_create_vfrag_with_data(&pdu, in_size, in_packet, in_size);
+    status = gse_create_vfrag_with_data(&pdu[counter], in_size,
+                                        MAX_HEADER_LENGTH, CRC_LENGTH,
+                                        in_packet, in_size);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto release_lib;
     }
 
-    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(PROTOCOL), qos);
+    status = gse_encap_receive_pdu(pdu[counter], encap, label, 0, ntohs(PROTOCOL), qos);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when receiving pdu (%s)\n", status, gse_get_status(status));
       goto release_lib;
     }
-    qos++;
+    qos = (qos + 1) % QOS_NBR;
   }
+  DEBUG(verbose, "%lu PDU received\n", counter);
 
-  for(i = 0 ; i < QOS_NBR ; i++)
+  for(qos_idx = 0 ; qos_idx < QOS_NBR ; qos_idx++)
   {
     pkt_nbr = 0;
     rcv_pkt_nbr = 0;
 
     do{
-      status = gse_encap_get_packet_copy(&vfrag_pkt[pkt_nbr], encap, frag_length, i);
+      status = gse_encap_get_packet_copy(&vfrag_pkt[pkt_nbr], encap, frag_length, qos_idx);
       if(status == STATUS_OK)
       {
         pkt_nbr++;
@@ -303,73 +309,76 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
       }
     }while(status != FIFO_EMPTY);
 
-    DEBUG(verbose, "PDU #%lu: %d packets copied in FIFO %d\n", counter, pkt_nbr, i);
+    DEBUG(verbose, "%d packets got in FIFO %d\n", pkt_nbr, qos_idx);
 
     do{
-      status = gse_deencap_packet(vfrag_pkt[rcv_pkt_nbr], deencap, &label_type, rcv_label,
-                                  &protocol, &rcv_pdu, &gse_length);
-      rcv_pkt_nbr++;
-      if((status != STATUS_OK) && (status != PDU))
+      do{
+        status = gse_deencap_packet(vfrag_pkt[rcv_pkt_nbr], deencap, &label_type, rcv_label,
+                                    &protocol, &rcv_pdu, &gse_length);
+        rcv_pkt_nbr++;
+        if((status != STATUS_OK) && (status != PDU))
+        {
+          DEBUG(verbose, "Error %#.4x when deencapsulating packet (%s)\n", status, gse_get_status(status));
+          goto free_packets;
+        }
+        DEBUG(verbose, "GSE packet #%d received, GSE Length = %d\n", rcv_pkt_nbr - 1, gse_length);
+        vfrag_pkt[rcv_pkt_nbr - 1] = NULL;
+      }while(status != PDU);
+      pdu_counter++;
+
+      cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
+      if(cmp_packet == NULL)
       {
-        DEBUG(verbose, "Error %#.4x when deencapsulating packet (%s)\n", status, gse_get_status(status));
-        goto free_packets;
+        DEBUG(verbose, "packet #%lu: no packet available for comparison\n", counter);
+        goto free_pdu;
       }
-      DEBUG(verbose, "GSE packet #%d received, GSE Length = %d\n", rcv_pkt_nbr - 1, gse_length);
-      vfrag_pkt[rcv_pkt_nbr - 1] = NULL;
-    }while((status != PDU) || (rcv_pkt_nbr < pkt_nbr));
 
-    cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
-    if(cmp_packet == NULL)
-    {
-      DEBUG(verbose, "packet #%lu: no packet available for comparison\n", counter);
-      goto free_pdu;
-    }
+      /* compare the output packets with the ones given by the user */
+      if(cmp_header.caplen <= link_len_cmp)
+      {
+        DEBUG(verbose, "packet #%lu: packet available for comparison but too small\n",
+              counter);
+        goto free_pdu;
+      }
 
-    /* compare the output packets with the ones given by the user */
-    if(cmp_header.caplen <= link_len_cmp)
-    {
-      DEBUG(verbose, "packet #%lu: packet available for comparison but too small\n",
-            counter);
-      goto free_pdu;
-    }
-
-    if(!compare_packets(verbose, rcv_pdu->start, rcv_pdu->length,
-                        cmp_packet + link_len_cmp, cmp_header.caplen - link_len_cmp))
-    {
-      DEBUG(verbose, "packet #%lu: generated packet is not as attended\n", counter);
-      goto free_pdu;
-    }
-    DEBUG(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
-          counter, label_type, protocol, rcv_label[0]);
-    for(i = 1 ; i < gse_get_label_length(label_type) ; i++)
-    {
-      DEBUG(verbose, ":%.2d", rcv_label[i]);
-    }
-    DEBUG(verbose, " (in hexa)\n");
-    if((label_type != 0) && (protocol != PROTOCOL))
-    {
-      DEBUG(verbose, "---------- BAD PARAMETERS VALUE ----------\n");
-      goto free_pdu;
-    }
-    for(i = 0 ; i < gse_get_label_length(label_type) ; i++)
-    {
-      if(rcv_label[i] != label[i])
+      if(!compare_packets(verbose, rcv_pdu->start, rcv_pdu->length,
+                          cmp_packet + link_len_cmp, cmp_header.caplen - link_len_cmp))
+      {
+        DEBUG(verbose, "packet #%lu: generated packet is not as attended\n", counter);
+        goto free_pdu;
+      }
+      DEBUG(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
+            pdu_counter, label_type, protocol, rcv_label[0]);
+      for(i = 1 ; i < gse_get_label_length(label_type) ; i++)
+      {
+        DEBUG(verbose, ":%.2d", rcv_label[i]);
+      }
+      DEBUG(verbose, " (in hexa)\n");
+      if((label_type != 0) && (protocol != PROTOCOL))
       {
         DEBUG(verbose, "---------- BAD PARAMETERS VALUE ----------\n");
         goto free_pdu;
       }
-    }
-
-    if(rcv_pdu != NULL)
-    {
-      status = gse_free_vfrag(rcv_pdu);
-      if(status != STATUS_OK)
+      for(i = 0 ; i < gse_get_label_length(label_type) ; i++)
       {
-        DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
-        goto free_pdu;
+        if(rcv_label[i] != label[i])
+        {
+          DEBUG(verbose, "---------- BAD PARAMETERS VALUE ----------\n");
+          goto free_pdu;
+        }
       }
-      rcv_pdu = NULL;
-    } 
+
+      if(rcv_pdu != NULL)
+      {
+        status = gse_free_vfrag(rcv_pdu);
+        if(status != STATUS_OK)
+        {
+          DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
+          goto free_pdu;
+        }
+      rcv_pdu = NULL; 
+      }
+    }while(rcv_pkt_nbr < pkt_nbr);
   }
 
   /* everything went fine */
@@ -402,6 +411,10 @@ release_lib:
   if(vfrag_pkt != NULL)
   {
     free(vfrag_pkt);
+  }
+  if(pdu != NULL)
+  {
+    free(pdu);
   }
   status = gse_deencap_release(deencap);
   if(status != STATUS_OK)

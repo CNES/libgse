@@ -55,24 +55,31 @@ typedef struct
 /**
  *  @brief   Create an empty virtual fragment
  *
- *  @param   vfrag     The virtual fragment
- *  @param   length    The maximum length of the fragment
- *                     If length = 0, default length is used
+ *  The length of the virtual buffer containing the fragment will be
+ *  max_length + head_offset + trail_offset
+ *
+ *  @param   vfrag         The virtual fragment
+ *  @param   max_length    The maximum length of the fragment
+ *  @param   head_offset   The offset applied before the fragment
+ *  @param   trail_offset  The offset applied after the fragment
  *  @return  status code
  */
-status_t gse_create_vfrag(vfrag_t **vfrag, size_t max_length);
+status_t gse_create_vfrag(vfrag_t **vfrag, size_t max_length,
+                          size_t head_offset, size_t trail_offset);
 
 /**
  *  @brief   Create a virtual fragment containing data
  *
- *  @param   vfrag       The virtual fragment
- *  @param   length      The maximum length of the fragment
- *                       If length = 0, default length is used
- *  @param   data        The data to write in the virtual fragment
- *  @param   data_length The length of the data
+ *  @param   vfrag        The virtual fragment
+ *  @param   max_length   The maximum length of the fragment
+ *  @param   head_offset  The offset applied before the fragment
+ *  @param   trail_offset  The offset applied after the fragment
+ *  @param   data         The data to write in the virtual fragment
+ *  @param   data_length  The length of the data
  *  @return  status code
  */
 status_t gse_create_vfrag_with_data(vfrag_t **vfrag, size_t max_length,
+                                    size_t head_offset, size_t trail_offset,
                                     unsigned char const *data,
                                     size_t data_length);
 
@@ -119,17 +126,24 @@ status_t gse_duplicate_vfrag(vfrag_t **vfrag, vfrag_t *father, size_t length);
 status_t gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift);
 
 /**
- *  @brief   Shift a pointer
+ *  @brief   Reset a virtual fragment to its created state
  *
- *  Be careful, if you shift a start or end pointer from a virtual buffer
- *  (or fragment) this function does not modify length element !
- *
- *  @param   pointer      The pointer to shift
- *  @param   origin       The original adress
- *  @param   shift        The shift value to apply on the pointer
+ *  @param   vfrag         The virtual fragment
+ *  @param   length        The length of the fragment
+ *  @param   head_offset   The offset applied before the fragment
+ *  @param   trail_offset  The offset applied after the fragment
+ *  @return  status code
  */
-void gse_shift_pointer(unsigned char **pointer, unsigned char *origin,
-                       size_t shift);
+status_t gse_reset_vfrag(vfrag_t *vfrag, size_t *length,
+                         size_t head_offset, size_t trail_offset);
+
+/**
+ *  @brief   Get the pointer on the beginning of a virtual fragment
+ *
+ *  @param   vfrag  Virtual fragment
+ *  @return  pointer on the start of virtual fragment
+ */
+unsigned char *gse_get_vfrag_start(vfrag_t *vfrag);
 
 /**
  *  @brief   Get the number of fragments in a virtual buffer related to a

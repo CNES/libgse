@@ -211,7 +211,9 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
 
     /* Encapsulate the input packets, use in_packet and in_size as
        input */
-    status = gse_create_vfrag_with_data(&gse_packet, in_size, in_packet, in_size);
+    status = gse_create_vfrag_with_data(&gse_packet, in_size,
+                                        MAX_HEADER_LENGTH, CRC_LENGTH,
+                                        in_packet, in_size);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));

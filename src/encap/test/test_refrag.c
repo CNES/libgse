@@ -241,7 +241,9 @@ static int test_refrag(int verbose, size_t frag_length,
     in_size = header.len - link_len_src;
 
     /* Create a fragment containing a GSE packet */
-    status = gse_create_vfrag_with_data(&vfrag, in_size, in_packet, in_size);
+    status = gse_create_vfrag_with_data(&vfrag, in_size,
+                                        MAX_HEADER_LENGTH, CRC_LENGTH,
+                                        in_packet, in_size);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));

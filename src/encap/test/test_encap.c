@@ -240,7 +240,8 @@ static int test_encap(int verbose, size_t frag_length,
   status = gse_encap_init(QOS_NBR, FIFO_SIZE, &encap);
   if(status != STATUS_OK)
   {
-    DEBUG(verbose, "Error %#.4x when initializing library (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when initializing library (%s)\n", status,
+          gse_get_status(status));
     goto close_comparison;
   }
 
@@ -268,16 +269,20 @@ static int test_encap(int verbose, size_t frag_length,
        input */
     for(i=0 ; i<6 ; i++)
       label[i] = i;
-    status = gse_create_vfrag_with_data(&pdu, in_size, in_packet, in_size);
+    status = gse_create_vfrag_with_data(&pdu, in_size,
+                                        MAX_HEADER_LENGTH, CRC_LENGTH,
+                                        in_packet, in_size);
     if(status != STATUS_OK)
     {
-      DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
+      DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status,
+            gse_get_status(status));
       goto release_lib;
     }
     status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(PROTOCOL), qos);
     if(status != STATUS_OK)
     {
-      DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status, gse_get_status(status));
+      DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status,
+            gse_get_status(status));
       goto release_lib;
     }
 
@@ -287,7 +292,8 @@ static int test_encap(int verbose, size_t frag_length,
       status = gse_encap_get_packet(&vfrag_pkt, encap, frag_length, qos);
       if((status != STATUS_OK) && (status != FIFO_EMPTY))
       {
-        DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
+        DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status,
+              gse_get_status(status));
         goto release_lib;
       }
 
@@ -326,7 +332,8 @@ static int test_encap(int verbose, size_t frag_length,
         status = gse_free_vfrag(vfrag_pkt);
         if((status != STATUS_OK) && (status != FIFO_EMPTY))
         {
-          DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
+          DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status,
+                gse_get_status(status));
           goto release_lib;
         }
       }
@@ -342,7 +349,8 @@ release_lib:
   if(status != STATUS_OK)
   {
     is_failure = 1;
-    DEBUG(verbose, "Error %#.4x when releasing library (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when releasing library (%s)\n", status,
+          gse_get_status(status));
   }
 close_comparison:
   pcap_close(cmp_handle);

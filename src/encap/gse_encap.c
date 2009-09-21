@@ -54,6 +54,7 @@ status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
     goto free_encap;
   }
 
+  //Initialize each FIFO in encapsulation context
   for(i = 0 ; i < qos_nbr ; i++)
   {
     status = gse_init_fifo(&(*encap)->fifo[i], fifo_size);
@@ -80,6 +81,13 @@ status_t gse_encap_release(gse_encap_t *encap)
 
   unsigned int i;
 
+  if(encap == NULL)
+  {
+    status = ERR_NULL_PTR;
+    goto error;
+  }
+
+  //release FIFO in each context
   for(i = 0 ; i < encap->qos_nbr ; i++)
   {
     status = gse_release_fifo(&encap->fifo[i]);
@@ -92,6 +100,8 @@ status_t gse_encap_release(gse_encap_t *encap)
   free(encap);
 
   return stat_mem;
+error:
+  return status;
 }
 
 uint8_t gse_encap_get_qos_nbr(gse_encap_t *const encap)

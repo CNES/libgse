@@ -31,6 +31,7 @@ typedef enum
 
   STATUS_OK = 0x0000,               /**< There is no error or warning */
   ERR_MALLOC_FAILED = 0x0101,       /**< Error when calling malloc function */
+  ERR_NULL_PTR = 0x0102,            /**< NULL pointer given as parameter */
 
   /** Virtual buffer status */
   ERR_FRAG_NBR = 0x0201,            /**< Error when manipulating buffer related
@@ -42,6 +43,10 @@ typedef enum
   ERR_PTR_OUTSIDE_BUFF = 0x0205,    /**< Virtual fragments pointers are outside allocated
                                          memory */
   ERR_FRAG_PTRS = 0x0206,           /**< Fragments pointers are erroneous */
+  ERR_OFFSET_TOO_SMALL = 0x0207,      /**< Offset between virtual fragment start and virtual
+                                         buffer start is too small */
+  ERR_OFFSET_TOO_HIGH = 0x0208,     /**< Sum of offsets is greater than allocated length */
+  ERR_BUFF_LENGTH_NULL = 0x0209,    /**< Specified length for buffer is null */
 
   /** FIFO status */
   FIFO_FULL = 0x0301,               /**< FIFO is full, no more context can be
@@ -84,6 +89,8 @@ typedef enum
                                          computed with total length */
   ERR_INVALID_CRC = 0x0702,         /**< CRC32 computed does not correspond to received
                                          CRC32 */
+  ERR_CRC_FRAGMENTED = 0x0703,      /**< Last packet containis less than 4 bytes after
+                                         header */
 
   STATUS_MAX = 0x0800,
 } status_t;

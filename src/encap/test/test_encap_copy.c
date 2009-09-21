@@ -271,7 +271,9 @@ static int test_encap(int verbose, size_t frag_length,
        input */
     for(i=0 ; i<6 ; i++)
       label[i] = i;
-    status = gse_create_vfrag_with_data(&pdu, in_size, in_packet, in_size);
+    status = gse_create_vfrag_with_data(&pdu, in_size,
+                                        MAX_HEADER_LENGTH, CRC_LENGTH,
+                                        in_packet, in_size);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));

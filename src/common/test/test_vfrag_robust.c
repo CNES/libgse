@@ -120,10 +120,12 @@ static int test_vfrag_robust(int verbose)
 
   // Create a fragment with too much data
   DEBUG(verbose, "\nCreate a fragment with max_length < data_length...\n");
-  status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, data, BAD_DATA_LENGTH);
+  status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, 0, 0, data,
+                                      BAD_DATA_LENGTH);
   if(status > 0)
   {
-    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status, gse_get_status(status));
+    DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status,
+          gse_get_status(status));
     if(status != ERR_DATA_TOO_LONG)
     {
       goto failure;
@@ -136,7 +138,8 @@ static int test_vfrag_robust(int verbose)
 
   // Create a fragment
   DEBUG(verbose, "Create a correct fragment and duplicate it\n");
-  status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, data, DATA_LENGTH);
+  status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, 0, 0, data,
+                                      DATA_LENGTH);
   if(status > 0)
   {
     DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status,
@@ -257,9 +260,9 @@ static int test_vfrag_robust(int verbose)
 
   /*******************************TEST_ROBUST_5*******************************/
 
-  // Create a fragment with no data
-  DEBUG(verbose, "Create a fragment with no data and duplicate it...\n");
-  status = gse_create_vfrag(&vfrag, VFRAG_LENGTH);
+  // Create a fragment with data size 0
+  DEBUG(verbose, "Create a fragment with data size 0 and duplicate it...\n");
+  status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, 10, 10, data, 0);
   if(status > 0)
   {
     DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status,

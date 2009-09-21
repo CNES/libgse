@@ -16,5 +16,3 @@ sources = \
 
 libgse_common_la_SOURCES = $(sources)
 
-INCLUDES =
-
