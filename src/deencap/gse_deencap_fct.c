@@ -233,6 +233,16 @@ status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
       }
       *protocol = ntohs(header.opt.complete.protocol_type);
       *pdu = packet;
+
+
+      status = gse_create_vfrag_with_data(pdu, packet->length,
+                                          deencap->head_offset, deencap->trail_offset,
+                                          packet->start, packet->length);
+      gse_free_vfrag(packet);
+      if(status != STATUS_OK)
+      {
+        goto error;
+      }
       status = PDU;
       break;
     //GSE packet carrying a first fragment of PDU
@@ -265,7 +275,8 @@ status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
       memcpy(label, &(ctx->label), gse_get_label_length(ctx->label_type));
       *protocol = ctx->protocol_type;
 
-      status = gse_create_vfrag_with_data(pdu, ctx->vfrag->length, 0, 0,
+      status = gse_create_vfrag_with_data(pdu, ctx->vfrag->length,
+                                          deencap->head_offset, deencap->trail_offset,
                                           ctx->vfrag->start, ctx->vfrag->length);
       gse_free_vfrag(ctx->vfrag);
       ctx->vfrag = NULL;

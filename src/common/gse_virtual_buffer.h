@@ -146,6 +146,22 @@ status_t gse_reset_vfrag(vfrag_t *vfrag, size_t *length,
 unsigned char *gse_get_vfrag_start(vfrag_t *vfrag);
 
 /**
+ *  @brief   Get the length of a virtual fragment
+ *
+ *  @param   vfrag  Virtual fragment
+ *  @return  length of the virtual fragment
+ */
+size_t gse_get_vfrag_length(vfrag_t *vfrag);
+
+/**
+ *  @brief   Set the length of a virtual fragment
+ *
+ *  @param   vfrag  Virtual fragment
+ *  @return  status
+ */
+status_t gse_set_vfrag_length(vfrag_t *vfrag, size_t length);
+
+/**
  *  @brief   Get the number of fragments in a virtual buffer related to a
  *           virtual fragment
  *

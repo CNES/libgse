@@ -304,6 +304,34 @@ unsigned char *gse_get_vfrag_start(vfrag_t *vfrag)
   return(vfrag->start);
 }
 
+size_t gse_get_vfrag_length(vfrag_t *vfrag)
+{
+  return(vfrag->length);
+}
+
+status_t gse_set_vfrag_length(vfrag_t *vfrag, size_t length)
+{
+  status_t status = STATUS_OK;
+  
+  if(vfrag == NULL)
+  {
+    status = ERR_NULL_PTR;
+    goto error;
+  }
+
+  if((vfrag->start + length) > vfrag->vbuf->end)
+  {
+    status = ERR_PTR_OUTSIDE_BUFF;
+    goto error;
+  }
+
+  vfrag->end = vfrag->start + length;
+  vfrag->length = length;
+
+error:
+  return status;
+}
+
 int gse_get_vfrag_nbr(vfrag_t *vfrag)
 {
   return(vfrag->vbuf->vfrag_count);

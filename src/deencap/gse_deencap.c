@@ -45,6 +45,9 @@ status_t gse_deencap_init(uint8_t qos_nbr, gse_deencap_t **deencap)
   memset((*deencap)->deencap_ctx, 0, sizeof(gse_deencap_ctx_t) * qos_nbr);
   (*deencap)->qos_nbr = qos_nbr;
 
+  //Initialize offsets
+  gse_deencap_set_offsets(*deencap, 0, 0);
+
   return status;
 free_deencap:
   free(*deencap);
@@ -84,6 +87,13 @@ status_t gse_deencap_release(gse_deencap_t *deencap)
   return stat_mem;
 error:
   return status;
+}
+
+void gse_deencap_set_offsets(gse_deencap_t *deencap, size_t head_offset,
+                             size_t trail_offset)
+{
+  deencap->head_offset = head_offset;
+  deencap->trail_offset = trail_offset;
 }
 
 uint8_t gse_deencap_get_qos_nbr(gse_deencap_t *deencap)
