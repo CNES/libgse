@@ -228,7 +228,7 @@ static int test_encap(int verbose, int output_value, size_t frag_length,
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto check_status;
     }
-    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(PROTOCOL), qos);
+    status = gse_encap_receive_pdu(pdu, encap, label, 0, PROTOCOL, qos);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status, gse_get_status(status));

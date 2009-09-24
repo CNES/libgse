@@ -45,6 +45,8 @@ AC_CONFIG_FILES([Makefile \
                  src/deencap/Makefile \
                  src/deencap/test/Makefile \
                  gse.pc \
+                 app/Makefile \
+                 app/tunnel/Makefile \
                  test/Makefile \
                  test/samples/Makefile \
                  test/samples/ipv4/Makefile \

@@ -150,7 +150,7 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
   }
   encap_ctx->vfrag = pdu;
   encap_ctx->qos = qos;
-  encap_ctx->protocol_type = protocol;
+  encap_ctx->protocol_type = htons(protocol);
   encap_ctx->label_type = label_type;
   memcpy(&(encap_ctx->label), label, label_length);
   encap_ctx->frag_nbr = 0;
@@ -188,7 +188,7 @@ status_t gse_encap_get_packet(vfrag_t **packet, gse_encap_t *encap,
   }
 
   //Duplicate this fragment
-  status = gse_duplicate_vfrag(packet, encap_ctx->vfrag,length);
+  status = gse_duplicate_vfrag(packet, encap_ctx->vfrag, length);
   if(status != STATUS_OK)
   {
     goto packet_null;
@@ -230,7 +230,6 @@ status_t gse_encap_get_packet_copy(vfrag_t **packet,
   status_t status = STATUS_OK;
 
   int fifo_elt;
-  size_t head_offset;
   gse_encap_ctx_t *encap_ctx;
 
   if(encap == NULL)
@@ -249,12 +248,9 @@ status_t gse_encap_get_packet_copy(vfrag_t **packet,
     goto packet_null;
   }
 
-  /* Compute the length difference between first fragment header and complete one
-   * This value will be used as header offset for the fragment copy in order to
-   * allocate enough space for a complete PDU refragmentation */
-  head_offset = FRAG_ID_LENGTH + TOTAL_LENGTH_LENGTH;
   //Create a new fragment
-  status = gse_create_vfrag_with_data(packet, length, head_offset, 0,
+  status = gse_create_vfrag_with_data(packet, length, encap->head_offset,
+                                      encap->trail_offset,
                                       encap_ctx->vfrag->start,
                                       length);
   if(status != STATUS_OK)

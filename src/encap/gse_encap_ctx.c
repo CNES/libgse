@@ -23,8 +23,12 @@
  *
  ****************************************************************************/
 
-unsigned int gse_get_frag_number(gse_encap_ctx_t *const encap_ctx)
+int gse_get_frag_number(gse_encap_ctx_t *const encap_ctx)
 {
+  if(encap_ctx == NULL)
+  {
+    return -1;
+  }
   return (encap_ctx->frag_nbr);
 }
 

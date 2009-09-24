@@ -104,6 +104,7 @@ static uint32_t gse_refrag_compute_crc(vfrag_t *const packet1, size_t length,
  ****************************************************************************/
 
 status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
+                           size_t head_offset, size_t trail_offset,
                            uint8_t qos, size_t max_length)
 {
   status_t status = STATUS_OK;
@@ -227,9 +228,11 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
 
   if(payload_type == COMPLETE)
   {
-    //Second fragment will be a last fragment, we need to add a CRC
-    status = gse_create_vfrag_with_data(packet2, remaining_length, header_length,
-                                        CRC_LENGTH, packet1->end, remaining_length);
+    //Second created fragment will be a last fragment, we need to add a CRC
+    status = gse_create_vfrag_with_data(packet2, remaining_length,
+                                        header_length + head_offset,
+                                        CRC_LENGTH + trail_offset,
+                                        packet1->end, remaining_length);
     if(status != STATUS_OK)
     {
       goto error;
@@ -259,8 +262,10 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     }
 
     //Create the second fragment
-    status = gse_create_vfrag_with_data(packet2, remaining_length, header_length,
-                                        0, packet1->end, remaining_length);
+    status = gse_create_vfrag_with_data(packet2, remaining_length,
+                                        header_length + head_offset,
+                                        trail_offset, packet1->end,
+                                        remaining_length);
     if(status != STATUS_OK)
     {
       goto error;
@@ -273,7 +278,8 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     }
   }
 
-  status = gse_refrag_create_header(*packet2, payload_type, header, qos, remaining_length);
+  status = gse_refrag_create_header(*packet2, payload_type, header, qos,
+                                    remaining_length);
   if(status != STATUS_OK)
   {
     goto free_packet;

@@ -118,7 +118,7 @@ error:
   return status;
 }
 
-status_t gse_get_elt(fifo_t *fifo, gse_encap_ctx_t **context)
+status_t gse_get_fifo_elt(fifo_t *fifo, gse_encap_ctx_t **context)
 {
   status_t status = STATUS_OK;
 
@@ -137,6 +137,7 @@ error:
 
 int gse_get_elt_nbr_fifo(fifo_t *const fifo)
 {
+  assert(fifo != NULL);
   return fifo->elt_nbr;
 }
 

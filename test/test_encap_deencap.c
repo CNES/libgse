@@ -281,7 +281,7 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
       goto release_lib;
     }
 
-    status = gse_encap_receive_pdu(pdu[counter], encap, label, 0, ntohs(PROTOCOL), qos);
+    status = gse_encap_receive_pdu(pdu[counter], encap, label, 0, PROTOCOL, qos);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when receiving pdu (%s)\n", status, gse_get_status(status));

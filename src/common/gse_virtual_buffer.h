@@ -58,7 +58,7 @@ typedef struct
  *  The length of the virtual buffer containing the fragment will be
  *  max_length + head_offset + trail_offset
  *
- *  @param   vfrag         The virtual fragment
+ *  @param   vfrag         OUT: The virtual fragment
  *  @param   max_length    The maximum length of the fragment
  *  @param   head_offset   The offset applied before the fragment
  *  @param   trail_offset  The offset applied after the fragment
@@ -70,10 +70,10 @@ status_t gse_create_vfrag(vfrag_t **vfrag, size_t max_length,
 /**
  *  @brief   Create a virtual fragment containing data
  *
- *  @param   vfrag        The virtual fragment
+ *  @param   vfrag        OUT: The virtual fragment
  *  @param   max_length   The maximum length of the fragment
  *  @param   head_offset  The offset applied before the fragment
- *  @param   trail_offset  The offset applied after the fragment
+ *  @param   trail_offset The offset applied after the fragment
  *  @param   data         The data to write in the virtual fragment
  *  @param   data_length  The length of the data
  *  @return  status code
@@ -82,6 +82,8 @@ status_t gse_create_vfrag_with_data(vfrag_t **vfrag, size_t max_length,
                                     size_t head_offset, size_t trail_offset,
                                     unsigned char const *data,
                                     size_t data_length);
+/* For a GSE encapsulation usage, the header offset should at least be the
+ * maximum header length and the trailer offset should at least be the CRC length */
 
 /**
  *  @brief   Copy data in a virtual fragment
@@ -141,7 +143,7 @@ status_t gse_reset_vfrag(vfrag_t *vfrag, size_t *length,
  *  @brief   Get the pointer on the beginning of a virtual fragment
  *
  *  @param   vfrag  Virtual fragment
- *  @return  pointer on the start of virtual fragment
+ *  @return  pointer on the start of virtual fragment on sucess, NULL on failure
  */
 unsigned char *gse_get_vfrag_start(vfrag_t *vfrag);
 
@@ -149,7 +151,7 @@ unsigned char *gse_get_vfrag_start(vfrag_t *vfrag);
  *  @brief   Get the length of a virtual fragment
  *
  *  @param   vfrag  Virtual fragment
- *  @return  length of the virtual fragment
+ *  @return  length of the virtual fragment on success, -1 on failure
  */
 size_t gse_get_vfrag_length(vfrag_t *vfrag);
 
@@ -166,7 +168,7 @@ status_t gse_set_vfrag_length(vfrag_t *vfrag, size_t length);
  *           virtual fragment
  *
  *  @param   vfrag The virtual fragment depending on the virtual buffer
- *  @return  Number of fragments
+ *  @return  Number of fragments on success, -1 on failure
  */
 int gse_get_vfrag_nbr(vfrag_t *vfrag);
 

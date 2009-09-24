@@ -37,7 +37,7 @@
  *  @param   encap          The encapsulation context structure
  *  @param   label          The packet label
  *  @param   label_type     The label type field value
- *                          //'00' only implemented
+ *                          only '00' is implemented
  *  @param   protocol       The PDU protocol
  *  @param   qos            The QoS value of the PDU
  *  @return  status code
@@ -49,7 +49,7 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
 /**
  *  @brief   Get a packet from the encapsulation context structure
  *
- *  @param   packet        The GSE packet
+ *  @param   packet        OUT: The GSE packet
  *  @param   encap         The encapsulation context structure
  *  @param   length        Desired length for the packet
  *  @param   qos           QoS of the packet
@@ -63,7 +63,7 @@ status_t gse_encap_get_packet(vfrag_t **packet, gse_encap_t *encap,
  *
  *  This function does not use zero copy strategy
  *
- *  @param   packet        The GSE packet
+ *  @param   packet        OUT: The GSE packet
  *  @param   encap         The encapsulation context structure related
  *  @param   length        Desired length for the packet
  *  @param   qos           QoS of the packet

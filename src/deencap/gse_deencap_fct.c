@@ -300,14 +300,21 @@ error:
   return status;
 }
 
-void gse_deencap_new_bbframe (gse_deencap_t *deencap)
+status_t gse_deencap_new_bbframe (gse_deencap_t *deencap)
 {
   unsigned int i;
+
+  if(deencap == NULL)
+  {
+    return ERR_NULL_PTR;
+  }
 
   for(i = 0 ; i < gse_deencap_get_qos_nbr(deencap) ; i++)
   {
     deencap->deencap_ctx[i].bbframe_nbr++;
   }
+
+  return STATUS_OK;
 }
 
 /****************************************************************************

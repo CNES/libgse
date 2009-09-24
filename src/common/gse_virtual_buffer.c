@@ -301,11 +301,19 @@ error:
 
 unsigned char *gse_get_vfrag_start(vfrag_t *vfrag)
 {
+  if(vfrag == NULL)
+  {
+    return NULL;
+  }
   return(vfrag->start);
 }
 
 size_t gse_get_vfrag_length(vfrag_t *vfrag)
 {
+  if(vfrag == NULL)
+  {
+    return -1;
+  }
   return(vfrag->length);
 }
 
@@ -334,6 +342,10 @@ error:
 
 int gse_get_vfrag_nbr(vfrag_t *vfrag)
 {
+  if(vfrag == NULL)
+  {
+    return -1;
+  }
   return(vfrag->vbuf->vfrag_count);
 }
 

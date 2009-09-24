@@ -89,14 +89,23 @@ error:
   return status;
 }
 
-void gse_deencap_set_offsets(gse_deencap_t *deencap, size_t head_offset,
+status_t gse_deencap_set_offsets(gse_deencap_t *deencap, size_t head_offset,
                              size_t trail_offset)
 {
+  if(deencap == NULL)
+  {
+    return ERR_NULL_PTR;
+  }
   deencap->head_offset = head_offset;
   deencap->trail_offset = trail_offset;
+  return STATUS_OK;
 }
 
 uint8_t gse_deencap_get_qos_nbr(gse_deencap_t *deencap)
 {
+  if(deencap == NULL)
+  {
+    return -1;
+  }
   return (deencap->qos_nbr);
 }

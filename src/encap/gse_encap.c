@@ -64,6 +64,14 @@ status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
     }
   }
 
+  /* Initialize offsets
+   * The head offset length difference between first fragment header and
+   * complete one, it allows to allocate enough space for a complete PDU 
+   * refragmentation */
+  gse_encap_set_offsets(*encap, 
+                        FRAG_ID_LENGTH + TOTAL_LENGTH_LENGTH , 0);
+
+
   return status;
 free_fifo:
   free((*encap)->fifo);
@@ -104,7 +112,23 @@ error:
   return status;
 }
 
+status_t gse_encap_set_offsets(gse_encap_t *encap,
+                               size_t head_offset, size_t trail_offset)
+{
+  if(encap == NULL)
+  {
+    return ERR_NULL_PTR;
+  }
+  encap->head_offset = head_offset;
+  encap->trail_offset = trail_offset;
+  return STATUS_OK;
+}
+
 uint8_t gse_encap_get_qos_nbr(gse_encap_t *const encap)
 {
+  if(encap == NULL)
+  {
+    return -1;
+  }
   return (encap->qos_nbr);
 }

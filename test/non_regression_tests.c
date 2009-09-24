@@ -44,18 +44,18 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [verbose] [-lvl nbr] [-h] [-s] [-r refrag_filename] frag_filename flow\n\
+usage: test [verbose] [-lvl LEVEL] [-h] [-s] [-r REFRAG_FILENAME] FRAG_FILENAME FLOW\n\
   verbose          Print DEBUG information level 1\n\
   -lvl             Modify DEBUG level\n\
-  nbr              New DEBUG level [0, 2]\n\
+  LEVEL            New DEBUG level [0, 2]\n\
   -h               Print this usage and exit\n\
   -s               Save output packets instead of compare them\n\
   -r               Activate refragmentation\n\
-  refrag_filename  Save the refragmented packets or compare them\n\
+  REFRAG_FILENAME  Save the refragmented packets or compare them\n\
                    with the reference packets stored in refrag_file (PCAP format)\n\
-  frag_filename    Save the fragmented packets or compare them\n\
+  FRAG_FILENAME    Save the fragmented packets or compare them\n\
                    with the reference packets stored in frag_file (PCAP format)\n\
-  flow             Flow of Ethernet frames to encapsulate (PCAP format)\n"
+  FLOW             Flow of Ethernet frames to encapsulate (PCAP format)\n"
 
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
@@ -516,7 +516,7 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
       goto release_lib;
     }
 
-    status = gse_encap_receive_pdu(pdu, encap, label, 0, ntohs(PROTOCOL), qos);
+    status = gse_encap_receive_pdu(pdu, encap, label, 0, PROTOCOL, qos);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when receiving PDU #%lu (%s)\n", status, counter,
@@ -608,8 +608,8 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
     {
       for(refrag_idx = 0 ; refrag_idx < pkt_nbr ; refrag_idx++)
       {
-        status = gse_refrag_packet(vfrag_pkt[refrag_idx], &refrag_pkt[refrag_idx], qos,
-                 refrag_length[refrag_length_idx]);
+        status = gse_refrag_packet(vfrag_pkt[refrag_idx], &refrag_pkt[refrag_idx], 
+                 0, 0, qos, refrag_length[refrag_length_idx]);
         if((status != STATUS_OK) && (status != REFRAG_UNNECESSARY))
         {
           DEBUG(verbose, "Error %#.4x when refragmenting packet (%s)\n",

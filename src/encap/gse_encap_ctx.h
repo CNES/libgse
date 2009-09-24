@@ -34,7 +34,7 @@ typedef struct
   uint8_t qos;            /**< QoS value of the context : used as FragID value */
   vfrag_t *vfrag;         /**< Virtual fragment containing the PDU */
   uint16_t total_length;  /**< Total length field value */
-  uint16_t protocol_type;  /**< Protocol type field value */
+  uint16_t protocol_type; /**< Protocol type field value */
   uint8_t label_type;     /**< Label type field value */
   gse_label_t label;      /**< Label field value */
   unsigned int frag_nbr;  /**< Number of fragment */
@@ -51,9 +51,9 @@ typedef struct
  *
  *  This function is used mainly to know if a fragment is the first one or not
  *
- *  @param   encap_ctx    Teh encapsulation context
- *  @return  Fragment number
+ *  @param   encap_ctx    The encapsulation context
+ *  @return  fragment number on success, -1 on failure
  */
-unsigned int gse_get_frag_number(gse_encap_ctx_t *const encap_ctx);
+int gse_get_frag_number(gse_encap_ctx_t *const encap_ctx);
 
 #endif

@@ -218,7 +218,7 @@ static int test_refrag(int verbose, int output_value, size_t frag_length,
     }
 
     /* Refragment the GSE packet */
-    status = gse_refrag_packet(vfrag, &vfrag_pkt, qos, frag_length);
+    status = gse_refrag_packet(vfrag, &vfrag_pkt, 0, 0, qos, frag_length);
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when refragment packet (%s)\n", status, gse_get_status(status));

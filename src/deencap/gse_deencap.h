@@ -84,15 +84,16 @@ status_t gse_deencap_release(gse_deencap_t *deencap);
  *  @param   deencap       Structure of de-encapsulation contexts
  *  @param   head_offset   Offset applied on the beginning of the PDU
  *  @param   trail_offset  Offset applied on the end of the PDU
+ *  @return  status code
  */
-void gse_deencap_set_offsets(gse_deencap_t *deencap,
-                             size_t head_offset, size_t trail_offset);
+status_t gse_deencap_set_offsets(gse_deencap_t *deencap,
+                                 size_t head_offset, size_t trail_offset);
 
 /**
  *  @brief   Get the QoS number for deencapsulation context
  *
  *  @param   deencap   Structure of deencapsulation contexts
- *  @return  QoS number
+ *  @return  QoS number on success, -1 on failure
  */
 uint8_t gse_deencap_get_qos_nbr(gse_deencap_t *const deencap);
 

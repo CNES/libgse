@@ -37,12 +37,12 @@
  *  @param   data           The data containing packet to deencapsulate
  *                          The first bytes of data should contain the packet
  *  @param   deencap        The deencapsulation context structure
- *  @param   label_type     The label type field value
- *                          //'00' only implemented
- *  @param   label          The packet label
- *  @param   protocol       The PDU protocol
- *  @param   pdu            The PDU
- *  @param   gse_length     The GSE Length field value
+ *  @param   label_type     OUT: The label type field value
+ *                          only '00' is implemented
+ *  @param   label          OUT: The packet label
+ *  @param   protocol       OUT: The PDU protocol
+ *  @param   pdu            OUT: The PDU
+ *  @param   gse_length     OUT: The GSE Length field value
  *                          The length of th GSE packet is GSE Length + 2 Bytes
  *  @return  status code
  */
@@ -55,7 +55,8 @@ status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
  *  @brief   Signal that a new BBFrame has been received
  *
  *  @param   deencap       The deencapsulation context structure
+ *  @return  status code
  */
-void gse_deencap_new_bbframe(gse_deencap_t *deencap);
+status_t gse_deencap_new_bbframe(gse_deencap_t *deencap);
 
 #endif

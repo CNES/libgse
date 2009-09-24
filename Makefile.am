@@ -4,7 +4,10 @@
 #	Description: create the GSE library and the test application
 ################################################################################
 
-SUBDIRS = src test
+SUBDIRS = \
+  src \
+	test \
+	app
 
 configure_files = \
 	aclocal.m4 \

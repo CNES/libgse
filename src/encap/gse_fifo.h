@@ -49,7 +49,7 @@ typedef struct
  *  @brief   Initialize a FIFO
  *
  *  @param   fifo  The FIFO to initialize
- *  @param   size  The size of the fifo
+ *  @param   size  The size of the FIFO
  *  @return  status code
  */
 status_t gse_init_fifo(fifo_t *fifo, size_t size);
@@ -71,12 +71,12 @@ status_t gse_release_fifo(fifo_t *fifo);
 status_t gse_pop_fifo(fifo_t *fifo);
 
 /**
- *  @brief   Add an element in the FIFO
+ *  @brief   Tell the FIFO to add an element
  *
  *  The function return the new element but does not fill it
  *
  *  @param   fifo      The FIFO
- *  @param   context   The element to add in the FIFO
+ *  @param   context   OUT: The element added in the FIFO
  *  @return  status code
  */
 status_t gse_push_fifo(fifo_t *fifo, gse_encap_ctx_t **context);
@@ -85,16 +85,16 @@ status_t gse_push_fifo(fifo_t *fifo, gse_encap_ctx_t **context);
  *  @brief   Get the first element of the FIFO without removing it
  *
  *  @param   fifo     The FIFO
- *  @param   context  The element to get in the FIFO
- *  @return  The fifo size
+ *  @param   context  OUT: The element to get in the FIFO
+ *  @return  status code
  */
-status_t gse_get_elt(fifo_t *fifo, gse_encap_ctx_t **context);
+status_t gse_get_fifo_elt(fifo_t *fifo, gse_encap_ctx_t **context);
 
 /**
  *  @brief   Get the number of elements in the FIFO
  *
  *  @param   fifo   The FIFO
- *  @return  The fifo size
+ *  @return  the FIFO size on success
  */
 int gse_get_elt_nbr_fifo(fifo_t *const fifo);
 
