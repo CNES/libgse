@@ -5,16 +5,24 @@
 ################################################################################
 
 noinst_PROGRAMS = \
-	gsetunnel
+	gsetunnel \
+	gsetunnel_thread
 
 INCLUDES = \
 	-I$(top_srcdir)/src/common \
 	-I$(top_srcdir)/src/encap \
 	-I$(top_srcdir)/src/deencap
 
-AM_LDFLAGS = -L$(top_srcdir)/src/
+AM_LDFLAGS = \
+	-L$(top_srcdir)/src/ \
+	-lpthread
 
 gsetunnel_SOURCES = tunnel.c
 gsetunnel_LDADD = \
+	-lpcap \
+	-lgse
+
+gsetunnel_thread_SOURCES = tunnel_thread.c
+gsetunnel_thread_LDADD = \
 	-lpcap \
 	-lgse

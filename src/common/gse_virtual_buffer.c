@@ -127,6 +127,12 @@ status_t gse_copy_data(vfrag_t *vfrag, unsigned char const* data,
     goto error;
   }
 
+  if(data == NULL)
+  {
+    status = ERR_NULL_PTR;
+    goto error;
+  }
+
   //If there is more than one virtual fragment in buffer, don't overwrite data
   if(gse_get_vfrag_nbr(vfrag) > 1)
   {

@@ -131,7 +131,7 @@ status_t gse_shift_vfrag(vfrag_t *vfrag, size_t start_shift, size_t end_shift);
  *  @brief   Reset a virtual fragment to its created state
  *
  *  @param   vfrag         The virtual fragment
- *  @param   length        The length of the fragment
+ *  @param   length        OUT: The length of the fragment
  *  @param   head_offset   The offset applied before the fragment
  *  @param   trail_offset  The offset applied after the fragment
  *  @return  status code

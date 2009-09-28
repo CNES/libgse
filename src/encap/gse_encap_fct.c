@@ -143,10 +143,12 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
 
   //Fill encapsulation context
   encap_ctx = NULL;
+  pthread_mutex_lock(&encap->fifo[qos].mutex);
+
   status = gse_push_fifo(&encap->fifo[qos], &encap_ctx);
   if(status != STATUS_OK)
   {
-    goto free_vfrag;
+    goto unlock;
   }
   encap_ctx->vfrag = pdu;
   encap_ctx->qos = qos;
@@ -156,8 +158,13 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
   encap_ctx->frag_nbr = 0;
   encap_ctx->total_length = gse_encap_compute_total_length(encap_ctx);
 
+  pthread_mutex_unlock(&encap->fifo[qos].mutex);
+
 error:
   return status;
+
+unlock:
+  pthread_mutex_unlock(&encap->fifo[qos].mutex);
 free_vfrag:
   gse_free_vfrag(pdu);
   return status;
@@ -168,7 +175,6 @@ status_t gse_encap_get_packet(vfrag_t **packet, gse_encap_t *encap,
 {
   status_t status = STATUS_OK;
 
-  int fifo_elt;
   gse_encap_ctx_t *encap_ctx;
 
   if(encap == NULL)
@@ -177,11 +183,14 @@ status_t gse_encap_get_packet(vfrag_t **packet, gse_encap_t *encap,
     goto packet_null;
   }
 
-  fifo_elt = encap->fifo[qos].first;
-  encap_ctx = &encap->fifo[qos].value[fifo_elt];
-
   //Create a packet in the fragment corresponding to wanted QoS
   status = gse_encap_get_packet_common(encap, &length, qos);
+  if(status != STATUS_OK)
+  {
+    goto packet_null;
+  }
+
+  status = gse_get_fifo_elt(&encap->fifo[qos], &encap_ctx);
   if(status != STATUS_OK)
   {
     goto packet_null;
@@ -204,7 +213,7 @@ status_t gse_encap_get_packet(vfrag_t **packet, gse_encap_t *encap,
   //Go to the next FIFO element if the initial fragment is empty
   if(encap_ctx->vfrag->length <= 0)
   {
-    status = gse_free_vfrag(encap->fifo[qos].value[fifo_elt].vfrag);
+    status = gse_free_vfrag(encap_ctx->vfrag);
     if(status != STATUS_OK)
     {
       goto error;
@@ -223,13 +232,11 @@ error:
   return status;
 }
 
-status_t gse_encap_get_packet_copy(vfrag_t **packet,
-                                   gse_encap_t *encap,
+status_t gse_encap_get_packet_copy(vfrag_t **packet, gse_encap_t *encap,
                                    size_t length, uint8_t qos)
 {
   status_t status = STATUS_OK;
 
-  int fifo_elt;
   gse_encap_ctx_t *encap_ctx;
 
   if(encap == NULL)
@@ -238,11 +245,14 @@ status_t gse_encap_get_packet_copy(vfrag_t **packet,
     goto packet_null;
   }
 
-  fifo_elt = encap->fifo[qos].first;
-  encap_ctx = &encap->fifo[qos].value[fifo_elt];
-
   //Create a packet in the fragment corresponding to wanted QoS
   status = gse_encap_get_packet_common(encap, &length, qos);
+  if(status != STATUS_OK)
+  {
+    goto packet_null;
+  }
+
+  gse_get_fifo_elt(&encap->fifo[qos], &encap_ctx);
   if(status != STATUS_OK)
   {
     goto packet_null;
@@ -268,7 +278,7 @@ status_t gse_encap_get_packet_copy(vfrag_t **packet,
   //Go to the next FIFO element if the initial fragment is empty
   if(encap_ctx->vfrag->length <= 0)
   {
-    status = gse_free_vfrag(encap->fifo[qos].value[fifo_elt].vfrag);
+    status = gse_free_vfrag(encap_ctx->vfrag);
     if(status != STATUS_OK)
     {
       goto error;
@@ -431,7 +441,6 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
 
   size_t remaining_data_length;
   size_t header_length;
-  unsigned int fifo_elt;
   gse_encap_ctx_t* encap_ctx;
   payload_type_t payload_type;
 
@@ -445,11 +454,13 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
     goto error;
   }
   //Check if there is elements for the specified QoS
-  if(gse_get_elt_nbr_fifo(&encap->fifo[qos]) == 0)
+  pthread_mutex_lock(&encap->fifo[qos].mutex);
+  if(gse_get_fifo_elt_nbr(&encap->fifo[qos]) == 0)
   {
     status = FIFO_EMPTY;
-    goto error;
+    goto unlock;
   }
+  pthread_mutex_unlock(&encap->fifo[qos].mutex);
   //If length = 0, the default value is used
   if(*length == 0)
   {
@@ -465,8 +476,11 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
     status = LENGTH_TOO_SMALL;
     goto error;
   }
-  fifo_elt = encap->fifo[qos].first;
-  encap_ctx = &encap->fifo[qos].value[fifo_elt];
+  status = gse_get_fifo_elt(&encap->fifo[qos], &encap_ctx);
+  if(status != STATUS_OK)
+  {
+    goto error;
+  }
 
   remaining_data_length = encap_ctx->vfrag->length;
 
@@ -475,7 +489,7 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
   //This should never append because this is performed in get_packet(_copy) function
   if(remaining_data_length <= 0)
   {
-    status = gse_free_vfrag(encap->fifo[qos].value[fifo_elt].vfrag);
+    status = gse_free_vfrag(encap_ctx->vfrag);
     if(status != STATUS_OK)
     {
       goto error;
@@ -561,6 +575,9 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
     goto error;
   }
 
+  return status;
+unlock:
+  pthread_mutex_unlock(&encap->fifo[qos].mutex);
 error:
   return status;
 }

@@ -32,10 +32,10 @@
 typedef struct
 {
   vfrag_t *vfrag;            /**< Virtual buffer containing the PDU fragments */
-  uint8_t label_type;        /**< Label type field value */
+  gse_label_t label;         /**< Label field value */
   uint16_t total_length;     /**< Total length field value */
   uint16_t protocol_type;    /**< Protocol type field value */
-  gse_label_t label;         /**< Label field value */
+  uint8_t label_type;        /**< Label type field value */
   unsigned int bbframe_nbr;  /**< Number of BBFram since the reception of first
                                   fragment */
 } gse_deencap_ctx_t;

@@ -48,6 +48,8 @@ status_t gse_init_fifo(fifo_t *fifo, size_t size)
   //When the first element is created fifo->last become 0
   fifo->last = size - 1;
   fifo->elt_nbr = 0;
+  pthread_mutex_init(&fifo->mutex, NULL);
+
 
 error:
   return status;
@@ -63,6 +65,8 @@ status_t gse_release_fifo(fifo_t *fifo)
 
   assert(fifo != NULL);
 
+  pthread_mutex_lock(&fifo->mutex);
+
   //Free fragments in each encapsulation context
   while(i < fifo->elt_nbr)
   {
@@ -77,6 +81,8 @@ status_t gse_release_fifo(fifo_t *fifo)
 
   free(fifo->value);
 
+  pthread_mutex_unlock(&fifo->mutex);
+
   return stat_mem;
 }
 
@@ -85,6 +91,8 @@ status_t gse_pop_fifo(fifo_t *fifo)
   status_t status = STATUS_OK;
 
   assert(fifo != NULL);
+
+  pthread_mutex_lock(&fifo->mutex);
 
   if(fifo->elt_nbr <= 0)
   {
@@ -95,6 +103,7 @@ status_t gse_pop_fifo(fifo_t *fifo)
   fifo->elt_nbr--;
 
 error:
+  pthread_mutex_unlock(&fifo->mutex);
   return status;
 }
 
@@ -124,6 +133,8 @@ status_t gse_get_fifo_elt(fifo_t *fifo, gse_encap_ctx_t **context)
 
   assert(fifo != NULL);
 
+  pthread_mutex_lock(&fifo->mutex);
+
   if(fifo->elt_nbr == 0)
   {
     status = FIFO_EMPTY;
@@ -132,10 +143,11 @@ status_t gse_get_fifo_elt(fifo_t *fifo, gse_encap_ctx_t **context)
   *context = &(fifo->value[fifo->first]);
 
 error:
+  pthread_mutex_unlock(&fifo->mutex);
   return status;
 }
 
-int gse_get_elt_nbr_fifo(fifo_t *const fifo)
+int gse_get_fifo_elt_nbr(fifo_t *const fifo)
 {
   assert(fifo != NULL);
   return fifo->elt_nbr;

@@ -22,6 +22,7 @@
 #include "gse_common.h"
 #include "gse_encap_ctx.h"
 #include "gse_virtual_buffer.h"
+#include <pthread.h>
 
 /****************************************************************************
  *
@@ -33,10 +34,11 @@
 typedef struct
 {
   gse_encap_ctx_t *value;   /**< The table of elements (ie. the FIFO) */
+  size_t size;              /**< Size of the fifo */
   unsigned int first;       /**< First element of the FIFO */
   unsigned int last;        /**< Last element of the FIFO */
-  size_t size;              /**< Size of the fifo */
   unsigned int elt_nbr;     /**< Number of elements in the FIFO */
+  pthread_mutex_t mutex;    /**< Mutex on the context for multithreading support */
 } fifo_t;
 
 /****************************************************************************
@@ -44,6 +46,10 @@ typedef struct
  *   FUNCTION PROTOTYPES
  *
  ****************************************************************************/
+
+/* All these functions protect the access to the FIFO with a mutex except
+ * push_fifo which need to be protected outside to take into account the
+ * element filling, get_elt_nbr and init_fifo */
 
 /**
  *  @brief   Initialize a FIFO
@@ -96,6 +102,6 @@ status_t gse_get_fifo_elt(fifo_t *fifo, gse_encap_ctx_t **context);
  *  @param   fifo   The FIFO
  *  @return  the FIFO size on success
  */
-int gse_get_elt_nbr_fifo(fifo_t *const fifo);
+int gse_get_fifo_elt_nbr(fifo_t *const fifo);
 
 #endif

@@ -17,6 +17,8 @@ sources = \
 
 libgse_encap_la_SOURCES = $(sources)
 
+AM_LDFLAGS = -lpthread 
+
 INCLUDES = \
 	-I../common
 

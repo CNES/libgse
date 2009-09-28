@@ -79,6 +79,9 @@
 #include <sys/socket.h>
 #include <arpa/inet.h>
 
+/* Thread include */
+#include <pthread.h>
+
 /* GSEincludes */
 #include "gse_encap_fct.h"
 #include "gse_deencap_fct.h"
@@ -98,8 +101,8 @@
 #define MAX_GSE_SIZE  4096
 
 /// GSE parameters
-#define QOS_NBR 4
-#define FIFO_SIZE 100
+#define QOS_NBR 5
+#define FIFO_SIZE 50
 
 // DEBUG macro
 #define DEBUG(is_debug, out, format, ...) \
@@ -110,24 +113,68 @@
 
 
 /*
+ * Structures
+ */
+
+typedef struct
+{
+  int error;
+  double ber;
+  double pe2;
+  double p2;
+  float p1;
+  unsigned long bytes_without_error;
+}error_t;
+
+typedef struct
+{
+  gse_encap_t *encap;
+  int from;
+  error_t *err;
+  int refrag;
+  int copy;
+  uint8_t qos;
+  sigset_t sigmask;
+}encap_t;
+
+typedef struct
+{
+  gse_deencap_t *deencap;
+  int from;
+  int to;
+  sigset_t sigmask;
+}deencap_t;
+
+typedef struct
+{
+  gse_encap_t *encap;
+  int to;
+  struct in_addr raddr;
+  int port;
+  error_t *err;
+  int refrag;
+  int copy;
+  uint8_t qos;
+}get_packet_t;
+
+
+
+/*
  * Function prototypes:
  */
 
 int tun_create(char *name);
-int read_from_tun(int fd, vfrag_t *vfrag);
+int read_from_tun(int fd, vfrag_t *vfrag, int timeout, sigset_t sigmask);
 int write_to_tun(int fd, vfrag_t *vfrag);
 
 int udp_create(struct in_addr laddr, int port);
-int read_from_udp(int sock, vfrag_t *vfrag);
+int read_from_udp(int sock, vfrag_t *vfrag, int timeout, sigset_t sigmask);
 int write_to_udp(int sock, struct in_addr raddr, int port,
                  unsigned char *packet, unsigned int length);
 
-int tun2udp(gse_encap_t *encap,
-            int from, int to,
-            struct in_addr raddr, int port,
-            int error, double ber, double pe2, double p2,
-            int refrag, int copy);
-int udp2tun(gse_deencap_t *deencap, int from, int to);
+void *tun2udp_thread(void *argv);
+void *get_packet_thread(void *argv);
+void *udp2tun_thread(void *argv);
 
 void dump_packet(char *descr, unsigned char *packet, unsigned int length);
 double get_probability(char *arg, int *error);
@@ -135,6 +182,9 @@ int is_timeout(struct timeval first,
                struct timeval second,
                unsigned int max);
 
+/// mutex
+pthread_mutex_t tun_mutex;
+pthread_mutex_t udp_mutex;
 
 
 /*
@@ -153,7 +203,7 @@ int alive;
  */
 void sighandler(int sig)
 {
-  fprintf(stderr, "signal %d received, terminate the process\n", sig);
+  fprintf(stderr, "\nsignal %d received, terminate the process\n\n", sig);
   alive = 0;
 }
 
@@ -206,31 +256,45 @@ int main(int argc, char *argv[])
   char *tun_name;
   struct in_addr raddr;
   struct in_addr laddr;
-  int port;
   int error_model;
   int conv_error;
-  double ber = 0;
-  double pe2 = 0;
-  double p2 = 0;
-  int arg_count;
-
-  int refrag = 0;
-  int copy = 0;
 
   int ret;
-
   int tun, udp;
 
-  fd_set readfds;
-  struct timespec timeout;
+  int arg_count;
+
   sigset_t sigmask;
 
   struct timeval last;
 
-  gse_encap_t *encap;
-  gse_deencap_t *deencap;
+  pthread_t th_get_pkt[QOS_NBR];
+  pthread_t th_encap[QOS_NBR];
+  pthread_t th_deencap;
+  void *ret_th;
 
+  int i;
   int ref;
+
+  encap_t encap_thread_param[QOS_NBR];
+  deencap_t deencap_thread_param;
+  get_packet_t get_packet_thread_param[QOS_NBR];
+  error_t error_param;
+
+  double ber = 0;
+  double pe2 = 0;
+  double p2 = 0;
+  float p1 = 0;
+  unsigned long bytes_without_error = 0;
+
+  int refrag = 0;
+  int copy = 0;
+
+  int port;
+
+  gse_encap_t *encap = NULL;
+  gse_deencap_t * deencap = NULL;
+
 
   /*
    * Parse arguments:
@@ -265,7 +329,6 @@ int main(int argc, char *argv[])
       argc--;
     }
   }
-
 
   /* get the tunnel name */
   tun_name = argv[1];
@@ -436,20 +499,19 @@ int main(int argc, char *argv[])
   }
 
 
-  /*
-   * GSE part:
+  /*fd* GSE part:
    */
 
   /* init the GSE library */
   ret = gse_encap_init(QOS_NBR, FIFO_SIZE, &encap);
-  if(ret > 0)
+  if(ret > STATUS_OK)
   {
     fprintf(stderr, "Fail to initialize encapsulation library: %s",
             gse_get_status(ret));
     goto close_udp;
   }
   ret = gse_deencap_init(QOS_NBR, &deencap);
-  if(ret > 0)
+  if(ret > STATUS_OK)
   {
     fprintf(stderr, "Fail to initialize deencapsulation library: %s",
             gse_get_status(ret));
@@ -458,15 +520,15 @@ int main(int argc, char *argv[])
   /* Set offsets to take into account the 2 bits of sequence number before
    * the GSE packets if library is used with copy */
   ret = gse_encap_set_offsets(encap, 2 + FRAG_ID_LENGTH + TOTAL_LENGTH_LENGTH, 0);
-  if(ret > 0)
+  if(ret > STATUS_OK)
   {
     fprintf(stderr, "Fail to initialize encapsulation offsets: %s",
             gse_get_status(ret));
-    goto release_deencap;
+  goto release_deencap;
   }
   /* Set offsets to take into account the bits of tun header */
   ret = gse_deencap_set_offsets(deencap, 4, 0);
-  if(ret > 0)
+  if(ret > STATUS_OK)
   {
     fprintf(stderr, "Fail to initialize de-encapsulation offsets: %s",
             gse_get_status(ret));
@@ -486,69 +548,94 @@ int main(int argc, char *argv[])
 
   /* catch signals to properly shutdown the bridge */
   alive = 1;
-  signal(SIGKILL, sighandler);
   signal(SIGTERM, sighandler);
   signal(SIGINT, sighandler);
 
-  /* poll network interfaces each second */
-  timeout.tv_sec = 1;
-  timeout.tv_nsec = 0;
-
   /* mask signals during interface polling */
   sigemptyset(&sigmask);
-  sigaddset(&sigmask, SIGKILL);
   sigaddset(&sigmask, SIGTERM);
   sigaddset(&sigmask, SIGINT);
 
   /* initialize the last time we sent a packet */
   gettimeofday(&last, NULL);
 
-  /* tunnel each packet from the UDP socket to the virtual interface
-   * and from the virtual interface to the UDP socket */
-  do
+
+
+  /* Set threads parameters */
+  error_param.error = error_model;
+  error_param.ber = ber;
+  error_param.pe2 = pe2;
+  error_param.p2 = p2;
+  error_param.p1 = p1;
+  error_param.bytes_without_error = bytes_without_error;
+
+  deencap_thread_param.deencap = deencap;
+  deencap_thread_param.from = udp;
+  deencap_thread_param.to = tun;
+  deencap_thread_param.sigmask = sigmask;
+
+
+  /* create threads */
+  for(i = 0 ; i < QOS_NBR ; i++)
   {
-    /* poll the read sockets/file descriptors */
-    FD_ZERO(&readfds);
-    FD_SET(tun, &readfds);
-    FD_SET(udp, &readfds);
+    encap_thread_param[i].encap = encap;
+    encap_thread_param[i].from = tun;
+    encap_thread_param[i].err = &error_param;
+    encap_thread_param[i].refrag = refrag;
+    encap_thread_param[i].copy = copy;
+    encap_thread_param[i].qos = i;
+    encap_thread_param[i].sigmask = sigmask;
+    get_packet_thread_param[i].encap = encap;
+    get_packet_thread_param[i].to = udp;
+    get_packet_thread_param[i].raddr = raddr;
+    get_packet_thread_param[i].port = port;
+    get_packet_thread_param[i].err = &error_param;
+    get_packet_thread_param[i].refrag = refrag;
+    get_packet_thread_param[i].copy = copy;
+    get_packet_thread_param[i].qos = i;
 
-    ret = pselect(MAX(tun, udp) + 1, &readfds, NULL, NULL, &timeout, &sigmask);
-    if(ret < 0)
+    if(pthread_create(&th_get_pkt[i], NULL, get_packet_thread, &get_packet_thread_param[i]) < 0)
     {
-      fprintf(stderr, "pselect failed: %s (%d)\n", strerror(errno), errno);
-      failure = 1;
-      alive = 0;
+      fprintf (stderr, "pthread_create error for thread get_pkt %d\n", i);
+      goto release_deencap;
     }
-    else if(ret > 0)
+    if(pthread_create(&th_encap[i], NULL, tun2udp_thread, &encap_thread_param[i]) < 0)
     {
-      /* bridge from TUN to UDP */
-      if(FD_ISSET(tun, &readfds))
-      {
-        failure = tun2udp(encap, tun, udp, raddr, port,
-                          error_model, ber, pe2, p2, refrag, copy);
-        gettimeofday(&last, NULL);
-#if STOP_ON_FAILURE
-        if(failure)
-          alive = 0;
-#endif
-      }
-
-      /* bridge from UDP to TUN */
-      if(
-#if STOP_ON_FAILURE
-         !failure &&
-#endif
-         FD_ISSET(udp, &readfds))
-      {
-        failure = udp2tun(deencap, udp, tun);
-#if STOP_ON_FAILURE
-        if(failure)
-          alive = 0;
-#endif
-      }
+      fprintf (stderr, "pthread_create error for thread encap\n");
+      goto release_deencap;
     }
   }
-  while(alive);
+
+  if(pthread_create(&th_deencap, NULL, udp2tun_thread, &deencap_thread_param) < 0)
+  {
+    fprintf (stderr, "pthread_create error for thread deencap\n");
+    goto release_deencap;
+  }
+
+  for(i = 0 ; i < QOS_NBR ; i++)
+  {
+    (void)pthread_join(th_get_pkt[i], &ret_th);
+    fprintf(stderr, "\tget packet thread %u terminated\n", i);
+    if((int)ret_th == 1)
+    {
+      fprintf(stderr, "FAILURE on get_packet thread %u\n", i);
+      failure = 1;
+    }
+    (void)pthread_join(th_encap[i], &ret_th);
+    fprintf(stderr, "\tencapsulation thread %u terminated\n", i);
+    if((int)ret_th == 1)
+    {
+      fprintf(stderr, "FAILURE on encapulsation thread %u\n", i);
+      failure = 1;
+    }
+  }
+  (void)pthread_join(th_deencap, &ret_th);
+  fprintf(stderr, "\tde-encapsulation thread terminated\n");
+  if((int)ret_th == 1)
+  {
+    fprintf(stderr, "FAILURE on de-encapulsation thread\n");
+    failure = 1;
+  }
 
 
   /*
@@ -556,6 +643,7 @@ int main(int argc, char *argv[])
    */
 
 release_deencap:
+  alive = 0;
   gse_deencap_release(deencap);
 release_encap:
   gse_encap_release(encap);
@@ -605,6 +693,8 @@ int tun_create(char *name)
     return err;
   }
 
+  pthread_mutex_init(&tun_mutex, NULL);
+
   return fd;
 }
 
@@ -623,35 +713,62 @@ int tun_create(char *name)
  *            0x86dd for IPv6
  *
  * @param fd         The TUN file descriptor to read data from
- * @param rcv_vfrag  The virtual fragment where to store the data
- * @param length     IN: the maximum length of the data
- *                   OUT: the length of the data
+ * @param vfrag      The virtual fragment where to store the data
+ * @param timeout    Timeout value for socket polling
+ * @param sigmask    Signal mask for socket polling
  * @return           0 in case of success, a non-null value otherwise
  */
-int read_from_tun(int fd, vfrag_t *vfrag)
+int read_from_tun(int fd, vfrag_t *vfrag, int timeout, sigset_t sigmask)
 {
   int ret;
   int read_length;
+  struct timespec tv;
+  fd_set readfds;
+  
+  
+  FD_ZERO(&readfds);
+  FD_SET(fd, &readfds);
 
-  read_length = read(fd, gse_get_vfrag_start(vfrag), gse_get_vfrag_length(vfrag));
+  tv.tv_sec = timeout;
+  tv.tv_nsec = 0;
 
-  if(read_length < 0 || read_length > (int)gse_get_vfrag_length(vfrag))
+  ret = pselect(fd + 1, &readfds, NULL, NULL, timeout > 0 ? &tv : NULL, &sigmask);
+  if (ret < 0)
   {
-    fprintf(stderr, "read failed: %s (%d)\n", strerror(errno), errno);
+    fprintf(stderr, "Error on UDP select: %s", strerror(errno));
     goto error;
   }
-  ret = gse_set_vfrag_length(vfrag, read_length);
-  if(ret > 0)
+  /* timeout */
+  else if(ret == 0)
   {
-    fprintf(stderr, "error when setting fragment length: %s\n", gse_get_status(ret));
-    goto error;
+    return 1;
   }
+  /* There is data */
+  else
+  {
+    pthread_mutex_lock(&tun_mutex);
+    read_length = read(fd, gse_get_vfrag_start(vfrag), gse_get_vfrag_length(vfrag));
 
-  DEBUG(is_debug, stderr, "read %u bytes on fd %d\n", gse_get_vfrag_length(vfrag), fd);
-
+    if(read_length < 0 || read_length > (int)gse_get_vfrag_length(vfrag))
+    {
+      fprintf(stderr, "read failed: %s (%d)\n", strerror(errno), errno);
+      goto error;
+    }
+    ret = gse_set_vfrag_length(vfrag, read_length);
+    if(ret > STATUS_OK)
+    {
+      fprintf(stderr, "error when setting fragment length: %s\n", gse_get_status(ret));
+      goto error;
+    }
+  
+    DEBUG(is_debug, stderr, "read %u bytes on fd %d\n", gse_get_vfrag_length(vfrag), fd);
+  }
+  
+  pthread_mutex_unlock(&tun_mutex);
+  
   return 0;
-
 error:
+  pthread_mutex_unlock(&tun_mutex);
   return 1;
 }
 
@@ -664,7 +781,6 @@ error:
  *
  * @param fd         The TUN file descriptor to write data to
  * @param vfrag_pkt  The packet to write to the TUN interface (header included)
- * @param length     The length of the packet (header included)
  * @return           0 in case of success, a non-null value otherwise
  */
 int write_to_tun(int fd, vfrag_t *vfrag)
@@ -681,7 +797,6 @@ int write_to_tun(int fd, vfrag_t *vfrag)
   DEBUG(is_debug, stderr, "%u bytes written on fd %d\n", ret, fd);
 
   return 0;
-
 error:
   return 1;
 }
@@ -709,6 +824,7 @@ int udp_create(struct in_addr laddr, int port)
 
   /* create an UDP socket */
   sock = socket(AF_INET, SOCK_DGRAM, PF_UNSPEC);
+
   if(sock < 0)
   {
     fprintf(stderr, "cannot create the UDP socket\n");
@@ -738,6 +854,8 @@ int udp_create(struct in_addr laddr, int port)
     goto close;
   }
 
+  pthread_mutex_init(&udp_mutex, NULL);
+
   return sock;
 
 close:
@@ -750,48 +868,73 @@ quit:
 /**
  * @brief Read data from the UDP socket
  *
- * @param sock    The UDP socket descriptor to read data from
- * @param vfrag   The virtual fragment where to store the data
- * @return        0 in case of success, a non-null value otherwise
+ * @param sock      The UDP socket descriptor to read data from
+ * @param vfrag     The virtual fragment where to store the data
+ * @param timeout   The timeout value for socket polling
+ * @param sigmask   Signal mask for socket polling
+ * @return          0 in case of success, a non-null value otherwise
  */
-int read_from_udp(int sock, vfrag_t *vfrag)
+int read_from_udp(int sock, vfrag_t *vfrag, int timeout, sigset_t sigmask)
 {
   struct sockaddr_in addr;
   socklen_t addr_len;
   int read_length;
   int ret;
+  struct timespec tv;
+  fd_set readfds;
+
 
   addr_len = sizeof(struct sockaddr_in);
   bzero(&addr, addr_len);
 
-  /* read data from the UDP socket */
-  read_length = recvfrom(sock, gse_get_vfrag_start(vfrag), gse_get_vfrag_length(vfrag),
-                 0, (struct sockaddr *) &addr, &addr_len);
+  tv.tv_sec = timeout;
+  tv.tv_nsec = 0;
 
-  if(read_length < 0 || (unsigned int)read_length > gse_get_vfrag_length(vfrag))
+  FD_ZERO(&readfds);
+  FD_SET(sock, &readfds);
+
+  ret = pselect(sock + 1, &readfds, NULL, NULL, timeout > 0 ? &tv : NULL, &sigmask);
+  if (ret < 0)
   {
-    fprintf(stderr, "recvfrom failed: %s (%d)\n", strerror(errno), errno);
+    fprintf(stderr, "Error on UDP select: %s", strerror(errno));
     goto error;
   }
-
-  if(read_length == 0)
-    goto quit;
-
-  ret = gse_set_vfrag_length(vfrag, read_length);
-  if(ret > 0)
+  /* timeout */
+  else if(ret == 0)
   {
-    fprintf(stderr, "error when setting fragment length: %s\n", gse_get_status(ret));
-    goto error;
+    return 1;
   }
+  /* There is data */
+  else
+  {
+    /* read data from the UDP socket */
+    read_length = recvfrom(sock, gse_get_vfrag_start(vfrag), gse_get_vfrag_length(vfrag),
+                           0, (struct sockaddr *) &addr, &addr_len);
+  
+    if(read_length < 0 || (unsigned int)read_length > gse_get_vfrag_length(vfrag))
+    {
+      fprintf(stderr, "recvfrom failed: %s (%d)\n", strerror(errno), errno);
+      goto error;
+    }
+  
+    ret = gse_set_vfrag_length(vfrag, read_length);
+    if(ret > STATUS_OK)
+    {
+      fprintf(stderr, "error when setting fragment length: %s\n", gse_get_status(ret));
+      goto error;
+    }
+    
+    DEBUG(is_debug, stderr, "read one %u-byte GSE packet on UDP sock %d\n",
+          gse_get_vfrag_length(vfrag) - 2, sock);
 
-  DEBUG(is_debug, stderr, "read one %u-byte GSE packet on UDP sock %d\n",
-        gse_get_vfrag_length(vfrag) - 2, sock);
+    if(read_length == 0)
+      goto quit;
+  }
 
 quit:
   return 0;
 
 error:
-  gse_get_vfrag_length(vfrag);
   return 1;
 }
 
@@ -819,6 +962,7 @@ int write_to_udp(int sock, struct in_addr raddr, int port,
   struct sockaddr_in addr;
   int ret;
 
+  pthread_mutex_lock(&udp_mutex);
   bzero(&addr, sizeof(addr));
   addr.sin_family = AF_INET;
   addr.sin_addr.s_addr = raddr.s_addr;
@@ -839,9 +983,11 @@ int write_to_udp(int sock, struct in_addr raddr, int port,
 
   DEBUG(is_debug, stderr, "%u bytes written on socket %d\n", length, sock);
 
+  pthread_mutex_unlock(&udp_mutex);
   return 0;
 
 error:
+  pthread_mutex_unlock(&udp_mutex);
   return 1;
 }
 
@@ -858,48 +1004,16 @@ error:
  * The function encapsulate the IP packets thanks to the GSE library before
  * sending them on the UDP socket.
  *
- * @param encap  The GSE encapsulation context
- * @param from   The TUN file descriptor to read from
- * @param to     The UDP socket descriptor to write to
- * @param raddr  The remote address of the tunnel
- * @param port   The remote port of the tunnel
- * @param error  Type of error emulation (0 = none, 1 = uniform,
- *               2 = non-uniform/burst)
- * @param ber    The BER (Binary Error Rate) to emulate (value used on first
- *               call only if error model is uniform)
- * @param pe2    The probability to be in error state (value used on first
- *               call only if error model is non-uniform)
- * @param p2     The probability to stay in error state (value used on first
- *               call only if error model is non-uniform)
  * @return       0 in case of success, a non-null value otherwise
  */
-int tun2udp(gse_encap_t *encap,
-            int from, int to,
-            struct in_addr raddr, int port,
-            int error, double ber, double pe2, double p2,
-            int refrag, int copy)
+void *tun2udp_thread(void *argv)
 {
   vfrag_t *vfrag_pdu = NULL;
-  vfrag_t *vfrag_pkt = NULL;
-  vfrag_t *refrag_pkt = NULL;
-  int frag_nbr;
 
   int ret;
-  int err;
-
-  /* error emulation */
-  static unsigned int dropped = 0;
-  int to_drop = 0;
-
-  /* uniform model */
-  static unsigned long nb_bytes = 0;
-  static unsigned long bytes_without_error = 0;
 
   /* non-uniform error model */
-  static int is_state_drop = 0;
-  static float p1 = 0;
   static struct timeval last;
-  struct timeval now;
 
   /* statistics output */
 //  static char *modes[] = { "error", "U-mode", "O-mode", "R-mode" };
@@ -915,149 +1029,207 @@ int tun2udp(gse_encap_t *encap,
     [4] =  4,
     [5] =  5,
   };
-  uint8_t qos = 0;
 
-  /* init the error model variables */
-  if(error > 0)
+  encap_t *arg;
+
+  arg = (encap_t*)argv;
+
+  fprintf(stderr, "encapsulation thread %u launched\n", arg->qos);
+
+  while(alive)
   {
-    /* init uniform error model variables */
-    if(error == 1 && bytes_without_error == 0)
+    sleep(0.001);
+    /* Create the PDU virtual fragment */
+    ret = gse_create_vfrag(&vfrag_pdu,
+                           MAX_PDU_LENGTH, MAX_HEADER_LENGTH + 2, CRC_LENGTH);
+    if(ret > STATUS_OK)
     {
-      // find out the number of bytes without an error
-      bytes_without_error = (unsigned long) (1 / (ber * 8));
+      fprintf(stderr, "THREAD ENCAP %u: Error when creating PDU virtual fragment: %s\n",
+              arg->qos, gse_get_status(ret));
+      goto error;
     }
 
-    /* init non-uniform error model variables */
-    if(error == 2 && p1 == 0)
+    /* init the error model variables */
+    if(arg->err->error > 0)
     {
-      /* init of the random generator */
-      gettimeofday(&last, NULL);
-      srand(last.tv_sec);
-
-      /* init the probability to stay in non-error state */
-      p1 = (p2 - 1) / (1 - pe2) + 2 - p2;
+      /* init uniform error model variables */
+      if(arg->err->error == 1 && arg->err->bytes_without_error == 0)
+      {
+        // find out the number of bytes without an error
+        arg->err->bytes_without_error = (unsigned long) (1 / (arg->err->ber * 8));
+      }
+  
+      /* init non-uniform error model variables */
+      if(arg->err->error == 2 && arg->err->p1 == 0)
+      {
+        /* init of the random generator */
+        gettimeofday(&last, NULL);
+        srand(last.tv_sec);
+  
+        /* init the probability to stay in non-error state */
+        arg->err->p1 = (arg->err->p2 - 1) / (1 - arg->err->pe2) + 2 - arg->err->p2;
+      }
     }
+  
+    DEBUG(is_debug, stderr, "\n");
+ 
+    do
+    {
+      /* read the IP packet from the virtual interface */
+      ret = read_from_tun(arg->from, vfrag_pdu, 1, arg->sigmask);
+      if(gse_get_vfrag_length(vfrag_pdu) == 0)
+      {
+        ret = 1;
+      }
+    }
+    while(ret && alive);
+    /* quit if a signal has been received */
+    if(!alive)
+    {
+      fprintf(stderr, "terminating encapsulation thread %u...\n", arg->qos);
+      goto free_vfrag;
+    }
+
+    protocol = ntohs(*(uint16_t*)(gse_get_vfrag_start(vfrag_pdu) + 2));
+  
+    /* remove tun header from packet */
+    ret = gse_shift_vfrag(vfrag_pdu, 4, 0);
+    if(ret > STATUS_OK)
+    {
+      fprintf(stderr, "THREAD ENCAP %u: error when shifting PDU: %s\n",
+              arg->qos, gse_get_status(ret));
+      gse_free_vfrag(vfrag_pdu);
+      vfrag_pdu = NULL;
+    }
+    /* Encapsulate the IP packet */
+    DEBUG(is_debug, stderr, "THREAD ENCAP %u: encapsulate PDU #%u (%u bytes |  protocol %#.4x )\n",
+          arg->qos, pdu, gse_get_vfrag_length(vfrag_pdu), protocol);
+
+    ret = gse_encap_receive_pdu(vfrag_pdu, arg->encap, label, label_type, protocol, arg->qos);
+    if(ret > STATUS_OK)
+    {
+      fprintf(stderr, "THREAD ENCAP %u: encapsulation of PDU #%u failed (%s)\n",
+              arg->qos, pdu, gse_get_status(ret));
+      if(ret != FIFO_FULL)
+      {
+        goto error;
+      }
+    }
+    pdu++;
   }
 
-  DEBUG(is_debug, stderr, "\n");
+  fprintf(stderr, "terminating encapsulation thread %u...\n", arg->qos);
+  pthread_exit(0);
+free_vfrag:
+  gse_free_vfrag(vfrag_pdu);
+  pthread_exit(0);
+error:
+  gettimeofday(&last, NULL);
+  alive = 0;
+  pthread_exit("1");
+}
 
-  /* Create the PDU virtual fragment */
-  ret = gse_create_vfrag(&vfrag_pdu,
-                         MAX_PDU_LENGTH, MAX_HEADER_LENGTH + 2, CRC_LENGTH);
-  if(ret > 0)
-  {
-    fprintf(stderr, "Error when creating PDU virtual fragment (%s)\n",
-            gse_get_status(ret));
-    goto error;
-  }
+void *get_packet_thread(void *argv)
+{
+  vfrag_t *vfrag_pkt = NULL;
+  vfrag_t *refrag_pkt = NULL;
 
-  /* read the IP packet from the virtual interface */
-  ret = read_from_tun(from, vfrag_pdu);
-  if(ret != 0)
-  {
-    fprintf(stderr, "read_from_tun failed\n");
-    goto error;
-  }
+  int ret;
 
-  protocol = ntohs(*(uint16_t*)(gse_get_vfrag_start(vfrag_pdu) + 2));
+  /* error emulation */
+  static unsigned int dropped = 0;
+  int to_drop = 0;
 
-  if(gse_get_vfrag_length(vfrag_pdu) == 0)
-  {
-    goto quit;
-  }
+  /* uniform model */
+  static unsigned long nb_bytes = 0;
 
-  /* remove tun header from packet */
-  ret = gse_shift_vfrag(vfrag_pdu, 4, 0);
-  if(ret > 0)
-  {
-    fprintf(stderr, "Error when shifting PDU: %s\n", gse_get_status(ret));
-    gse_free_vfrag(vfrag_pdu);
-    goto quit;
-  }
+  /* non-uniform error model */
+  static int is_state_drop = 0;
+  static struct timeval last;
+  struct timeval now;
 
-  /* Encapsulate the IP packet */
-  DEBUG(is_debug, stderr, "encapsulate packet #%u (%u bytes |  protocol %#.4x )\n",
-        seq, gse_get_vfrag_length(vfrag_pdu), protocol);
+  get_packet_t *arg = (get_packet_t*)argv;
 
+  fprintf(stderr, "get_packet thread %u launched\n", arg->qos);
 
-  ret = gse_encap_receive_pdu(vfrag_pdu, encap, label, label_type, protocol, qos);
-  if(ret > 0)
-  {
-    fprintf(stderr, "encapsulation of packet #%u failed (%s)\n",
-            seq, gse_get_status(ret));
-    goto error;
-  }
-  pdu++;
-
-  /* Fragment the IP packet */
-  frag_nbr = 0;
-  err = 0;
   srand(time(NULL));
-  while((ret != FIFO_EMPTY) && (err < 5))
+
+  while(alive)
   {
-    if(!copy)
+    sleep(0.001);
+    if(!arg->copy)
     {
-      ret = gse_encap_get_packet(&vfrag_pkt, encap,
-                                 rand() % 1500 + 1, qos);
+      ret = gse_encap_get_packet(&vfrag_pkt, arg->encap,
+                                 rand() % 1500 + 1, arg->qos);
     }
     else
     {
-      ret = gse_encap_get_packet_copy(&vfrag_pkt, encap,
-                                      rand() % 1500 + 1, qos);
+      ret = gse_encap_get_packet_copy(&vfrag_pkt, arg->encap,
+                                      rand() % 1500 + 1, arg->qos);
     }
-    if((ret > 0) && (ret != FIFO_EMPTY))
+    if((ret > STATUS_OK) && (ret != FIFO_EMPTY))
     {
-      fprintf(stderr, "Error when getting packet #%u from PDU #%u: %s\n",
-              seq, pdu, gse_get_status(ret));
-      err++;
+      fprintf(stderr, "THREAD GET %u: error when getting packet #%u: %s\n",
+              arg->qos, seq, gse_get_status(ret));
+      if(vfrag_pkt != NULL)
+      {
+        gse_free_vfrag(vfrag_pkt);
+        vfrag_pkt = NULL;
+      }
     }
     else if(ret != FIFO_EMPTY)
     {
+      DEBUG(is_debug, stderr, "THREAD GET %u: get a packet\n", arg->qos);
       refrag_pkt = NULL;
-      if(refrag)
+      if(arg->refrag)
       {
-        ret = gse_refrag_packet(vfrag_pkt, &refrag_pkt, 2, 0, qos, rand() % 800 + 1);
-        if((ret > 0) && (ret != REFRAG_UNNECESSARY))
+        ret = gse_refrag_packet(vfrag_pkt, &refrag_pkt, 2, 0, arg->qos, rand() % 800 + 1);
+        if((ret > STATUS_OK) && (ret != REFRAG_UNNECESSARY))
         {
-          fprintf(stderr, "Error when refragmenting packet #%u from PDU #%u: %s\n",
-                  seq, pdu, gse_get_status(ret));
+          fprintf(stderr, "THREAD GET %u: error when refragmenting packet #%u: %s\n",
+                  arg->qos, seq, gse_get_status(ret));
+          if(refrag_pkt != NULL)
+          {
+            gse_free_vfrag(refrag_pkt);
+            refrag_pkt = NULL;
+          }
         }
 
-        else if(ret == 0)
+        else if(ret == STATUS_OK)
         {
-          DEBUG(is_debug, stderr, "Packet #%u from PDU #%u refragmented\n",
-                  seq, pdu);
+          DEBUG(is_debug, stderr, "THREAD GET %u: packet #%u refragmented\n",
+                  arg->qos, seq);
         }
         else if(ret == REFRAG_UNNECESSARY)
         {
-          DEBUG(is_debug, stderr, "GSE packet #%u from PDU #%u: %s\n",
-                  seq, pdu, gse_get_status(ret));
+          DEBUG(is_debug, stderr, "THREAD GET %u: GSE packet #%u: %s\n",
+                arg->qos, seq, gse_get_status(ret));
         }
 
       }
       /* emulate lossy medium if asked to do so */
-      if(error == 1) /* uniform error model */
+      if(arg->err->error == 1) /* uniform error model */
       {
-        if(nb_bytes + gse_get_vfrag_length(vfrag_pkt) >= bytes_without_error)
+        if(nb_bytes + gse_get_vfrag_length(vfrag_pkt) >= arg->err->bytes_without_error)
         {
           to_drop = 1;
           dropped++;
-          fprintf(stderr, "error inserted, GSE packet #%u from PDU #%u dropped\n",
-                  seq, pdu);
+          fprintf(stderr, "THREAD GET %u: error inserted, GSE packet #%u dropped\n",
+                  arg->qos, seq);
           nb_bytes = gse_get_vfrag_length(vfrag_pkt) -
-                     (bytes_without_error - nb_bytes);
+                     (arg->err->bytes_without_error - nb_bytes);
         }
 
         nb_bytes += gse_get_vfrag_length(vfrag_pkt);
       }
-      else if(error == 2) /* non-uniform/burst error model */
+      else if(arg->err->error == 2) /* non-uniform/burst error model */
       {
         /* reset to normal state if too much time between two packets */
         gettimeofday(&now, NULL);
         if(is_state_drop && is_timeout(last, now, 2))
         {
-          fprintf(stderr, "go back to normal state (too much time between "
-                  "packets #%u and #%u)\n", seq - 1, seq);
+          fprintf(stderr, "THREAD GET %u: go back to normal state (too much time between "
+                  "packets #%u and #%u)\n", arg->qos, seq - 1, seq);
           is_state_drop = 0;
         }
         last = now;
@@ -1065,16 +1237,16 @@ int tun2udp(gse_encap_t *encap,
         /* do we change state ? */
         int r = rand() % 1000;
         if(!is_state_drop)
-          is_state_drop = (r > (int) (p1 * 1000));
+          is_state_drop = (r > (int) (arg->err->p1 * 1000));
         else
-          is_state_drop = (r <= (int) (p2 * 1000));
+          is_state_drop = (r <= (int) (arg->err->p2 * 1000));
 
         if(is_state_drop)
         {
           to_drop = 1;
           dropped++;
-          fprintf(stderr, "error inserted, GSE packet #%u from PDU #%u dropped\n",
-                  seq, pdu);
+          fprintf(stderr, "THREAD GET %u: error inserted, GSE packet #%u dropped\n",
+                  arg->qos, seq);
         }
       }
 
@@ -1082,52 +1254,52 @@ int tun2udp(gse_encap_t *encap,
       if(!to_drop)
       {
         //dump_packet("SENT", gse_get_vfrag_start(vfrag_pkt), gse_get_vfrag_length(vfrag_pkt));
-        ret = write_to_udp(to, raddr, port,
+        ret = write_to_udp(arg->to, arg->raddr, arg->port,
                            gse_get_vfrag_start(vfrag_pkt) - 2,
                            gse_get_vfrag_length(vfrag_pkt) + 2);
         if(ret != 0)
         {
-          fprintf(stderr, "write_to_udp failed\n");
+          fprintf(stderr, "THREAD GET %u: write_to_udp failed\n", arg->qos);
           goto error;
         }
+        DEBUG(is_debug, stderr, "THREAD GET %u: sent packet %u\n", arg->qos, seq);
       }
-      frag_nbr++;
       /* release the fragment */
       ret = gse_free_vfrag(vfrag_pkt);
       vfrag_pkt = NULL;
-      if(ret > 0)
+      if(ret > STATUS_OK)
       {
-        fprintf(stderr, "Error when releasing fragment #%u from PDU #%u: %s\n",
-                seq, pdu, gse_get_status(ret));
+        fprintf(stderr, "THREAD GET %u: error when releasing fragment #%u: %s\n",
+                arg->qos, seq, gse_get_status(ret));
       }
       /* increment the tunnel sequence number */
-      seq++;
+      seq = (seq + 1) % 0xFFFF;
 
-      if((refrag) && (refrag_pkt != NULL))
+      if((arg->refrag) && (refrag_pkt != NULL))
       {
         /* emulate lossy medium if asked to do so */
-        if(error == 1) /* uniform error model */
+        if(arg->err->error == 1) /* uniform error model */
         {
-          if(nb_bytes + gse_get_vfrag_length(refrag_pkt) >= bytes_without_error)
+          if(nb_bytes + gse_get_vfrag_length(refrag_pkt) >= arg->err->bytes_without_error)
           {
             to_drop = 1;
             dropped++;
-            fprintf(stderr, "error inserted, GSE packet #%u from PDU #%u dropped\n",
-                    seq, pdu);
+            fprintf(stderr, "THREAD GET %u: error inserted, GSE packet #%u dropped\n",
+                    arg->qos, seq);
             nb_bytes = gse_get_vfrag_length(refrag_pkt) -
-                       (bytes_without_error - nb_bytes);
+                       (arg->err->bytes_without_error - nb_bytes);
           }
 
           nb_bytes += gse_get_vfrag_length(refrag_pkt);
         }
-        else if(error == 2) /* non-uniform/burst error model */
+        else if(arg->err->error == 2) /* non-uniform/burst error model */
         {
           /* reset to normal state if too much time between two packets */
           gettimeofday(&now, NULL);
           if(is_state_drop && is_timeout(last, now, 2))
           {
-            fprintf(stderr, "go back to normal state (too much time between "
-                    "packets #%u and #%u)\n", seq - 1, seq);
+            fprintf(stderr, "THREAD GET %u: go back to normal state (too much time between "
+                    "packets #%u and #%u)\n", arg->qos, seq - 1, seq);
             is_state_drop = 0;
           }
           last = now;
@@ -1135,16 +1307,16 @@ int tun2udp(gse_encap_t *encap,
           /* do we change state ? */
           int r = rand() % 1000;
           if(!is_state_drop)
-            is_state_drop = (r > (int) (p1 * 1000));
+            is_state_drop = (r > (int) (arg->err->p1 * 1000));
           else
-            is_state_drop = (r <= (int) (p2 * 1000));
+            is_state_drop = (r <= (int) (arg->err->p2 * 1000));
 
           if(is_state_drop)
           {
             to_drop = 1;
             dropped++;
-            fprintf(stderr, "error inserted, GSE packet #%u from PDU #%u dropped\n",
-                    seq, pdu);
+            fprintf(stderr, "THREAD GET %u: error inserted, GSE packet #%u dropped\n",
+                    arg->qos, seq);
           }
         }
 
@@ -1152,50 +1324,52 @@ int tun2udp(gse_encap_t *encap,
         if(!to_drop)
         {
           //dump_packet("SENT REFRAG", gse_get_vfrag_start(refrag_pkt), gse_get_vfrag_length(refrag_pkt));
-          ret = write_to_udp(to, raddr, port,
+          ret = write_to_udp(arg->to, arg->raddr, arg->port,
                              gse_get_vfrag_start(refrag_pkt) - 2,
                              gse_get_vfrag_length(refrag_pkt) + 2);
           if(ret != 0)
           {
-            fprintf(stderr, "write_to_udp failed\n");
+            fprintf(stderr, "THREAD GET %u: write_to_udp failed\n", arg->qos);
             goto error;
           }
+          DEBUG(is_debug, stderr, "THREAD GET %u: sent packet %u\n", arg->qos, seq);
         }
-        frag_nbr++;
         /* release the fragment */
         ret = gse_free_vfrag(refrag_pkt);
         refrag_pkt = NULL;
-        if(ret > 0)
+        if(ret > STATUS_OK)
         {
-          fprintf(stderr, "Error when releasing fragment #%u from PDU #%u: %s\n",
-                  seq, pdu, gse_get_status(ret));
+          fprintf(stderr, "THREAD GET %u: error when releasing fragment #%u: %s\n",
+                  arg->qos, seq, gse_get_status(ret));
         }
         /* increment the tunnel sequence number */
-        seq++;
+        seq = (seq + 1) % 0xFFFF;
       }
     }
+    else
+    {
+      gse_free_vfrag(vfrag_pkt);
+      vfrag_pkt = NULL;
+    }
   }
-  if(err > 5)
-  {
-    fprintf(stderr, "Two many errors when getting packet\n");
-    goto error;
-  }
-  if(frag_nbr > 1)
-  {
-    fprintf(stderr, "Send PDU #%u fragmented in %d GSE packets\n",
-            pdu - 1, frag_nbr);
-  }
-  else
-  {
-    fprintf(stderr, "Send PDU #%u not fragmented\n", pdu - 1);
-  }
-
-
-quit:
-  return 0;
+  
+  fprintf(stderr, "terminating get packet thread %u...\n", arg->qos); 
+  pthread_exit(0);
 
 error:
-  return 1;
+  if(vfrag_pkt != NULL)
+  {
+    gse_free_vfrag(vfrag_pkt);
+    vfrag_pkt = NULL;
+  }
+  if(refrag_pkt != NULL)
+  {
+    gse_free_vfrag(refrag_pkt);
+    refrag_pkt = NULL;
+  }
+  gettimeofday(&last, NULL);
+  alive = 0;
+  pthread_exit("1");
 }
 
 /**
@@ -1204,12 +1378,9 @@ error:
  * The function deencapsulate the GSE packets thanks to the GSE library before
  * sending them on the TUN interface.
  *
- * @param deencap The GSE deencapsulation context
- * @param from    The UDP socket descriptor to read from
- * @param to      The TUN file descriptor to write to
  * @return        0 in case of success, a non-null value otherwise
  */
-int udp2tun(gse_deencap_t *deencap, int from, int to)
+void *udp2tun_thread(void *argv)
 {
   vfrag_t *vfrag_pkt = NULL;
   vfrag_t *pdu = NULL;
@@ -1225,144 +1396,155 @@ int udp2tun(gse_deencap_t *deencap, int from, int to)
   unsigned int new_seq;
   static unsigned long lost_packets = 0;
 
-  DEBUG(is_debug, stderr, "\n");
+  static struct timeval last;
 
-  ret = gse_create_vfrag(&vfrag_pkt, MAX_GSE_PACKET_LENGTH + 2, 0, 0);
-  if(ret > 0)
+  deencap_t *arg = (deencap_t*)argv;
+
+  fprintf(stderr, "de-encapsulation thread launched\n");
+
+  while(alive)
   {
-    fprintf(stderr, "Error when creating reception fragment: %s\n",
-            gse_get_status(ret));
-    goto error;
-  }
+    DEBUG(is_debug, stderr, "\n");
 
-  /* read the sequence number + GSE packet from the UDP tunnel */
-  ret = read_from_udp(from, vfrag_pkt);
-  if(ret != 0)
-  {
-    fprintf(stderr, "read_from_udp failed\n");
-    goto error;
-  }
-
-  if(gse_get_vfrag_length(vfrag_pkt) <= 2)
-    goto quit;
-
-  /* find out if some GSE packets were lost between encapsulation and
-   * de-encapsulation (use the tunnel sequence number) */
-  new_seq = ntohs((gse_get_vfrag_start(vfrag_pkt)[0] << 8) +
-                  gse_get_vfrag_start(vfrag_pkt)[1]);
-  ret = gse_shift_vfrag(vfrag_pkt, 2, 0);
-  if(ret != 0)
-  {
-    fprintf(stderr, "Error when shifting reception fragment: %s\n",
-            gse_get_status(ret));
-    goto error;
-  }
-  //dump_packet("RECEIVE", gse_get_vfrag_start(vfrag_pkt), gse_get_vfrag_length(vfrag_pkt));
-
-  if(new_seq < max_seq)
-  {
-    /* some packets were reordered, the packet was wrongly
-     * considered as lost */
-    fprintf(stderr, "GSE packet with seq = %u received after seq = %u\n",
-            new_seq, max_seq);
-    lost_packets--;
-  }
-  else if(new_seq > max_seq + 1)
-  {
-    /* there is a gap between sequence numbers, some packets were lost */
-    fprintf(stderr, "GSE packet(s) probably lost between "
-            "seq = %u and seq = %u\n", max_seq, new_seq);
-    lost_packets += new_seq - (max_seq + 1);
-  }
-  else if(new_seq == max_seq)
-  {
-    /* should not append */
-    fprintf(stderr, "GSE packet #%u duplicated\n", new_seq);
-  }
-
-  if(new_seq > max_seq)
-  {
-    /* update max sequence numbers */
-    max_seq = new_seq;
-  }
-
-  /* de-encapsulate the GSE packet */
-  DEBUG(is_debug, stderr, "de-encapsulate GSE packet #%u (%u bytes)\n",
-          new_seq, gse_get_vfrag_length(vfrag_pkt));
-
-  ret = gse_deencap_packet(vfrag_pkt, deencap, &label_type, label, &protocol,
-                           &pdu, &gse_length);
-  if((ret > 0) && (ret != PDU))
-  {
-    fprintf(stderr, "Error when de-encapsulating GSE packet #%u: %s\n",
-            new_seq, gse_get_status(ret));
-  }
-  nbr_pkt++;
-
-  if(ret == 0)
-  {
-    DEBUG(is_debug, stderr, "GSE packet #%u: GSE Length = %u\n", new_seq, gse_length);
-  }
-
-  if(ret == PDU)
-  {
-    fprintf(stderr, "PDU #%u received in %d GSE packet(s)\n", rcv_pdu, nbr_pkt);
-    nbr_pkt = 0;
-
-    DEBUG(is_debug, stderr, "Label Type: %d | Protocol: %#.4x | Label: %.2d",
-            label_type, protocol, label[0]);
-    for(j = 1 ; j < gse_get_label_length(label_type) ; j++)
+    ret = gse_create_vfrag(&vfrag_pkt, MAX_GSE_PACKET_LENGTH + 2, 0, 0);
+    if(ret > STATUS_OK)
     {
-      DEBUG(is_debug, stderr, ":%.2d", label[j]);
+      fprintf(stderr, "Error when creating reception fragment: %s\n",
+              gse_get_status(ret));
+      goto error;
     }
-    DEBUG(is_debug, stderr, " (in hexa)\n");
 
-    rcv_pdu++;
-
-    ret = gse_shift_vfrag(pdu, -4, 0);
-    if(ret > 0)
+    /* read the sequence number + GSE packet from the UDP tunnel */
+    do
     {
-      fprintf(stderr, "Error when shifting PDU #%u: %s\n",
-              rcv_pdu, gse_get_status(ret));
+      ret = read_from_udp(arg->from, vfrag_pkt, 1, arg->sigmask);
+      if(gse_get_vfrag_length(vfrag_pkt) <= 2)
+      {
+        ret = 1;
+      }
     }
-    /* build the TUN header */
-    gse_get_vfrag_start(pdu)[0] = 0;
-    gse_get_vfrag_start(pdu)[1] = 0;
-    protocol = htons(protocol);
-    memcpy(&gse_get_vfrag_start(pdu)[2], &protocol, 2);
+    while(ret && alive);
+    /* Quit if a signal has been received */
+    if(!alive)
+    {
+      fprintf(stderr, "terminating de-encapsulation thread...\n");
+      goto free_vfrag;
+    }
 
-    /* write the IP packet on the virtual interface */
-    ret = write_to_tun(to, pdu);
+    gse_deencap_new_bbframe(arg->deencap);
+
+    /* find out if some GSE packets were lost between encapsulation and
+     * de-encapsulation (use the tunnel sequence number) */
+    new_seq = ntohs((gse_get_vfrag_start(vfrag_pkt)[0] << 8) +
+                    gse_get_vfrag_start(vfrag_pkt)[1]);
+    ret = gse_shift_vfrag(vfrag_pkt, 2, 0);
     if(ret != 0)
     {
-      fprintf(stderr, "write_to_tun failed\n");
-      goto free_pdu;
+      fprintf(stderr, "Error when shifting reception fragment: %s\n",
+              gse_get_status(ret));
+      gse_free_vfrag(vfrag_pkt);
+      vfrag_pkt = NULL;
+      goto error;
+    }
+    //dump_packet("RECEIVE", gse_get_vfrag_start(vfrag_pkt), gse_get_vfrag_length(vfrag_pkt));
+
+    if(new_seq % 0xFFFF < max_seq % 0xFFFF)
+    {
+      /* some packets were reordered, the packet was wrongly
+       * considered as lost */
+        fprintf(stderr, "GSE packet with seq = %u received after seq = %u\n",
+              new_seq, max_seq);
+      lost_packets--;
+    }
+    else if(new_seq % 0xFFFF > (max_seq + 1) % 0xFFFF)
+    {
+      /* there is a gap between sequence numbers, some packets were lost */
+      fprintf(stderr, "GSE packet(s) probably lost between "
+              "seq = %u and seq = %u\n", max_seq, new_seq);
+      lost_packets += new_seq - (max_seq + 1);
+    }
+    else if(new_seq % 0xFFFF == max_seq % 0xFFFF)
+    {
+      /* should not append */
+      fprintf(stderr, "GSE packet #%u duplicated\n", new_seq);
     }
 
-    gse_free_vfrag(pdu);
-
-    /* print packet statistics */
-/*    ret = print_decomp_stats(decomp, new_seq, lost_packets);
-    if(ret != 0)
+    if(new_seq % 0xFFFF > max_seq % 0xFFFF)
     {
-      fprintf(stderr, "cannot display stats (print_decomp_stats failed)\n");
-      goto drop;
-    }*/
+      /* update max sequence numbers */
+      max_seq = new_seq;
+    }
+
+    /* de-encapsulate the GSE packet */
+    DEBUG(is_debug, stderr, "de-encapsulate GSE packet #%u (%u bytes)\n",
+            new_seq, gse_get_vfrag_length(vfrag_pkt));
+  
+    ret = gse_deencap_packet(vfrag_pkt, arg->deencap, &label_type, label, &protocol,
+                             &pdu, &gse_length);
+    if((ret > STATUS_OK) && (ret != PDU))
+    {
+      fprintf(stderr, "Error when de-encapsulating GSE packet #%u: %s\n",
+              new_seq, gse_get_status(ret));
+    }
+    nbr_pkt++;
+
+    if(ret == 0)
+    {
+      DEBUG(is_debug, stderr, "GSE packet #%u: GSE Length = %u\n", new_seq, gse_length);
+    }
+
+    if(ret == PDU)
+    {
+      DEBUG(is_debug, stderr, "PDU #%u received in %d GSE packet(s)\n", rcv_pdu, nbr_pkt);
+      nbr_pkt = 0;
+  
+      DEBUG(is_debug, stderr, "Label Type: %d | Protocol: %#.4x | Label: %.2d",
+              label_type, protocol, label[0]);
+      for(j = 1 ; j < gse_get_label_length(label_type) ; j++)
+      {
+        DEBUG(is_debug, stderr, ":%.2d", label[j]);
+      }
+      DEBUG(is_debug, stderr, " (in hexa)\n");
+  
+      rcv_pdu++;
+
+      ret = gse_shift_vfrag(pdu, -4, 0);
+      if(ret > STATUS_OK)
+      {
+        fprintf(stderr, "Error when shifting PDU #%u: %s\n",
+                rcv_pdu, gse_get_status(ret));
+      }
+      /* build the TUN header */
+      gse_get_vfrag_start(pdu)[0] = 0;
+      gse_get_vfrag_start(pdu)[1] = 0;
+      protocol = htons(protocol);
+      memcpy(&gse_get_vfrag_start(pdu)[2], &protocol, 2);
+  
+      /* write the IP packet on the virtual interface */
+      ret = write_to_tun(arg->to, pdu);
+      if(ret != 0)
+      {
+        fprintf(stderr, "write_to_tun failed\n");
+        goto free_pdu;
+      }
+  
+      gse_free_vfrag(pdu);
+      pdu = NULL;
+    }
   }
 
-quit:
-  return 0;
-
+  fprintf(stderr, "terminating de-encapsulation thread...\n");
+  pthread_exit(0);
+free_vfrag:
+  gse_free_vfrag(vfrag_pkt);
+  pthread_exit(0);
 free_pdu:
-    gse_free_vfrag(pdu);
-//drop:
-  /* print packet statistics */
-/*  ret = print_decomp_stats(decomp, new_seq, lost_packets);
-  if(ret != 0)
-    fprintf(stderr, "cannot display stats (print_decomp_stats failed)\n");
-*/
+  gse_free_vfrag(pdu);
+  pdu = NULL;
 error:
-  return 1;
+  gettimeofday(&last, NULL);
+  alive = 0;
+  pthread_exit("1");
 }
 
 
@@ -1394,6 +1576,10 @@ error:
   return 1;
 }*/
 
+
+/*
+ * Feedback flushing to the UDP socket
+ */
 
 
 /*

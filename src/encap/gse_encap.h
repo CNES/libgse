@@ -37,11 +37,11 @@ typedef struct
                               (default: FRAG_ID_LENGTH + TOTAL_LENGTH_LENGTH) */
   size_t trail_offset;   /**< Offset applied on the end of each copied
                               GSE packet (default: 0) */
-  uint8_t qos_nbr;       /**<Number of QoS values */
+  uint8_t qos_nbr;       /**< Number of QoS values */
 } gse_encap_t;
 
 /* If library is used with zero copy, the header and trailer offsets are not used.
- * However, with zero copy, there is at least the sepcified header offset minus
+ * However, with zero copy, there is at least the specified header offset minus
  * the maximum header length before the GSE packets. Thus, a header offset can
  * be used if a correct offset is specified when the fragment is created.
  * Trailer offset usage on GSE packets is not possible with zero-copy else, 
