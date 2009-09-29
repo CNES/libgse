@@ -25,8 +25,8 @@
 #include <pcap.h>
 
 /* GSE includes */
-#include "gse_encap_fct.h"
-#include "gse_encap.h"
+#include "constants.h"
+#include "encap.h"
 
 /****************************************************************************
  *
@@ -272,7 +272,8 @@ static int test_encap(int verbose, size_t frag_length,
     for(i=0 ; i<6 ; i++)
       label[i] = i;
     status = gse_create_vfrag_with_data(&pdu, in_size,
-                                        MAX_HEADER_LENGTH, CRC_LENGTH,
+                                        GSE_MAX_HEADER_LENGTH,
+                                        GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
     if(status != STATUS_OK)
     {

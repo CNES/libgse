@@ -53,6 +53,8 @@
 #ifndef CRC_H
 #define CRC_H
 
+#include <string.h>
+
 uint32_t compute_crc(unsigned char *data, size_t length);
 
 #endif

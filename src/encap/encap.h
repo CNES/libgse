@@ -1,14 +1,14 @@
 /****************************************************************************/
 /**
- *   @file          gse_encap_fct.h
+ *   @file          encap.h
  *
  *          Project:     GSE LIBRARY
  *
  *          Company:     VIVERIS TECHNOLOGIES
  *
- *          Module name: ENCAPSULATION
+ *          Module name: ENCAPSULATION CONTEXT
  *
- *   @brief         GSE encapsulation functions
+ *   @brief         GSE encapsulation public functions definition
  *
  *   @author        Julien BERNARD / Viveris Technologies
  *
@@ -16,19 +16,59 @@
 /****************************************************************************/
 
 
-#ifndef GSE_ENCAP_FCT_H
-#define GSE_ENCAP_FCT_H
+#ifndef GSE_ENCAP_H
+#define GSE_ENCAP_H
 
-#include "gse_common.h"
-#include "gse_fifo.h"
-#include "gse_encap.h"
-#include "gse_encap_ctx.h"
+#include <stdint.h>
+
+#include "virtual_buffer.h"
+
+struct gse_encap_s;
+typedef struct gse_encap_s gse_encap_t;
+
 
 /****************************************************************************
  *
  *   FUNCTION PROTOTYPES
  *
  ****************************************************************************/
+
+/* Encapsulation initialization and release functions */
+
+/**
+ *  @brief   Initialize the encapsulation structure
+ *
+ *  The function return the encapsulation structure which is a fifo table
+ *
+ *  @param   qos_nbr        number of qos values
+ *  @param   fifo_size      size of FIFOs
+ *  @param   encap          OUT: Encapsulation structure
+ *                          (table of FIFOs associated to a QoS value)
+ *  @return  status code
+ */
+status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
+                        gse_encap_t **encap);
+
+/**
+ *  @brief   Release the encapsulation structure
+ *
+ *  @param   encap   Encapsulation structure
+ *  @return  status code
+ */
+status_t gse_encap_release(gse_encap_t *encap);
+
+/**
+ *  @brief   Set the offset applied on each GSE packet (for usage with copy only)
+ *
+ *  @param   encap         Encapsulation structure
+ *  @param   head_offset   Offset applied on the beginning of each GSE packet
+ *  @param   trail_offset  Offset applied on the end of each GSE packet
+ *  @return  status code
+ */
+status_t gse_encap_set_offsets(gse_encap_t *encap,
+                               size_t head_offset, size_t trail_offset);
+
+/* Encapsulation functions */
 
 /**
  *  @brief   Receive a PDU which is stored in a virtual buffer

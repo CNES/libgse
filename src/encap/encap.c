@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_encap_fct.c
+ *   @file          encap.c
  *
  *          Project:     GSE LIBRARY
  *
@@ -15,7 +15,43 @@
  */
 /****************************************************************************/
 
-#include "gse_encap_fct.h"
+#include <stdlib.h>
+#include <assert.h>
+#include <arpa/inet.h>
+
+#include "constants.h"
+#include "fifo.h"
+#include "encap.h"
+#include "crc.h"
+
+#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
+
+
+/****************************************************************************
+ *
+ *   STRUCTURES AND TYPES
+ *
+ ****************************************************************************/
+
+/**Encapsulation structure*/
+struct gse_encap_s
+{
+  fifo_t *fifo;          /**< Table of FIFOs */
+  size_t head_offset;    /**< Offset applied on the beginning of each copied
+                              GSE packet
+                              (default: MAX_REFRAG_HEAD_OFFSET) */
+  size_t trail_offset;   /**< Offset applied on the end of each copied
+                              GSE packet (default: 0) */
+  uint8_t qos_nbr;       /**< Number of QoS values */
+};
+
+/* If library is used with zero copy, the header and trailer offsets are not used.
+ * However, with zero copy, there is at least the specified header offset minus
+ * the maximum header length before the GSE packets. Thus, a header offset can
+ * be used if a correct offset is specified when the fragment is created.
+ * Trailer offset usage on GSE packets is not possible with zero-copy else, 
+ * data could be overwritten. */
+
 
 /****************************************************************************
  *
@@ -86,11 +122,146 @@ static uint32_t gse_encap_compute_crc(vfrag_t *vfrag);
 static status_t gse_encap_get_packet_common(gse_encap_t *encap,
                                             size_t *length, uint8_t qos);
 
+/**
+ *  @brief   Get the QoS number
+ *
+ *  @param   encap   Encapsulation structure
+ *  @return  QoS number on success, -1 on failure
+ */
+uint8_t gse_encap_get_qos_nbr(gse_encap_t *const encap);
+
+
+/**
+ *  @brief   Get the number of created fragments
+ *
+ *  This function is used mainly to know if a fragment is the first one or not
+ *
+ *  @param   encap_ctx    The encapsulation context
+ *  @return  fragment number on success, -1 on failure
+ */
+int gse_get_frag_number(gse_encap_ctx_t *const encap_ctx);
+
+/**
+ *  @brief   Get the number of created fragments
+ *
+ *  This function is used mainly to know if a fragment is the first one or not
+ *
+ *  @param   encap_ctx    The encapsulation context
+ *  @return  fragment number on success, -1 on failure
+ */
+int gse_get_frag_number(gse_encap_ctx_t *const encap_ctx);
+
+
 /****************************************************************************
  *
  *   PUBLIC FUNCTIONS
  *
  ****************************************************************************/
+
+/* Encapsulation initialization and release */
+
+status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
+                        gse_encap_t **encap)
+{
+  status_t status = STATUS_OK;
+
+  unsigned int i;
+
+  if(qos_nbr == 0)
+  {
+    status = ERR_QOS_NBR_NULL;
+    goto error;
+  }
+  if(fifo_size == 0)
+  {
+    status = ERR_FIFO_SIZE_NULL;
+    goto error;
+  }
+  *encap = malloc(sizeof(gse_encap_t));
+  if(*encap == NULL)
+  {
+    status = ERR_MALLOC_FAILED;
+    goto error;
+  }
+  (*encap)->fifo =  malloc(sizeof(fifo_t) * qos_nbr);
+  (*encap)->qos_nbr = qos_nbr;
+  if((*encap)->fifo == NULL)
+  {
+    status = ERR_MALLOC_FAILED;
+    goto free_encap;
+  }
+
+  //Initialize each FIFO in encapsulation context
+  for(i = 0 ; i < qos_nbr ; i++)
+  {
+    status = gse_init_fifo(&(*encap)->fifo[i], fifo_size);
+    if(status != STATUS_OK)
+    {
+      goto free_fifo;
+    }
+  }
+
+  /* Initialize offsets
+   * The head offset length difference between first fragment header and
+   * complete one, it allows to allocate enough space for a complete PDU 
+   * refragmentation */
+  gse_encap_set_offsets(*encap, 
+                        GSE_MAX_REFRAG_HEAD_OFFSET, 0);
+
+
+  return status;
+free_fifo:
+  free((*encap)->fifo);
+free_encap:
+  free(*encap);
+error:
+  *encap = NULL;
+  return status;
+}
+
+status_t gse_encap_release(gse_encap_t *encap)
+{
+  status_t status = STATUS_OK;
+  status_t stat_mem = STATUS_OK;
+
+  unsigned int i;
+
+  if(encap == NULL)
+  {
+    status = ERR_NULL_PTR;
+    goto error;
+  }
+
+  //release FIFO in each context
+  for(i = 0 ; i < encap->qos_nbr ; i++)
+  {
+    status = gse_release_fifo(&encap->fifo[i]);
+    if(status != STATUS_OK)
+    {
+      stat_mem = status;
+    }
+  }
+  free(encap->fifo);
+  free(encap);
+
+  return stat_mem;
+error:
+  return status;
+}
+
+status_t gse_encap_set_offsets(gse_encap_t *encap,
+                               size_t head_offset, size_t trail_offset)
+{
+  if(encap == NULL)
+  {
+    return ERR_NULL_PTR;
+  }
+  encap->head_offset = head_offset;
+  encap->trail_offset = trail_offset;
+  return STATUS_OK;
+}
+
+/* Encapsulation functions */
 
 status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
                                uint8_t label[6], uint8_t label_type,
@@ -119,7 +290,7 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
     goto free_vfrag;
   }
   //Total length field shall be < 65536
-  if(pdu->length > (MAX_PDU_LENGTH - PROTOCOL_TYPE_LENGTH -
+  if(pdu->length > (GSE_MAX_PDU_LENGTH - GSE_PROTOCOL_TYPE_LENGTH -
                     (unsigned int)label_length))
   {
     status = ERR_PDU_LENGTH;
@@ -130,7 +301,7 @@ status_t gse_encap_receive_pdu(vfrag_t *pdu, gse_encap_t *encap,
     status = ERR_INVALID_LT;
     goto free_vfrag;
   }
-  if(protocol < MIN_ETHER_TYPE)
+  if(protocol < GSE_MIN_ETHER_TYPE)
   {
     status = EXTENSION_NOT_SUPPORTED;
     goto free_vfrag;
@@ -297,6 +468,7 @@ error:
   return status;
 }
 
+
 /****************************************************************************
  *
  *   PRIVATE FUNCTIONS
@@ -349,7 +521,7 @@ status_t gse_encap_create_header(payload_type_t payload_type,
        * some of its header elements are necessary */
       crc = gse_encap_compute_crc(encap_ctx->vfrag);
       //Add CRC at the end of the data field
-      memcpy(encap_ctx->vfrag->end - 4, &crc, CRC_LENGTH);
+      memcpy(encap_ctx->vfrag->end - 4, &crc, GSE_MAX_TRAILER_LENGTH);
       break;
     /* GSE packet carrying a subsequent fragment of PDU
      * which is not the last one */
@@ -380,7 +552,7 @@ uint16_t gse_encap_compute_total_length(gse_encap_ctx_t *const encap_ctx)
   uint16_t total_length;
   assert(encap_ctx != NULL);
   total_length = gse_get_label_length(encap_ctx->label_type)
-                 + PROTOCOL_TYPE_LENGTH
+                 + GSE_PROTOCOL_TYPE_LENGTH
                  + encap_ctx->vfrag->length;
   return  htons(total_length);
 }
@@ -393,7 +565,7 @@ status_t gse_encap_compute_gse_length(size_t length, gse_header_t *header)
 
   assert(header != NULL);
   //GSE Length take into account all the fields following it
-  gse_length = length - MANDATORY_FIELDS_LENGTH;
+  gse_length = length - GSE_MANDATORY_FIELDS_LENGTH;
   //GSE Length field contain 12 bits
   if(gse_length > 0xFFF)
   {
@@ -414,7 +586,7 @@ size_t gse_encap_compute_packet_length(size_t length,
 {
   size_t packet_length;
 
-  packet_length = MIN(length, MAX_GSE_PACKET_LENGTH);
+  packet_length = MIN(length, GSE_MAX_PACKET_LENGTH);
   packet_length = MIN(length, remaining_data_length + header_length);
 
   return packet_length;
@@ -427,8 +599,9 @@ uint32_t gse_encap_compute_crc(vfrag_t *vfrag)
   size_t length;
 
   //CRC is computed with complete PDU, Total length, Protocol Type and Label
-  data = vfrag->start + MANDATORY_FIELDS_LENGTH + FRAG_ID_LENGTH;
-  length = vfrag->length - (MANDATORY_FIELDS_LENGTH + FRAG_ID_LENGTH + CRC_LENGTH);
+  data = vfrag->start + GSE_MANDATORY_FIELDS_LENGTH + GSE_FRAG_ID_LENGTH;
+  length = vfrag->length -
+          (GSE_MANDATORY_FIELDS_LENGTH + GSE_FRAG_ID_LENGTH + GSE_MAX_TRAILER_LENGTH);
   crc = compute_crc(data, length);
 
   return htonl(crc);
@@ -464,14 +637,14 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
   //If length = 0, the default value is used
   if(*length == 0)
   {
-    *length = MAX_GSE_PACKET_LENGTH;
+    *length = GSE_MAX_PACKET_LENGTH;
   }
-  if(*length > MAX_GSE_PACKET_LENGTH)
+  if(*length > GSE_MAX_PACKET_LENGTH)
   {
     status = LENGTH_TOO_HIGH;
     goto error;
   }
-  if(*length < MIN_GSE_PACKET_LENGTH)
+  if(*length < GSE_MIN_PACKET_LENGTH)
   {
     status = LENGTH_TOO_SMALL;
     goto error;
@@ -529,7 +702,7 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
     {
       payload_type = LAST_FRAG;
       //Check if complete CRC can be sent
-      if((header_length + CRC_LENGTH) > *length)
+      if((header_length + GSE_MAX_TRAILER_LENGTH) > *length)
       {
         status = LENGTH_TOO_SMALL;
         goto error;
@@ -554,7 +727,7 @@ status_t gse_encap_get_packet_common(gse_encap_t *encap,
   //For the first fragment CRC is also applied at the end of the data field
   if(payload_type == FIRST_FRAG)
   {
-    status = gse_shift_vfrag(encap_ctx->vfrag, header_length * -1, CRC_LENGTH);
+    status = gse_shift_vfrag(encap_ctx->vfrag, header_length * -1, GSE_MAX_TRAILER_LENGTH);
     if(status != STATUS_OK)
     {
       goto error;
@@ -580,5 +753,23 @@ unlock:
   pthread_mutex_unlock(&encap->fifo[qos].mutex);
 error:
   return status;
+}
+
+uint8_t gse_encap_get_qos_nbr(gse_encap_t *const encap)
+{
+  if(encap == NULL)
+  {
+    return -1;
+  }
+  return (encap->qos_nbr);
+}
+
+int gse_get_frag_number(gse_encap_ctx_t *const encap_ctx)
+{
+  if(encap_ctx == NULL)
+  {
+    return -1;
+  }
+  return (encap_ctx->frag_nbr);
 }
 

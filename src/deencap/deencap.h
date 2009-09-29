@@ -1,14 +1,14 @@
 /****************************************************************************/
 /**
- *   @file          gse_deencap_fct.h
+ *   @file          deencap.h
  *
  *          Project:     GSE LIBRARY
  *
  *          Company:     VIVERIS TECHNOLOGIES
  *
- *          Module name: DEENCAPSULATION
+ *          Module name: DEENCAPSULATION CONTEXT
  *
- *   @brief         GSE deencapsulation functions
+ *   @brief         GSE deencapsulation public functions definition
  *
  *   @author        Julien BERNARD / Viveris Technologies
  *
@@ -16,17 +16,56 @@
 /****************************************************************************/
 
 
-#ifndef GSE_DEENCAP_FCT_H
-#define GSE_DEENCAP_FCT_H
+#ifndef GSE_DEENCAP_H
+#define GSE_DEENCAP_H
 
-#include "gse_common.h"
-#include "gse_deencap.h"
+#include <stdint.h>
+
+#include "virtual_buffer.h"
+
+struct gse_deencap_s;
+typedef struct gse_deencap_s gse_deencap_t;
 
 /****************************************************************************
  *
  *   FUNCTION PROTOTYPES
  *
  ****************************************************************************/
+
+/* Deencapsulation structure management */
+
+/**
+ *  @brief   Initialize the deencapsulation structure
+ *
+ *  The function return the deencapsulation structure which is a table of
+ *  deencapsulation contexts
+ *
+ *  @param   qos_nbr   Number of qos values
+ *  @param   deencap   Structure of de-encapsulation contexts
+ *  @return  status code
+ */
+status_t gse_deencap_init(uint8_t qos_nbr, gse_deencap_t **deencap);
+
+/**
+ *  @brief   Release the encapsulation structure
+ *
+ *  @param   deencap   Structure of de-encapsulation contexts
+ *  @return  status code
+ */
+status_t gse_deencap_release(gse_deencap_t *deencap);
+
+/**
+ *  @brief   Set the offset applied on all the received PDU
+ *
+ *  @param   deencap       Structure of de-encapsulation contexts
+ *  @param   head_offset   Offset applied on the beginning of the PDU
+ *  @param   trail_offset  Offset applied on the end of the PDU
+ *  @return  status code
+ */
+status_t gse_deencap_set_offsets(gse_deencap_t *deencap,
+                                 size_t head_offset, size_t trail_offset);
+
+/* Deencapsulation functions */
 
 /**
  *  @brief   Deencapsulate a PDU from one or more packets

@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_status.c
+ *   @file          status.c
  *
  *          Project:     GSE LIBRARY
  *
@@ -8,14 +8,14 @@
  *
  *          Module name: STATUS
  *
- *   @brief         Status code functions
+ *   @brief         Function which allow to get a status code desription 
  *
  *   @author        Julien BERNARD / Viveris Technologies
  *
  */
 /****************************************************************************/
 
-#include "gse_status.h"
+#include "status.h"
 
 /****************************************************************************
  *

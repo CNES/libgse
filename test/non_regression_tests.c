@@ -25,9 +25,10 @@
 #include <pcap.h>
 
 /* GSE includes */
-#include "gse_encap_fct.h"
-#include "gse_deencap_fct.h"
-#include "gse_refrag.h"
+#include "constants.h"
+#include "encap.h"
+#include "deencap.h"
+#include "refrag.h"
 
 /****************************************************************************
  *
@@ -507,7 +508,8 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
     /* Encapsulate the input packets, use in_packet and in_size as
        input */
     status = gse_create_vfrag_with_data(&pdu, in_size,
-                                        MAX_HEADER_LENGTH, CRC_LENGTH,
+                                        GSE_MAX_HEADER_LENGTH,
+                                        GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
     if(status != STATUS_OK)
     {

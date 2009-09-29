@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_deencap_fct.c
+ *   @file          deencap.c
  *
  *          Project:     GSE LIBRARY
  *
@@ -15,13 +15,62 @@
  */
 /****************************************************************************/
 
-#include "gse_deencap_fct.h"
+#include <stdlib.h>
+#include <assert.h>
+#include <arpa/inet.h>
+
+#include "constants.h"
+#include "header.h"
+#include "deencap.h"
+#include "crc.h"
+
+#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
+
+
+/****************************************************************************
+ *
+ *   STRUCTURES AND TYPES
+ *
+ ****************************************************************************/
+
+/** Deencapsulation context */
+typedef struct
+{
+  vfrag_t *vfrag;            /**< Virtual buffer containing the PDU fragments */
+  gse_label_t label;         /**< Label field value */
+  uint16_t total_length;     /**< Total length field value */
+  uint16_t protocol_type;    /**< Protocol type field value */
+  uint8_t label_type;        /**< Label type field value */
+  unsigned int bbframe_nbr;  /**< Number of BBFram since the reception of first
+                                  fragment */
+} gse_deencap_ctx_t;
+
+/** Deencapsulation structure */
+struct gse_deencap_s
+{
+  gse_deencap_ctx_t *deencap_ctx; /**< Table of deencapsulation contexts */
+  size_t head_offset;             /**< Offset applied on the beginning of the
+                                       returned PDU (default: 0) */
+  size_t trail_offset;            /**< Offset applied on the end of the
+                                       returned PDU (default: 0) */
+  uint8_t qos_nbr;                /**< Size of the deencapsulation context table,
+                                       number of potential Frag ID */
+};
+
 
 /****************************************************************************
  *
  *   PROTOTYPES OF PRIVATE FUNCTIONS
  *
  ****************************************************************************/
+
+/**
+ *  @brief   Get the QoS number for deencapsulation context
+ *
+ *  @param   deencap   Structure of deencapsulation contexts
+ *  @return  QoS number on success, -1 on failure
+ */
+uint8_t gse_deencap_get_qos_nbr(gse_deencap_t *const deencap);
 
 /**
  *  @brief   Create Deencapsulation context
@@ -75,11 +124,94 @@ static size_t gse_deencap_compute_pdu_length(uint16_t total_length,
  */
 static uint32_t gse_deencap_compute_crc(vfrag_t *vfrag, uint8_t label_type);
 
+
 /****************************************************************************
  *
  *   PUBLIC FUNCTIONS
  *
  ****************************************************************************/
+
+/* Deencapsulation context initialization and release */
+
+status_t gse_deencap_init(uint8_t qos_nbr, gse_deencap_t **deencap)
+{
+  status_t status = STATUS_OK;
+
+  *deencap = malloc(sizeof(gse_deencap_t));
+  if(*deencap == NULL)
+  {
+    status = ERR_MALLOC_FAILED;
+    goto error;
+  }
+  //Create as deencapsulation contexts as QoS values
+  (*deencap)->deencap_ctx = malloc(sizeof(gse_deencap_ctx_t) * qos_nbr);
+  if((*deencap)->deencap_ctx == NULL)
+  {
+    status = ERR_MALLOC_FAILED;
+    goto free_deencap;
+  }
+  //Each value is set to 0 because on release, virtual fragments contained by
+  //context are destroyed only if they exist
+  memset((*deencap)->deencap_ctx, 0, sizeof(gse_deencap_ctx_t) * qos_nbr);
+  (*deencap)->qos_nbr = qos_nbr;
+
+  //Initialize offsets
+  gse_deencap_set_offsets(*deencap, 0, 0);
+
+  return status;
+free_deencap:
+  free(*deencap);
+  *deencap = NULL;
+error:
+  return status;
+}
+
+status_t gse_deencap_release(gse_deencap_t *deencap)
+{
+  status_t status = STATUS_OK;
+  status_t stat_mem = STATUS_OK;
+
+  unsigned int i;
+
+  if(deencap == NULL)
+  {
+    status = ERR_NULL_PTR;
+    goto error;
+  }
+
+  //Release each context
+  for(i = 0; i < gse_deencap_get_qos_nbr(deencap) ; i++)
+  {
+    if(deencap->deencap_ctx[i].vfrag != NULL)
+    {
+      status = gse_free_vfrag(deencap->deencap_ctx[i].vfrag);
+      if(status != STATUS_OK)
+      {
+        stat_mem = status;
+      }
+    }
+  }
+  free(deencap->deencap_ctx);
+  free(deencap);
+
+  return stat_mem;
+error:
+  return status;
+}
+
+status_t gse_deencap_set_offsets(gse_deencap_t *deencap, size_t head_offset,
+                             size_t trail_offset)
+{
+  if(deencap == NULL)
+  {
+    return ERR_NULL_PTR;
+  }
+  deencap->head_offset = head_offset;
+  deencap->trail_offset = trail_offset;
+  return STATUS_OK;
+}
+
+/* Deencapsulation functions */
 
 status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
                             uint8_t *label_type, uint8_t label[6],
@@ -106,7 +238,7 @@ status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
     goto error;
   }
 
-  if(data->length < MIN_GSE_PACKET_LENGTH)
+  if(data->length < GSE_MIN_PACKET_LENGTH)
   {
     status = ERR_PACKET_TOO_SMALL;
     goto free_data;
@@ -121,21 +253,21 @@ status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
   }
   //Limit received data to GSE packet
   *gse_length = ((uint16_t)header.gse_length_hi << 8) | header.gse_length_lo;
-  if((size_t)(*gse_length + MANDATORY_FIELDS_LENGTH) > data->length)
+  if((size_t)(*gse_length + GSE_MANDATORY_FIELDS_LENGTH) > data->length)
   {
     status = ERR_INVALID_GSE_LENGTH;
     goto free_data;
   }
   //Create the packet from data
   status = gse_duplicate_vfrag(&packet, data,
-                               (*gse_length + MANDATORY_FIELDS_LENGTH));
+                               (*gse_length + GSE_MANDATORY_FIELDS_LENGTH));
   if(status != STATUS_OK)
   {
     goto free_data;
   }
   gse_free_vfrag(data);
 
-  if(packet->length < MIN_GSE_PACKET_LENGTH)
+  if(packet->length < GSE_MIN_PACKET_LENGTH)
   {
     status = ERR_PACKET_TOO_SMALL;
     goto free_packet;
@@ -204,7 +336,7 @@ status_t gse_deencap_packet(vfrag_t *data, gse_deencap_t *deencap,
     //GSE packet carrying a complete PDU
     case COMPLETE:
       //Discard packet if it contains header extensions
-      if(ntohs(header.opt.complete.protocol_type) < MIN_ETHER_TYPE)
+      if(ntohs(header.opt.complete.protocol_type) < GSE_MIN_ETHER_TYPE)
       {
         status = EXTENSION_NOT_SUPPORTED;
         goto free_packet;
@@ -317,11 +449,21 @@ status_t gse_deencap_new_bbframe (gse_deencap_t *deencap)
   return STATUS_OK;
 }
 
+
 /****************************************************************************
  *
  *   PRIVATE FUNCTIONS
  *
  ****************************************************************************/
+
+uint8_t gse_deencap_get_qos_nbr(gse_deencap_t *deencap)
+{
+  if(deencap == NULL)
+  {
+    return -1;
+  }
+  return (deencap->qos_nbr);
+}
 
 status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
                                 gse_header_t header)
@@ -344,7 +486,7 @@ status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
     goto free_data;
   }
   // Discard packet if it contains header extensions
-  if(ntohs(header.opt.first.protocol_type) < MIN_ETHER_TYPE)
+  if(ntohs(header.opt.first.protocol_type) < GSE_MIN_ETHER_TYPE)
   {
     status = EXTENSION_NOT_SUPPORTED;
     goto free_data;
@@ -370,10 +512,11 @@ status_t gse_deencap_create_ctx(vfrag_t *data, gse_deencap_t *deencap,
   if((data->vbuf->length - data_start_offset) < pdu_length)
   {
     //Compute offset needed to write fields used for CRC computation
-    offset = TOTAL_LENGTH_LENGTH + PROTOCOL_TYPE_LENGTH +
+    offset = GSE_TOTAL_LENGTH_LENGTH + GSE_PROTOCOL_TYPE_LENGTH +
              gse_get_label_length(header.lt);
     status = gse_create_vfrag_with_data(&(ctx->vfrag), pdu_length, offset,
-                                        CRC_LENGTH, data->start, data->length);
+                                        GSE_MAX_TRAILER_LENGTH,
+                                        data->start, data->length);
     if(status != STATUS_OK)
     {
       goto free_data;
@@ -501,7 +644,7 @@ status_t gse_deencap_add_last_frag(vfrag_t *data, gse_deencap_t *deencap,
   assert(deencap != NULL);
 
   //Move end pointer to the end of the data field
-  status = gse_shift_vfrag(data, 0, CRC_LENGTH * -1);
+  status = gse_shift_vfrag(data, 0, GSE_MAX_TRAILER_LENGTH * -1);
   if(status != STATUS_OK)
   {
     goto free_data;
@@ -523,7 +666,7 @@ status_t gse_deencap_add_last_frag(vfrag_t *data, gse_deencap_t *deencap,
   }
 
   //Compare received and computed CRC
-  memcpy(&rcv_crc, data->end, CRC_LENGTH);
+  memcpy(&rcv_crc, data->end, GSE_MAX_TRAILER_LENGTH);
   calc_crc = gse_deencap_compute_crc(ctx->vfrag, ctx->label_type);
   if(rcv_crc != calc_crc)
   {
@@ -546,7 +689,7 @@ size_t gse_deencap_compute_pdu_length(uint16_t total_length, uint8_t label_type)
 {
   uint16_t pdu_length;
   pdu_length = total_length - gse_get_label_length(label_type)
-               - PROTOCOL_TYPE_LENGTH;
+               - GSE_PROTOCOL_TYPE_LENGTH;
   return pdu_length;
 }
 
@@ -555,11 +698,12 @@ uint32_t gse_deencap_compute_crc(vfrag_t *pdu, uint8_t label_type)
   uint32_t crc;
   size_t offset;
 
-  offset = TOTAL_LENGTH_LENGTH + PROTOCOL_TYPE_LENGTH +
+  offset = GSE_TOTAL_LENGTH_LENGTH + GSE_PROTOCOL_TYPE_LENGTH +
            gse_get_label_length(label_type);
 
   crc = compute_crc(pdu->start - offset, pdu->length + offset);
 
   return htonl(crc);
 }
+
 

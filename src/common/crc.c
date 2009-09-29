@@ -53,12 +53,7 @@
  */
 /****************************************************************************/
 
-#include <sys/cdefs.h>
-
-#include <sys/types.h>
-
 #include <stdint.h>
-#include <unistd.h>
 
 #include "crc.h"
 
@@ -127,7 +122,7 @@ static const uint32_t crctab[] = {
 uint32_t compute_crc(unsigned char *data, size_t length)
 {
   uint32_t crc;
-  u_char *p;
+  unsigned char *p;
   size_t len;
   len = 0;
 

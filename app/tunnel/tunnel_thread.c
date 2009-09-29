@@ -82,10 +82,11 @@
 /* Thread include */
 #include <pthread.h>
 
-/* GSEincludes */
-#include "gse_encap_fct.h"
-#include "gse_deencap_fct.h"
-#include "gse_refrag.h"
+/* GSE includes */
+#include "constants.h"
+#include "encap.h"
+#include "deencap.h"
+#include "refrag.h"
 
 /*
  * Macros & definitions:
@@ -519,7 +520,7 @@ int main(int argc, char *argv[])
   }
   /* Set offsets to take into account the 2 bits of sequence number before
    * the GSE packets if library is used with copy */
-  ret = gse_encap_set_offsets(encap, 2 + FRAG_ID_LENGTH + TOTAL_LENGTH_LENGTH, 0);
+  ret = gse_encap_set_offsets(encap, 2 + GSE_MAX_REFRAG_HEAD_OFFSET, 0);
   if(ret > STATUS_OK)
   {
     fprintf(stderr, "Fail to initialize encapsulation offsets: %s",
@@ -1041,7 +1042,8 @@ void *tun2udp_thread(void *argv)
     sleep(0.001);
     /* Create the PDU virtual fragment */
     ret = gse_create_vfrag(&vfrag_pdu,
-                           MAX_PDU_LENGTH, MAX_HEADER_LENGTH + 2, CRC_LENGTH);
+                           GSE_MAX_PDU_LENGTH,
+                           GSE_MAX_HEADER_LENGTH + 2, GSE_MAX_TRAILER_LENGTH);
     if(ret > STATUS_OK)
     {
       fprintf(stderr, "THREAD ENCAP %u: Error when creating PDU virtual fragment: %s\n",
@@ -1406,7 +1408,7 @@ void *udp2tun_thread(void *argv)
   {
     DEBUG(is_debug, stderr, "\n");
 
-    ret = gse_create_vfrag(&vfrag_pkt, MAX_GSE_PACKET_LENGTH + 2, 0, 0);
+    ret = gse_create_vfrag(&vfrag_pkt, GSE_MAX_PACKET_LENGTH + 2, 0, 0);
     if(ret > STATUS_OK)
     {
       fprintf(stderr, "Error when creating reception fragment: %s\n",

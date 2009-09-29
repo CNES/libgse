@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_virtual_buffer.c
+ *   @file          virtual_buffer.c
  *
  *          Project:     GSE LIBRARY
  *
@@ -15,7 +15,12 @@
  */
 /****************************************************************************/
 
-#include "gse_virtual_buffer.h"
+#include <stdlib.h>
+#include <assert.h>
+
+#include "virtual_buffer.h"
+
+#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 /****************************************************************************
  *

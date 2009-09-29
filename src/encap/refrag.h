@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_refrag.h
+ *   @file          refrag.h
  *
  *          Project:     GSE LIBRARY
  *
@@ -19,8 +19,9 @@
 #ifndef GSE_REFRAG_H
 #define GSE_REFRAG_H
 
-#include "gse_common.h"
-#include "gse_virtual_buffer.h"
+#include <stdint.h>
+
+#include "virtual_buffer.h"
 
 /****************************************************************************
  *

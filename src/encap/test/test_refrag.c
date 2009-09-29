@@ -25,7 +25,8 @@
 #include <pcap.h>
 
 /* GSE includes */
-#include "gse_refrag.h"
+#include "constants.h"
+#include "refrag.h"
 
 /****************************************************************************
  *
@@ -242,7 +243,8 @@ static int test_refrag(int verbose, size_t frag_length,
 
     /* Create a fragment containing a GSE packet */
     status = gse_create_vfrag_with_data(&vfrag, in_size,
-                                        MAX_HEADER_LENGTH, CRC_LENGTH,
+                                        GSE_MAX_HEADER_LENGTH,
+                                        GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
     if(status != STATUS_OK)
     {

@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_fifo.h
+ *   @file          fifo.h
  *
  *          Project:     GSE LIBRARY
  *
@@ -19,10 +19,9 @@
 #ifndef GSE_FIFO_H
 #define GSE_FIFO_H
 
-#include "gse_common.h"
-#include "gse_encap_ctx.h"
-#include "gse_virtual_buffer.h"
 #include <pthread.h>
+
+#include "encap_ctx.h"
 
 /****************************************************************************
  *

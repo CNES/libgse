@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_virtual_buffer.h
+ *   @file          virtual_buffer.h
  *
  *          Project:     GSE LIBRARY
  *
@@ -16,10 +16,12 @@
 /****************************************************************************/
 
 
-#ifndef GSE_VIRTUAL_BUFFER_H
-#define GSE_VIRTUAL_BUFFER_H
+#ifndef VIRTUAL_BUFFER_H
+#define VIRTUAL_BUFFER_H
 
-#include "gse_common.h"
+#include <string.h>
+
+#include "status.h"
 
 /****************************************************************************
  *

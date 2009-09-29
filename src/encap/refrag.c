@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_refrag.c
+ *   @file          refrag.c
  *
  *          Project:     GSE LIBRARY
  *
@@ -15,7 +15,15 @@
  */
 /****************************************************************************/
 
-#include "gse_refrag.h"
+#include <assert.h>
+#include <arpa/inet.h>
+
+#include "constants.h"
+#include "header.h"
+#include "crc.h"
+#include "refrag.h"
+
+#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 /****************************************************************************
  *
@@ -124,12 +132,12 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     goto error;
   }
 
-  if(max_length > MAX_GSE_PACKET_LENGTH)
+  if(max_length > GSE_MAX_PACKET_LENGTH)
   {
     status = LENGTH_TOO_HIGH;
     goto error;
   }
-  if(max_length < MIN_GSE_PACKET_LENGTH)
+  if(max_length < GSE_MIN_PACKET_LENGTH)
   {
     status = LENGTH_TOO_SMALL;
     goto error;
@@ -143,7 +151,7 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
   memcpy(&header, packet1->start, MIN(sizeof(gse_header_t), packet1->length));
 
   gse_length = ((uint16_t)header.gse_length_hi << 8) | header.gse_length_lo;
-  if(gse_length != packet1->length - MANDATORY_FIELDS_LENGTH)
+  if(gse_length != packet1->length - GSE_MANDATORY_FIELDS_LENGTH)
   {
     status = ERR_INVALID_GSE_LENGTH;
     goto error;
@@ -205,10 +213,10 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
   remaining_length = packet1->length - max_length - header_shift;
 
   //Check if CRC will be fragmented in the case of a last fragment and avoid it
-  if((payload_type == LAST_FRAG) && (remaining_length < CRC_LENGTH))
+  if((payload_type == LAST_FRAG) && (remaining_length < GSE_MAX_TRAILER_LENGTH))
   {
-    max_length -= (CRC_LENGTH - remaining_length);
-    remaining_length = CRC_LENGTH;
+    max_length -= (GSE_MAX_TRAILER_LENGTH - remaining_length);
+    remaining_length = GSE_MAX_TRAILER_LENGTH;
   }
 
   status = gse_shift_vfrag(packet1, header_shift, remaining_length * -1);
@@ -231,7 +239,7 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     //Second created fragment will be a last fragment, we need to add a CRC
     status = gse_create_vfrag_with_data(packet2, remaining_length,
                                         header_length + head_offset,
-                                        CRC_LENGTH + trail_offset,
+                                        GSE_MAX_TRAILER_LENGTH + trail_offset,
                                         packet1->end, remaining_length);
     if(status != STATUS_OK)
     {
@@ -241,16 +249,16 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     crc = gse_refrag_compute_crc(packet1, init_data_length,
                                  gse_get_label_length(header.lt));
 
-    memcpy((*packet2)->end, &crc, CRC_LENGTH);
+    memcpy((*packet2)->end, &crc, GSE_MAX_TRAILER_LENGTH);
 
-    status = gse_shift_vfrag(*packet2, header_length * -1, CRC_LENGTH);
+    status = gse_shift_vfrag(*packet2, header_length * -1, GSE_MAX_TRAILER_LENGTH);
     if(status != STATUS_OK)
     {
       goto free_packet;
     }
 
     // Add CRC length to remaining length
-    remaining_length += CRC_LENGTH;
+    remaining_length += GSE_MAX_TRAILER_LENGTH;
   }
   else
   {
@@ -308,7 +316,7 @@ size_t gse_refrag_compute_header_shift(payload_type_t payload_type)
     //GSE packet carrying a complete PDU
     case COMPLETE:
       //Difference between complete PDU and first fragment header
-      header_shift = (FRAG_ID_LENGTH + TOTAL_LENGTH_LENGTH) * -1;
+      header_shift = GSE_MAX_REFRAG_HEAD_OFFSET * -1;
       break;
     //GSE packet carrying a fragment of PDU
     case FIRST_FRAG:
@@ -351,7 +359,7 @@ status_t gse_refrag_modify_header(vfrag_t *packet, gse_header_t header,
         goto error;
       }
       total_length = gse_get_label_length(header.lt) + pdu_length
-                     + PROTOCOL_TYPE_LENGTH;
+                     + GSE_PROTOCOL_TYPE_LENGTH;
 
       //Complete -> FIRST FRAGMENT + last fragment
       modified_hdr->s = 0x1;
@@ -369,7 +377,7 @@ status_t gse_refrag_modify_header(vfrag_t *packet, gse_header_t header,
     case FIRST_FRAG:
       //First fragment -> FIRST FRAGMENT + subsequent fragment
       status = gse_refrag_compute_gse_length(FIRST_FRAG, header,
-                                        data_field_length, modified_hdr);
+                                             data_field_length, modified_hdr);
       if(status != STATUS_OK)
       {
         goto error;
@@ -380,7 +388,7 @@ status_t gse_refrag_modify_header(vfrag_t *packet, gse_header_t header,
     case SUBS_FRAG:
       //Subsequent fragment -> SUBSEQUENT FRAGMENT + subsequent fragment
       status = gse_refrag_compute_gse_length(SUBS_FRAG, header,
-                                         data_field_length, modified_hdr);
+                                             data_field_length, modified_hdr);
       if(status != STATUS_OK)
       {
         goto error;
@@ -390,7 +398,7 @@ status_t gse_refrag_modify_header(vfrag_t *packet, gse_header_t header,
     case LAST_FRAG:
       //Last fragment -> SUBSEQUENT FRAGMENT + last fragment
       status = gse_refrag_compute_gse_length(SUBS_FRAG, header,
-                                        data_field_length, modified_hdr);
+                                             data_field_length, modified_hdr);
       if(status != STATUS_OK)
       {
         goto error;
@@ -443,16 +451,16 @@ status_t gse_refrag_compute_gse_length(payload_type_t payload_type,
 
     //GSE packet carrying a first fragment of PDU
     case FIRST_FRAG:
-      gse_length = FRAG_ID_LENGTH +
-                   TOTAL_LENGTH_LENGTH +
-                   PROTOCOL_TYPE_LENGTH +
+      gse_length = GSE_FRAG_ID_LENGTH +
+                   GSE_TOTAL_LENGTH_LENGTH +
+                   GSE_PROTOCOL_TYPE_LENGTH +
                    gse_get_label_length(header.lt) +
                    data_length;
       break;
     //GSE packet carrying a subsequent fragment of PDU
     case SUBS_FRAG:
     case LAST_FRAG:
-       gse_length = FRAG_ID_LENGTH +
+       gse_length = GSE_FRAG_ID_LENGTH +
                     data_length;
        break;
     default:
@@ -528,8 +536,8 @@ uint32_t gse_refrag_compute_crc(vfrag_t *const packet1, size_t length,
   uint32_t crc;
   unsigned char *data;
 
-  data = packet1->start + MANDATORY_FIELDS_LENGTH + FRAG_ID_LENGTH;
-  length += TOTAL_LENGTH_LENGTH + PROTOCOL_TYPE_LENGTH + label_length;
+  data = packet1->start + GSE_MANDATORY_FIELDS_LENGTH + GSE_FRAG_ID_LENGTH;
+  length += GSE_TOTAL_LENGTH_LENGTH + GSE_PROTOCOL_TYPE_LENGTH + label_length;
 
   crc = compute_crc(data, length);
 

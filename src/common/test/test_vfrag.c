@@ -13,10 +13,15 @@
  *****************************************************************************/
 
 /* system includes */
-#include <gse_common.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <strings.h>
+#include <string.h>
+#include <net/ethernet.h>
+#include <stdint.h>
 
 /* GSE includes */
-#include "gse_virtual_buffer.h"
+#include "virtual_buffer.h"
 
 /****************************************************************************
  *

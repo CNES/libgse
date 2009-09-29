@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_common.h
+ *   @file          header.h
  *
  *          Project:     GSE LIBRARY
  *
@@ -8,7 +8,7 @@
  *
  *          Module name: COMMON
  *
- *   @brief         Common include, preprocessor, structures and functions
+ *   @brief         Sets of header constants, structures and functions
  *
  *   @author        Julien BERNARD / Viveris Technologies
  *
@@ -16,39 +16,23 @@
 /****************************************************************************/
 
 
-#ifndef GSE_COMMON_H
-#define GSE_COMMON_H
+#ifndef HEADER_H
+#define HEADER_H
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
 #include <stdint.h>
+#include <string.h>
 #include <endian.h>
-#include <arpa/inet.h>
 
-#include "gse_status.h"
-#include "crc.h"
 
-/** Limits length */
-#define MAX_PDU_LENGTH 65535         /**< Maximum length of a PDU (in Bytes) */
-#define MAX_GSE_PACKET_LENGTH 4095+2
-/**< Maximum length of a GSE packet (in Bytes) \
-     4095 corresponds to the maximum for GSE length field \
-     2 corresponds to the bytes which are not counted in GSE length field */
-#define MIN_GSE_PACKET_LENGTH 3      /**< Minimum length of a GSE packet (in Bytes) */
-#define MAX_HEADER_LENGTH 13         /**< Maximum length of GSE header (in Bytes) */
-#define MIN_ETHER_TYPE 1536          /**< Minimum value for EtherTypes */
+#define GSE_MIN_PACKET_LENGTH 3       /**< Minimum length of a GSE packet (in Bytes) */
+#define GSE_MIN_ETHER_TYPE 1536       /**< Minimum value for EtherTypes */
 
 /** Header field length */
-#define MANDATORY_FIELDS_LENGTH 2    /**< Length of the mandatory fields (in Bytes) \
+#define GSE_MANDATORY_FIELDS_LENGTH 2 /**< Length of the mandatory fields (in Bytes) \
                                           (E, S, LT, GSE_Length) */
-#define FRAG_ID_LENGTH 1             /**< Length of Frag ID field (in Bytes) */
-#define TOTAL_LENGTH_LENGTH 2        /**< Length of Total length field (in Bytes) */
-#define PROTOCOL_TYPE_LENGTH 2       /**< Length of Protocol type field (in Bytes) */
-#define CRC_LENGTH 4                 /**< Length of CRC32 (in Bytes) */
-
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
+#define GSE_FRAG_ID_LENGTH 1          /**< Length of Frag ID field (in Bytes) */
+#define GSE_TOTAL_LENGTH_LENGTH 2     /**< Length of Total length field (in Bytes) */
+#define GSE_PROTOCOL_TYPE_LENGTH 2    /**< Length of Protocol type field (in Bytes) */
 
 /****************************************************************************
  *
@@ -118,14 +102,6 @@ typedef enum
  *   FUNCTIONS
  *
  ****************************************************************************/
-
-/**
- *  @brief   Get GSE length depending on label type value
- *
- *  @param   label_type    Label Type field of GSE packet header
- *  @return  label_length on success, -1 if label_type is wrong
- */
-int gse_get_label_length(uint8_t label_type);
 
 /**
  *  @brief   Compute GSE packet header length
