@@ -97,6 +97,7 @@ AC_CONFIG_FILES([Makefile \
                  test/samples/ipv6/udp/rtp/video2/Makefile \
                  test/samples/ipv6/udplite/Makefile \
                  test/samples/ipv4fragmented/Makefile \
+                 test/samples/internet_trafic/Makefile
                  ])
 
 AC_OUTPUT

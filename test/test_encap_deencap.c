@@ -303,6 +303,11 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
       if(status == STATUS_OK)
       {
         pkt_nbr++;
+        if(pkt_nbr >= PKT_MAX * PDU_MAX)
+        {
+          DEBUG(verbose, "Too much packet generated in test\n");
+          goto free_packets;
+        }
       }
       if((status != STATUS_OK) && (status != FIFO_EMPTY))
       {
@@ -327,6 +332,11 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
         vfrag_pkt[rcv_pkt_nbr - 1] = NULL;
       }while(status != PDU);
       pdu_counter++;
+      if(pdu_counter >= PDU_MAX)
+      {
+        DEBUG(verbose, "Too much PDU generated in test\n");
+        goto free_pdu;
+      }
 
       cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
       if(cmp_packet == NULL)

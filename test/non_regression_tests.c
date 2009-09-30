@@ -280,6 +280,9 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
   unsigned long pdu_counter;
   unsigned long refrag_idx = 0;
   unsigned long rcv_pkt_nbr = 0;
+  unsigned long rcv_refrag_nbr = 0;
+  unsigned long sent_frag_nbr = 0;
+  unsigned long rcv_frag_nbr = 0;
   gse_encap_t *encap = NULL;
   gse_deencap_t *deencap = NULL;
   vfrag_t **vfrag_pkt = NULL;
@@ -478,7 +481,9 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
   }
 
   vfrag_pkt = malloc(sizeof(vfrag_t*) * PKT_NBR_MAX);
-  refrag_pkt = malloc(sizeof(vfrag_t*) * PKT_NBR_MAX * 2);
+  memset(vfrag_pkt, 0, sizeof(vfrag_t*) * PKT_NBR_MAX);
+  refrag_pkt = malloc(sizeof(vfrag_t*) * PKT_NBR_MAX);
+  memset(refrag_pkt, 0, sizeof(vfrag_t*) * PKT_NBR_MAX);
 
   /* for each packet in the dump */
   counter = 0;
@@ -537,11 +542,13 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
                                          frag_length[frag_length_idx], qos);
       if((status != STATUS_OK) && (status != FIFO_EMPTY))
       {
+        vfrag_pkt[pkt_nbr] = NULL;
         DEBUG(verbose, "Error %#.4x when getting packet #%lu (%s)\n",
               status, pkt_nbr, gse_get_status(status));
         goto free_packets;
       }
       frag_length_idx = (frag_length_idx + 1) % 20;
+      sent_frag_nbr++;
 
       if(status == STATUS_OK)
       {
@@ -601,6 +608,11 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
           }
         }
         pkt_nbr++;
+        if(pkt_nbr >= PKT_NBR_MAX)
+        {
+          DEBUG(verbose, "Too much packet generated in test\n");
+          goto free_packets;
+        }
       }
     }while(status != FIFO_EMPTY);
 
@@ -614,8 +626,9 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
                  0, 0, qos, refrag_length[refrag_length_idx]);
         if((status != STATUS_OK) && (status != REFRAG_UNNECESSARY))
         {
-          DEBUG(verbose, "Error %#.4x when refragmenting packet (%s)\n",
-                status, gse_get_status(status));
+          refrag_pkt[refrag_idx] = NULL;
+          DEBUG(verbose, "Error %#.4x when refragmenting packet #%lu (%s)\n",
+                status, sent_frag_nbr, gse_get_status(status));
           goto free_packets;
         }
 
@@ -628,7 +641,7 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
           if(refrag_packet == NULL)
           {
             DEBUG(verbose, "packet #%lu: no packet available for comparison\n", refrag_idx);
-            goto free_refrag_packets;
+            goto free_packets;
           }
 
           /* compare the output refragmented packets with the ones given by the user */
@@ -636,14 +649,14 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
           {
             DEBUG(verbose, "packet #%lu: packet available for comparison but too small\n",
                   refrag_idx);
-            goto free_refrag_packets;
+            goto free_packets;
           }
 
           if(!compare_packets(verbose, vfrag_pkt[refrag_idx]->start, vfrag_pkt[refrag_idx]->length,
                               refrag_packet + link_len_refrag, refrag_header.caplen - link_len_refrag))
           {
             DEBUG(verbose, "packet #%lu: first refragmented packet is not as attended\n", refrag_idx);
-            goto free_refrag_packets;
+            goto free_packets;
           }
 
           if(refrag_pkt[refrag_idx] != NULL)
@@ -653,14 +666,14 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
             if(refrag_packet == NULL)
             {
               DEBUG(verbose, "packet #%lu: no packet available for comparison\n", refrag_idx);
-              goto free_refrag_packets;
+              goto free_packets;
             }
 
             /* compare the output refragmented packets with the ones given by the user */
             if(refrag_header.caplen <= link_len_refrag)
             {
               DEBUG(verbose, "packet #%lu: packet available for comparison but too small\n", refrag_idx);
-              goto free_refrag_packets;
+              goto free_packets;
             }
 
             if(!compare_packets(verbose, refrag_pkt[refrag_idx]->start, refrag_pkt[refrag_idx]->length,
@@ -668,7 +681,7 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
             {
               DEBUG(verbose, "packet #%lu: second refragmented packet is not as attended\n", 
                     refrag_idx);
-              goto free_refrag_packets;
+              goto free_packets;
             }
           }
         }
@@ -742,14 +755,19 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
                                       &protocol, &rcv_pdu, &gse_length);
           if((status != STATUS_OK) && (status != PDU))
           {
-            DEBUG(verbose, "Error %#.4x when deencapsulating packet 1#%lu (%s)\n",
-                  status, rcv_pkt_idx, gse_get_status(status));
-            goto free_refrag_packets;
+            vfrag_pkt[rcv_pkt_idx] = NULL;
+            DEBUG(verbose, "Error %#.4x when deencapsulating packet 1#%lu number "
+                  "#%lu in fragment capture or #%lu in refragment capture(%s)\n",
+                  status, rcv_pkt_idx, rcv_frag_nbr + 1, rcv_refrag_nbr + 1, 
+                  gse_get_status(status));
+            goto free_packets;
           }
           DEBUG_L2(verbose, "GSE packet #%lu received, GSE Length = %d\n", rcv_pkt_nbr,
                    gse_length);
           vfrag_pkt[rcv_pkt_idx] = NULL;
           rcv_pkt_nbr++;
+          rcv_frag_nbr++;
+          rcv_refrag_nbr++;
         }
         if((refrag_filename != NULL) && (refrag_pkt[rcv_pkt_idx] != NULL) && (status != PDU))
         {
@@ -757,14 +775,17 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
                                       &protocol, &rcv_pdu, &gse_length);
           if((status != STATUS_OK) && (status != PDU))
           {
-            DEBUG(verbose, "Error %#.4x when deencapsulating packet 2#%lu (%s)\n",
-                  status, rcv_pkt_idx, gse_get_status(status));
-            goto free_refrag_packets;
+            refrag_pkt[rcv_pkt_idx] = NULL;
+            DEBUG(verbose, "Error %#.4x when deencapsulating packet 2#%lu number "
+                  "#%lu in refragment capture (%s)\n",
+                  status, rcv_pkt_idx, rcv_refrag_nbr + 1, gse_get_status(status));
+            goto free_packets;
           }
           DEBUG_L2(verbose, "GSE packet #%lu received, GSE Length = %d\n", rcv_pkt_nbr,
                    gse_length);
           refrag_pkt[rcv_pkt_idx] = NULL;
           rcv_pkt_nbr++;
+          rcv_refrag_nbr++;
         }
         rcv_pkt_idx++;
       }while((status != PDU) && (vfrag_pkt[rcv_pkt_idx] != NULL));
@@ -808,12 +829,12 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
       if(rcv_pdu != NULL)
       {
         status = gse_free_vfrag(rcv_pdu);
+        rcv_pdu = NULL; 
         if(status != STATUS_OK)
         {
           DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
           goto free_pdu;
         }
-      rcv_pdu = NULL; 
       }
     }while(rcv_pkt_idx < pkt_nbr);
     qos = (qos + 1) % QOS_NBR;
@@ -826,13 +847,14 @@ free_pdu:
   if(rcv_pdu != NULL)
   {
     status = gse_free_vfrag(rcv_pdu);
+    rcv_pdu = NULL;
     if(status != STATUS_OK)
     {
       is_failure = 1;
       DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
     }
   }
-free_refrag_packets:
+free_packets:
   if(refrag_filename != NULL)
   {
     for(i = refrag_idx ; i < pkt_nbr ; i++)
@@ -840,6 +862,7 @@ free_refrag_packets:
       if(refrag_pkt[i] != NULL)
       {
         status = gse_free_vfrag(refrag_pkt[i]);
+        refrag_pkt[i] = NULL;
         if(status != STATUS_OK)
         {
           DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
@@ -847,12 +870,12 @@ free_refrag_packets:
       }
     }
   }
-free_packets:
   for(i = rcv_pkt_idx ; i < pkt_nbr ; i++)
   {
     if(vfrag_pkt[i] != NULL)
     {
       status = gse_free_vfrag(vfrag_pkt[i]);
+      vfrag_pkt[i] = NULL;
       if(status != STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));

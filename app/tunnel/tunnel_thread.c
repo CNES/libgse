@@ -1159,16 +1159,20 @@ void *get_packet_thread(void *argv)
   while(alive)
   {
     sleep(0.001);
-    if(!arg->copy)
+    do
     {
-      ret = gse_encap_get_packet(&vfrag_pkt, arg->encap,
-                                 rand() % 1500 + 1, arg->qos);
+      if(!arg->copy)
+      {
+        ret = gse_encap_get_packet(&vfrag_pkt, arg->encap,
+                                   rand() % 1500 + 1, arg->qos);
+      }
+      else
+      {
+        ret = gse_encap_get_packet_copy(&vfrag_pkt, arg->encap,
+                                        rand() % 1500 + 1, arg->qos);
+      }
     }
-    else
-    {
-      ret = gse_encap_get_packet_copy(&vfrag_pkt, arg->encap,
-                                      rand() % 1500 + 1, arg->qos);
-    }
+    while(alive && ret != ERR_PACKET_TOO_SMALL);
     if((ret > STATUS_OK) && (ret != FIFO_EMPTY))
     {
       fprintf(stderr, "THREAD GET %u: error when getting packet #%u: %s\n",
@@ -1352,6 +1356,7 @@ void *get_packet_thread(void *argv)
     {
       gse_free_vfrag(vfrag_pkt);
       vfrag_pkt = NULL;
+      sleep(0.5);
     }
   }
   

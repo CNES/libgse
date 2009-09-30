@@ -39,7 +39,7 @@ struct gse_encap_s
   fifo_t *fifo;          /**< Table of FIFOs */
   size_t head_offset;    /**< Offset applied on the beginning of each copied
                               GSE packet
-                              (default: MAX_REFRAG_HEAD_OFFSET) */
+                              (default: GSE_MAX_REFRAG_HEAD_OFFSET) */
   size_t trail_offset;   /**< Offset applied on the end of each copied
                               GSE packet (default: 0) */
   uint8_t qos_nbr;       /**< Number of QoS values */
@@ -588,6 +588,12 @@ size_t gse_encap_compute_packet_length(size_t length,
 
   packet_length = MIN(length, GSE_MAX_PACKET_LENGTH);
   packet_length = MIN(length, remaining_data_length + header_length);
+  //Avoid CRC fragmentation
+  if((packet_length < remaining_data_length + header_length) &&
+     ((remaining_data_length + header_length - packet_length) < GSE_MAX_TRAILER_LENGTH))
+  {
+    packet_length = remaining_data_length - GSE_MAX_TRAILER_LENGTH + header_length;
+  }
 
   return packet_length;
 }

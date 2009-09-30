@@ -175,7 +175,7 @@ static int test_encap(int verbose, size_t frag_length,
   unsigned long counter;
   gse_encap_t *encap = NULL;
   vfrag_t **vfrag_pkt = NULL;
-  int pkt_nbr;
+  int pkt_nbr = 0;
   uint8_t label[6];
   vfrag_t *pdu = NULL;
   int i;
@@ -293,7 +293,7 @@ static int test_encap(int verbose, size_t frag_length,
     if(status != STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status, gse_get_status(status));
-      goto release_lib;
+      goto free_dup_vfrag;
     }
 
     /* get next GSE packet from the comparison dump file */
@@ -304,11 +304,16 @@ static int test_encap(int verbose, size_t frag_length,
       if(status != FIFO_EMPTY)
       {
         pkt_nbr++;
+        if(pkt_nbr >= PKT_MAX)
+        {
+          DEBUG(verbose, "Too much packet generated in test\n");
+          goto free_vfrag;
+        }
       }
       if((status != STATUS_OK) && (status != FIFO_EMPTY))
       {
         DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
-        goto release_lib;
+        goto free_vfrag;
       }
     }while(status != FIFO_EMPTY);
     DEBUG(verbose, "Fifo empty, %d packets copied\nCompare packets:\n", pkt_nbr);
@@ -323,7 +328,7 @@ static int test_encap(int verbose, size_t frag_length,
     if((status != STATUS_OK) && (status != FIFO_EMPTY))
     {
       DEBUG(verbose, "Error %#.4x when copying new data in pdu virtual fragment (%s)\n", status, gse_get_status(status));
-      goto release_lib;
+      goto free_vfrag;
     }
 
     for(i=0 ; i<pkt_nbr ; i++)
@@ -332,7 +337,7 @@ static int test_encap(int verbose, size_t frag_length,
       if(cmp_packet == NULL)
       {
         DEBUG(verbose, "packet #%lu: no packet available for comparison\n", counter);
-        goto release_lib;
+        goto free_vfrag;
       }
 
       /* compare the output packets with the ones given by the user */
@@ -340,28 +345,29 @@ static int test_encap(int verbose, size_t frag_length,
       {
         DEBUG(verbose, "packet #%lu: packet available for comparison but too small\n",
               counter);
-        goto release_lib;
+        goto free_vfrag;
       }
 
       if(!compare_packets(verbose, vfrag_pkt[i]->start, vfrag_pkt[i]->length,
                           cmp_packet + link_len_cmp, cmp_header.caplen - link_len_cmp))
       {
         DEBUG(verbose, "packet #%lu: generated packet is not as attended\n", counter);
-        goto release_lib;
+        goto free_vfrag;
       }
       DEBUG(verbose, "Packet %d OK\n", i);
     }
     gse_free_vfrag(dup_vfrag);
+    dup_vfrag = NULL;
 
     for(i=0 ; i<pkt_nbr ; i++)
     {
       if(vfrag_pkt[i] != NULL)
       {
         status = gse_free_vfrag(vfrag_pkt[i]);
+        vfrag_pkt[i] = NULL;
         if((status != STATUS_OK) && (status != FIFO_EMPTY))
         {
           DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
-          goto release_lib;
         }
       }
     }
@@ -370,8 +376,25 @@ static int test_encap(int verbose, size_t frag_length,
   /* everything went fine */
   is_failure = 0;
 
+free_vfrag:
+  for(i=0 ; i<pkt_nbr ; i++)
+  {
+    if(vfrag_pkt[i] != NULL)
+    {
+      status = gse_free_vfrag(vfrag_pkt[i]);
+      vfrag_pkt[i] = NULL;
+    }
+  }
+free_dup_vfrag:
+  if(dup_vfrag != NULL)
+  {
+    gse_free_vfrag(dup_vfrag);
+  }
 release_lib:
-  free(vfrag_pkt);
+  if(vfrag_pkt != NULL)
+  {
+    free(vfrag_pkt);
+  }
   status = gse_encap_release(encap);
   if(status != STATUS_OK)
   {
