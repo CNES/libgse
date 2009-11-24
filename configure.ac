@@ -14,7 +14,7 @@ AC_PROG_LIBTOOL
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdio.h stdlib.h])
+AC_CHECK_HEADERS([stdio.h stdlib.h stdint.h string.h strings.h assert.h arpa/inet.h endian.h pthread.h])
 
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -27,7 +27,7 @@ AC_PROG_GCC_TRADITIONAL
 AC_FUNC_MALLOC
 AC_FUNC_MEMCMP
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([malloc calloc free memcpy memcmp bzero])
+AC_CHECK_FUNCS([malloc calloc free memcpy memcmp bzero pthread_mutex_lock pthread_mutex_unlock assert htonl htons ntohl ntohs pthread_join pthread_create pselect])
 
 # check for pkg-config
 PKG_PROG_PKG_CONFIG

@@ -4,11 +4,12 @@
 #	Description: create the GSE virtual buffer test program
 ################################################################################
 
-noinst_PROGRAMS = test_vfrag \
-									test_vfrag_robust
+noinst_PROGRAMS = \
+	test_vfrag \
+	test_vfrag_robust
 
 TESTS = \
-  test_vfrag.sh \
+	test_vfrag.sh \
 	test_vfrag_robust.sh
 
 INCLUDES = \

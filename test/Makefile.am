@@ -5,7 +5,7 @@
 ################################################################################
 
 SUBDIRS = . \
-  samples
+	samples
 
 noinst_PROGRAMS = \
 	test_encap_deencap \

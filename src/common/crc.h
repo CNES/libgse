@@ -4,7 +4,7 @@
  *
  *          Project:     GSE LIBRARY
  *
- *          Company:     VIVERIS TECHNOLOGIES
+ *          Company:     THALES ALENIA SPACE
  *
  *          Module name: COMMON
  *
@@ -53,8 +53,12 @@
 #ifndef CRC_H
 #define CRC_H
 
+#include <stdint.h>
 #include <string.h>
 
-uint32_t compute_crc(unsigned char *data, size_t length);
+/**< Initial value for CRC32 computation */
+#define GSE_CRC_INIT 0xFFFFFFFF
+
+uint32_t compute_crc(unsigned char *data, size_t length, uint32_t crc_init);
 
 #endif

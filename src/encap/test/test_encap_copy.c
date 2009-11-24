@@ -174,14 +174,14 @@ static int test_encap(int verbose, size_t frag_length,
   int is_failure = 1;
   unsigned long counter;
   gse_encap_t *encap = NULL;
-  vfrag_t **vfrag_pkt = NULL;
+  gse_vfrag_t **vfrag_pkt = NULL;
   int pkt_nbr = 0;
   uint8_t label[6];
-  vfrag_t *pdu = NULL;
+  gse_vfrag_t *pdu = NULL;
   int i;
   int status;
   uint8_t qos = 0;
-  vfrag_t *dup_vfrag = NULL;
+  gse_vfrag_t *dup_vfrag = NULL;
 
   /* open the source dump file */
   handle = pcap_open_offline(src_filename, errbuf);
@@ -239,13 +239,13 @@ static int test_encap(int verbose, size_t frag_length,
 
   /* Initialize the GSE library */
   status = gse_encap_init(QOS_NBR, FIFO_SIZE, &encap);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error %#.4x when initializing library (%s)\n", status, gse_get_status(status));
     goto close_comparison;
   }
 
-  vfrag_pkt = malloc(sizeof(vfrag_t*) * PKT_MAX);
+  vfrag_pkt = calloc(PKT_MAX, sizeof(gse_vfrag_t*));
 
   /* for each packet in the dump */
   counter = 0;
@@ -275,7 +275,7 @@ static int test_encap(int verbose, size_t frag_length,
                                         GSE_MAX_HEADER_LENGTH,
                                         GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto release_lib;
@@ -283,14 +283,14 @@ static int test_encap(int verbose, size_t frag_length,
     /* Duplicate PDU to avoid destruction by the library in order to fill if
      * with '0' and test copy */
     status = gse_duplicate_vfrag(&dup_vfrag, pdu, in_size);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when duplicating pdu (%s)\n", status, gse_get_status(status));
       goto release_lib;
     }
 
     status = gse_encap_receive_pdu(pdu, encap, label, 0, PROTOCOL, qos);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status, gse_get_status(status));
       goto free_dup_vfrag;
@@ -301,7 +301,7 @@ static int test_encap(int verbose, size_t frag_length,
     pkt_nbr = 0;
     do{
       status = gse_encap_get_packet_copy(&vfrag_pkt[pkt_nbr], encap, frag_length, qos);
-      if(status != FIFO_EMPTY)
+      if(status != GSE_STATUS_FIFO_EMPTY)
       {
         pkt_nbr++;
         if(pkt_nbr >= PKT_MAX)
@@ -310,12 +310,12 @@ static int test_encap(int verbose, size_t frag_length,
           goto free_vfrag;
         }
       }
-      if((status != STATUS_OK) && (status != FIFO_EMPTY))
+      if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
       {
         DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
         goto free_vfrag;
       }
-    }while(status != FIFO_EMPTY);
+    }while(status != GSE_STATUS_FIFO_EMPTY);
     DEBUG(verbose, "Fifo empty, %d packets copied\nCompare packets:\n", pkt_nbr);
 
     /* Fill the PDU with 0 in order to check if packet is correctly created
@@ -325,7 +325,7 @@ static int test_encap(int verbose, size_t frag_length,
     for(j = 0 ; j < dup_vfrag->length ; j++)
       data[j] = 0x00;
     status = gse_copy_data(dup_vfrag, data, dup_vfrag->length);
-    if((status != STATUS_OK) && (status != FIFO_EMPTY))
+    if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
     {
       DEBUG(verbose, "Error %#.4x when copying new data in pdu virtual fragment (%s)\n", status, gse_get_status(status));
       goto free_vfrag;
@@ -365,7 +365,7 @@ static int test_encap(int verbose, size_t frag_length,
       {
         status = gse_free_vfrag(vfrag_pkt[i]);
         vfrag_pkt[i] = NULL;
-        if((status != STATUS_OK) && (status != FIFO_EMPTY))
+        if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
         {
           DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
         }
@@ -396,7 +396,7 @@ release_lib:
     free(vfrag_pkt);
   }
   status = gse_encap_release(encap);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     is_failure = 1;
     DEBUG(verbose, "Error %#.4x when releasing library (%s)\n", status, gse_get_status(status));

@@ -105,9 +105,9 @@ static int test_vfrag(int verbose)
 {
   int is_failure = 1;
   unsigned char *data = NULL;
-  vfrag_t *vfrag;
-  vfrag_t *dup_vfrag;
-  vfrag_t *created_vfrag;
+  gse_vfrag_t *vfrag;
+  gse_vfrag_t *dup_vfrag;
+  gse_vfrag_t *created_vfrag;
   size_t length;
   int status = 0;
   unsigned int i;
@@ -116,7 +116,7 @@ static int test_vfrag(int verbose)
   data = malloc(sizeof(unsigned char) * DATA_LENGTH);
   DEBUG(verbose, "The original data are '");
 
-  // Create data
+  /* Create data */
   for(i = 0 ; i < DATA_LENGTH ; i++)
   {
     data[i] = i;
@@ -126,7 +126,7 @@ static int test_vfrag(int verbose)
 
   /********************************TEST_FUNC_1********************************/
 
-  // Create a fragment and print informations
+  /* Create a fragment and print informations */
   status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, 0, 0, data,
                                       DATA_LENGTH);
   if(status > 0)
@@ -157,7 +157,7 @@ static int test_vfrag(int verbose)
 
   /********************************TEST_FUNC_2********************************/
 
-  // Duplicate a fragment and print informations
+  /* Duplicate a fragment and print informations */
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status > 0)
   {
@@ -194,7 +194,7 @@ static int test_vfrag(int verbose)
   }
   DEBUG(verbose, "'.\n");
 
-  // free duplicated fragment
+  /* free duplicated fragment */
   status = gse_free_vfrag(dup_vfrag);
   if(status > 0)
   {
@@ -219,10 +219,10 @@ static int test_vfrag(int verbose)
     goto failure;
   }
   DEBUG(verbose, "Its length is %d:\n'", length);
-  
+
   DEBUG(verbose, "New data are written into the virtual fragment:\n'");
 
-  // Create new data
+  /* Create new data */
   for(i = 0 ; i < DATA_LENGTH ; i++)
   {
     data[i] = DATA_LENGTH - i;
@@ -230,7 +230,7 @@ static int test_vfrag(int verbose)
   }
   DEBUG(verbose, "'.\nThe data are copied in the virtual fragment...\n");
 
-  // Copy the data and print informations
+  /* Copy the data and print informations */
   status = gse_copy_data(vfrag, data, DATA_LENGTH);
   if(status > 0)
   {
@@ -250,7 +250,7 @@ static int test_vfrag(int verbose)
 
   /********************************TEST_FUNC_4********************************/
 
-  //Create a fragment from virtual fragment data
+  /* Create a fragment from virtual fragment data */
   status = gse_create_vfrag_with_data(&created_vfrag, CREATED_LENGTH, 10, 10,
                                       vfrag->start, CREATED_LENGTH);
   if(status > 0)
@@ -291,7 +291,7 @@ static int test_vfrag(int verbose)
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  //Fill the virtual fragment with 0 and check the data in the created vfrag
+  /* Fill the virtual fragment with 0 and check the data in the created vfrag */
   status = gse_reset_vfrag(vfrag, &length, 0, 0);
   if(status > 0)
   {
@@ -331,7 +331,7 @@ static int test_vfrag(int verbose)
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  // Duplicate a fragment and print informations
+  /* Duplicate a fragment and print informations */
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status > 0)
   {
@@ -348,7 +348,7 @@ static int test_vfrag(int verbose)
   }
   DEBUG(verbose, "'.\n");
 
-  // free the virtual fragment
+  /* free the virtual fragment */
   status = gse_free_vfrag(vfrag);
   if(status > 0)
   {
@@ -359,7 +359,7 @@ static int test_vfrag(int verbose)
   DEBUG(verbose, "\nThe virtual fragment is destroyed, buffer is not destroyed because"
          " number of fragment is %d\n", dup_vfrag->vbuf->vfrag_count);
 
-  // free the duplicated fragment
+  /* free the duplicated fragment */
   status = gse_free_vfrag(dup_vfrag);
   if(status > 0)
   {
@@ -369,7 +369,7 @@ static int test_vfrag(int verbose)
   }
   DEBUG(verbose, "\nThe duplicated fragment and the buffer are destroyed\n");
 
-  // free the created fragment
+  /* free the created fragment */
   status = gse_free_vfrag(created_vfrag);
   if(status > 0)
   {

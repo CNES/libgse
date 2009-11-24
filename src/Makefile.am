@@ -9,7 +9,7 @@ SUBDIRS = \
 	encap \
 	deencap
 
-	
+
 lib_LTLIBRARIES = libgse.la
 
 libgse_la_SOURCES =
@@ -19,5 +19,13 @@ libgse_la_LIBADD = \
 	encap/libgse_encap.la \
 	deencap/libgse_deencap.la
 
-include_HEADERS =
+libgse_includedir = ${includedir}/gse
+
+libgse_include_HEADERS = \
+	common/constants.h \
+	common/status.h \
+	common/virtual_buffer.h \
+	encap/encap.h \
+	encap/refrag.h \
+	deencap/deencap.h
 

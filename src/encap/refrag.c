@@ -4,7 +4,7 @@
  *
  *          Project:     GSE LIBRARY
  *
- *          Company:     VIVERIS TECHNOLOGIES
+ *          Company:     THALES ALENIA SPACE
  *
  *          Module name: REFRAGMENTATION
  *
@@ -15,15 +15,19 @@
  */
 /****************************************************************************/
 
+#include "refrag.h"
+
 #include <assert.h>
 #include <arpa/inet.h>
 
 #include "constants.h"
 #include "header.h"
 #include "crc.h"
-#include "refrag.h"
 
+
+/** Get the minimum between two values */
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
+
 
 /****************************************************************************
  *
@@ -32,77 +36,98 @@
  ****************************************************************************/
 
 /**
- *  @brief   Compute shift to applicate on header pointer
+ *  @brief   Modify the header of the GSE packet that is being refragmented
  *
- *  This is the difference between the former and the new header length
- *
- *  @param   payload_type   Type of data carried by the GSE packet
- *  @return  Header shift
-*/
-static size_t gse_refrag_compute_header_shift(payload_type_t payload_type);
-
-/**
- *  @brief   Modify header of a GSE packet
- *
- *  @param   packet        The GSE packet
- *  @param   header        The GSE initial header
+ *  @param   packet        IN/OUT: The GSE packet that is being refragmented
+ *  @param   header        The initial header of the GSE packet that is being
+ *                         refragmented
  *  @param   qos           The QoS of the packet
- *  @param   pdu_length    The length of the complete PDU
+ *  @param   data_length   The length of the data field of the GSE packet (in bytes)
  *  @param   payload_type  The type of payload of the initial packet
- *  @return  status
-*/
-static status_t gse_refrag_modify_header(vfrag_t *packet, gse_header_t header,
-                                         uint8_t qos, size_t pdu_length,
-                                         payload_type_t payload_type);
-
-/**
- *  @brief   Compute the header length of a GSE packet refragmented
  *
- *  @param   payload_type   Type of data carried by the initial GSE packet
- *  @param   label_type     Label Type filed of the GSE packet header
- *  @return  Header length
-*/
-static size_t gse_refrag_compute_header_length(payload_type_t payload_type,
-                                               uint8_t label_type);
+ *  @return
+ *                         - success/informative code among:
+ *                           - \ref GSE_STATUS_OK
+ *                         - warning/error code among:
+ *                           - \ref GSE_STATUS_INVALID_GSE_LENGTH
+ *                           - \ref GSE_STATUS_INTERNAL_ERROR;
+ */
+static gse_status_t gse_refrag_modify_header(gse_vfrag_t *packet,
+                                             gse_header_t header,
+                                             uint8_t qos, size_t data_length,
+                                             gse_payload_type_t payload_type);
 
 /**
- *  @brief   Compute the gse length header field of a GSE packet
+ *  @brief   Compute the header length of the first fragment of a refragmented
+ *           GSE packet according to its type
  *
  *  @param   payload_type   Type of data carried by the GSE packet
- *  @param   header         Header of the initial GSE packet
- *  @param   data_length    Length of data field
- *  @param   new_header     Header of the new GSE packet
- *  @return  status
-*/
-static status_t gse_refrag_compute_gse_length(payload_type_t payload_type,
-                                              gse_header_t header,
-                                              size_t data_length,
-                                              gse_header_t *new_header);
+ *  @param   label_type     The Label Type of the GSE packet
+ *
+ *  @return                 The header length (in bytes) on success,
+ *                          0 on error
+ */
+static size_t gse_refrag_compute_header_length(gse_payload_type_t payload_type,
+                                               gse_label_type_t label_type);
 
 /**
- *  @brief   Create the header of a GSE packet depending on a GSE initial header
+ *  @brief   Compute the value of the 'GSE Length' field of a GSE packet header
  *
- *  @param   packet         The GSE packet
- *  @param   payload_type   The payload carried by the packet
- *  @param   header         The GSE initial header
- *  @param   qos            The QoS of the packet
- *  @param   data_length    Length of the packet data field
- *  @return  status
-*/
-static status_t gse_refrag_create_header(vfrag_t *packet, payload_type_t payload_type,
-                                         gse_header_t header, uint8_t qos,
-                                         size_t data_length);
+ *  @param   payload_type   Type of data carried by the GSE packet
+ *  @param   label_type     The Label Type of the GSE packet
+ *  @param   data_length    The length of data field of the GSE packet
+ *  @param   new_header     IN/OUT: The header of the GSE packet to update
+ *
+ *  @return
+ *                          - success/informative code among:
+ *                            - \ref GSE_STATUS_OK
+ *                          - warning/error code among:
+ *                            - \ref GSE_STATUS_INVALID_GSE_LENGTH
+ *                            - \ref GSE_STATUS_INTERNAL_ERROR;
+ */
+static gse_status_t gse_refrag_compute_gse_length(gse_payload_type_t payload_type,
+                                                  gse_label_type_t label_type,
+                                                  size_t data_length,
+                                                  gse_header_t *new_header);
 
 /**
- *  @brief   Compute CRC32 from two packets containing the two fragments of
- *           a PDU
+ *  @brief   Create the header of the second fragment of GSE packet that is
+ *           being refragmented
  *
- *  @param   packet1      The GSE packet carrying the first fragment of the PDU
- *  @param   length       Length of data
- *  @param   label_length Length of label
- *  @return  status code
-*/
-static uint32_t gse_refrag_compute_crc(vfrag_t *const packet1, size_t length,
+ *  @param   packet         IN/OUT: The second fragment of the GSE packet being
+ *                          refragmented
+ *  @param   payload_type   The payload carried by the GSE packet being
+ *                          refragmented
+ *  @param   label_type     The Label Type of the GSE packet being refragmented
+ *  @param   qos            The QoS of the GSE packet being refragmented
+ *  @param   data_length    The length of data field of the second fragment
+ *
+ *  @return
+ *                          - success/informative code among:
+ *                            - \ref GSE_STATUS_OK\n
+ *                          - warning/error code among:
+ *                            - \ref GSE_STATUS_INVALID_GSE_LENGTH
+ *                            - \ref GSE_STATUS_INTERNAL_ERROR;
+ */
+static gse_status_t gse_refrag_create_header(gse_vfrag_t *packet,
+                                             gse_payload_type_t payload_type,
+                                             gse_label_type_t label_type,
+                                             uint8_t qos,
+                                             size_t data_length);
+
+/**
+ *  @brief   Compute the CRC32 from a GSE packet carrying a complete PDU.
+ *
+ *  The CRC32 is returned in NBO (Network Byte Order)
+ *
+ *  @param   packet        The GSE packet to compute the CRC for
+ *  @param   data_length   The length of the PDU carried by the GSE packet
+ *  @param   label_length  The length of the label of the GSE packet
+ *
+ *  @return                The CRC32
+ */
+static uint32_t gse_refrag_compute_crc(gse_vfrag_t *const packet,
+                                       size_t data_length,
                                        size_t label_length);
 
 /****************************************************************************
@@ -111,58 +136,67 @@ static uint32_t gse_refrag_compute_crc(vfrag_t *const packet1, size_t length,
  *
  ****************************************************************************/
 
-status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
-                           size_t head_offset, size_t trail_offset,
-                           uint8_t qos, size_t max_length)
+gse_status_t gse_refrag_packet(gse_vfrag_t *packet1, gse_vfrag_t **packet2,
+                               size_t head_offset, size_t trail_offset,
+                               uint8_t qos, size_t max_length)
 {
-  status_t status = STATUS_OK;
+  gse_status_t status = GSE_STATUS_OK;
 
   gse_header_t header;
-  payload_type_t payload_type;
+  gse_payload_type_t payload_type;
   size_t header_shift;
   size_t header_length;
   size_t init_data_length;
   size_t remaining_length;
+  size_t header_shift_bkp;
+  size_t trailer_shift_bkp;
+  size_t header_length_bkp;
   uint32_t crc;
   uint16_t gse_length;
 
   if(packet1 == NULL)
   {
-    status = ERR_NULL_PTR;
+    status = GSE_STATUS_NULL_PTR;
     goto error;
   }
 
   if(max_length > GSE_MAX_PACKET_LENGTH)
   {
-    status = LENGTH_TOO_HIGH;
+    status = GSE_STATUS_LENGTH_TOO_HIGH;
     goto error;
   }
   if(max_length < GSE_MIN_PACKET_LENGTH)
   {
-    status = LENGTH_TOO_SMALL;
+    status = GSE_STATUS_LENGTH_TOO_SMALL;
     goto error;
   }
   if(max_length >= packet1->length)
   {
-    status = REFRAG_UNNECESSARY;
+    status = GSE_STATUS_REFRAG_UNNECESSARY;
     goto error;
   }
 
+  /* make a backup copy of the header of the GSE packet being fragmented before
+   * altering it */
   memcpy(&header, packet1->start, MIN(sizeof(gse_header_t), packet1->length));
 
+  /* Extract the GSE Length of the header of the GSE packet */
   gse_length = ((uint16_t)header.gse_length_hi << 8) | header.gse_length_lo;
   if(gse_length != packet1->length - GSE_MANDATORY_FIELDS_LENGTH)
   {
-    status = ERR_INVALID_GSE_LENGTH;
+    status = GSE_STATUS_INVALID_GSE_LENGTH;
     goto error;
   }
+  /* Check the validity of the Label Length field */
   if(gse_get_label_length(header.lt) < 0)
   {
-    status = ERR_INVALID_LT;
+    status = GSE_STATUS_INVALID_LT;
     goto error;
   }
 
-  /* S and E values: - '00': subsequent fragment (not last)
+  /* Determine the type of payload of the GSE packet being refragmented with
+   * the values of the S and E fields.
+   * S and E values: - '00': subsequent fragment (not last)
    *                 - '01': last fragment
    *                 - '10': first fragment
    *                 - '11': complete PDU
@@ -171,79 +205,115 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
   {
     if(header.e == 0x1)
     {
-      payload_type = COMPLETE;
-      header_length = gse_compute_header_length(COMPLETE, header.lt);
+      payload_type = GSE_PDU_COMPLETE;
     }
     else
     {
-      payload_type = FIRST_FRAG;
-      header_length = gse_compute_header_length(FIRST_FRAG, header.lt);
+      payload_type = GSE_PDU_FIRST_FRAG;
     }
   }
   else
   {
     if(header.e == 0x1)
     {
-      payload_type = LAST_FRAG;
-      header_length = gse_compute_header_length(LAST_FRAG, header.lt);
+      payload_type = GSE_PDU_LAST_FRAG;
     }
     else
     {
-      payload_type = SUBS_FRAG;
-      header_length = gse_compute_header_length(SUBS_FRAG, header.lt);
+      payload_type = GSE_PDU_SUBS_FRAG;
     }
   }
-  //Check if wanted length allow 1 bit of data
+  /* Determine the header length of the GSE packet being refragmented */
+  header_length = gse_compute_header_length(payload_type, header.lt);
+  if(header_length == 0)
+  {
+    status = GSE_STATUS_INTERNAL_ERROR;
+    goto error;
+  }
+
+  /* Check if wanted length allows at least 1 bit of data */
   if((header_length + 1) > max_length)
   {
-    status = LENGTH_TOO_SMALL;
+    status = GSE_STATUS_LENGTH_TOO_SMALL;
     goto error;
   }
   if(header_length > packet1->length)
   {
-    status = ERR_INVALID_HEADER;
+    status = GSE_STATUS_INVALID_HEADER;
     goto error;
   }
 
-  init_data_length = packet1->length -
-                     gse_compute_header_length(payload_type, header.lt);
+  /* Remember the payload length of the packet being refragmented */
+  init_data_length = packet1->length - header_length;
 
-  header_shift = gse_refrag_compute_header_shift(payload_type);
-
-  remaining_length = packet1->length - max_length - header_shift;
-
-  //Check if CRC will be fragmented in the case of a last fragment and avoid it
-  if((payload_type == LAST_FRAG) && (remaining_length < GSE_MAX_TRAILER_LENGTH))
+  /* Compute the difference between the header length of the first GSE fragment
+   * and the header length of the initial GSE packet.
+   * There is a header shift only if the initial GSE packet contain a complete
+   * PDU */
+  header_shift = 0;
+  if(payload_type == GSE_PDU_COMPLETE)
   {
+    header_shift = GSE_MAX_REFRAG_HEAD_OFFSET;
+  }
+
+  /* Compute the remaining length of the data after first fragment creation */
+  remaining_length = packet1->length + header_shift - max_length;
+
+  /* Check if CRC32 will be fragmented in the case of a last fragment and avoid it */
+  if((payload_type == GSE_PDU_LAST_FRAG) &&
+     (remaining_length < GSE_MAX_TRAILER_LENGTH))
+  {
+    /* Reduce the length of the first fragment to be sure that the CRC32 field
+     * of the second fragment will not be cut between two fragments */
     max_length -= (GSE_MAX_TRAILER_LENGTH - remaining_length);
     remaining_length = GSE_MAX_TRAILER_LENGTH;
   }
 
-  status = gse_shift_vfrag(packet1, header_shift, remaining_length * -1);
-  if(status != STATUS_OK)
+  /* Resize the GSE packet being fragmented to the size of the first fragment */
+  status = gse_shift_vfrag(packet1, header_shift * -1, remaining_length * -1);
+  if(status != GSE_STATUS_OK)
   {
     goto error;
   }
+  /* Store the values of header and trailer shift and header length for
+   * reinitialization in case of error */
+  header_shift_bkp = header_shift;
+  trailer_shift_bkp = remaining_length;
+  header_length_bkp = header_length;
 
-  status = gse_refrag_modify_header(packet1, header, qos, init_data_length, payload_type);
-  if(status != STATUS_OK)
+  /* Create the header of the first GSE fragment thanks to the backup of the
+   * header of the original GSE packet */
+  status = gse_refrag_modify_header(packet1, header, qos, init_data_length,
+                                    payload_type);
+  if(status != GSE_STATUS_OK)
   {
-    goto error;
+    goto resize;
   }
 
-  //Second paquet is always a subsequent fragment or a last fragment
-  header_length = gse_compute_header_length(SUBS_FRAG, header.lt);
-
-  if(payload_type == COMPLETE)
+  /* Compute the header length of the second GSE fragment:
+   * the second fragment is always a subsequent fragment or a last fragment and
+   * these two packets types got the same header size */
+  header_length = gse_compute_header_length(GSE_PDU_SUBS_FRAG, header.lt);
+  if(header_length == 0)
   {
-    //Second created fragment will be a last fragment, we need to add a CRC
+    status = GSE_STATUS_INTERNAL_ERROR;
+    goto reinit;
+  }
+
+  /* Create the second fragment with remaining data. If the initial GSE packet
+   * was carrying a complete PDU, a CRC32 must be added at the end of the data
+   * because the second fragment will be a last one, so there is two separate
+   * cases */
+  if(payload_type == GSE_PDU_COMPLETE)
+  {
+    /* Second created fragment will be a last fragment, we need to add a CRC */
     status = gse_create_vfrag_with_data(packet2, remaining_length,
                                         header_length + head_offset,
                                         GSE_MAX_TRAILER_LENGTH + trail_offset,
                                         packet1->end, remaining_length);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
-      goto error;
+      goto reinit;
     }
 
     crc = gse_refrag_compute_crc(packet1, init_data_length,
@@ -252,43 +322,44 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
     memcpy((*packet2)->end, &crc, GSE_MAX_TRAILER_LENGTH);
 
     status = gse_shift_vfrag(*packet2, header_length * -1, GSE_MAX_TRAILER_LENGTH);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       goto free_packet;
     }
 
-    // Add CRC length to remaining length
+    /* Add CRC length to remaining length */
     remaining_length += GSE_MAX_TRAILER_LENGTH;
   }
   else
   {
-    // Check QoS
-    if(header.opt.frag_id != qos)
+    /* Check QoS */
+    if(header.subs_frag_s.frag_id != qos)
     {
-      status = ERR_INVALID_QOS;
-      goto error;
+      status = GSE_STATUS_INVALID_QOS;
+      goto reinit;
     }
 
-    //Create the second fragment
+    /* Create the second fragment */
     status = gse_create_vfrag_with_data(packet2, remaining_length,
                                         header_length + head_offset,
                                         trail_offset, packet1->end,
                                         remaining_length);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
-      goto error;
+      goto reinit;
     }
 
     status = gse_shift_vfrag(*packet2, header_length * -1, 0);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       goto free_packet;
     }
   }
 
-  status = gse_refrag_create_header(*packet2, payload_type, header, qos,
+  /* Create the header of the second GSE fragment */
+  status = gse_refrag_create_header(*packet2, payload_type, header.lt, qos,
                                     remaining_length);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     goto free_packet;
   }
@@ -296,7 +367,14 @@ status_t gse_refrag_packet(vfrag_t *packet1, vfrag_t **packet2,
   return status;
 free_packet:
   gse_free_vfrag(*packet2);
+reinit:
+  gse_shift_vfrag(packet1, header_shift_bkp, trailer_shift_bkp);
+  memcpy(packet1->start, &header, header_length_bkp);
 error:
+  *packet2 = NULL;
+  return status;
+resize:
+  gse_shift_vfrag(packet1, header_shift_bkp, trailer_shift_bkp);
   *packet2 = NULL;
   return status;
 }
@@ -307,168 +385,179 @@ error:
  *
  ****************************************************************************/
 
-size_t gse_refrag_compute_header_shift(payload_type_t payload_type)
+static gse_status_t gse_refrag_modify_header(gse_vfrag_t *packet,
+                                             gse_header_t header,
+                                             uint8_t qos, size_t data_length,
+                                             gse_payload_type_t payload_type)
 {
-  size_t header_shift = 0;
-
-  switch (payload_type)
-  {
-    //GSE packet carrying a complete PDU
-    case COMPLETE:
-      //Difference between complete PDU and first fragment header
-      header_shift = GSE_MAX_REFRAG_HEAD_OFFSET * -1;
-      break;
-    //GSE packet carrying a fragment of PDU
-    case FIRST_FRAG:
-    case SUBS_FRAG:
-    case LAST_FRAG:
-      header_shift = 0;
-      break;
-    default:
-      assert(0);
-  }
-  return header_shift;
-}
-
-
-status_t gse_refrag_modify_header(vfrag_t *packet, gse_header_t header,
-                                  uint8_t qos, size_t pdu_length,
-                                  payload_type_t payload_type)
-{
-  status_t status = STATUS_OK;
+  gse_status_t status = GSE_STATUS_OK;
 
   size_t data_field_length;
+  size_t header_length;
   uint16_t total_length;
-  gse_header_t* modified_hdr;
+  gse_header_t *modified_hdr;
 
   assert(packet != NULL);
 
-  modified_hdr = ((gse_header_t*)packet->start);
+  modified_hdr = ((gse_header_t *)packet->start);
 
-  data_field_length = packet->length -
-                      gse_refrag_compute_header_length(payload_type, header.lt);
-
-  switch (payload_type)
+  header_length = gse_refrag_compute_header_length(payload_type, header.lt);
+  if(header_length == 0)
   {
-    //Initial GSE packet carrying a complete PDU
-    case COMPLETE:
-      status = gse_refrag_compute_gse_length(FIRST_FRAG, header,
+    status = GSE_STATUS_INTERNAL_ERROR;
+    goto error;
+  }
+  data_field_length = packet->length - header_length;
+
+  /* Determine the type of the GSE fragment according to the type of the initial
+   * GSE packet and modify the GSE header in consequence.
+   * There is no header shift except for complete payload type, so all the
+   * fields are in correct position and only those which need to be modified
+   * are changed */
+  switch(payload_type)
+  {
+    /* Initial GSE packet carrying a complete PDU */
+    case GSE_PDU_COMPLETE:
+    {
+      /* Complete -> FIRST FRAGMENT + last fragment */
+      status = gse_refrag_compute_gse_length(GSE_PDU_FIRST_FRAG, header.lt,
                                              data_field_length, modified_hdr);
-      if(status != STATUS_OK)
+      if(status != GSE_STATUS_OK)
       {
         goto error;
       }
-      total_length = gse_get_label_length(header.lt) + pdu_length
+      total_length = gse_get_label_length(header.lt) + data_length
                      + GSE_PROTOCOL_TYPE_LENGTH;
 
-      //Complete -> FIRST FRAGMENT + last fragment
       modified_hdr->s = 0x1;
       modified_hdr->e = 0x0;
       modified_hdr->lt = header.lt;
-      modified_hdr->opt.first.frag_id = qos;
-      modified_hdr->opt.first.total_length = htons(total_length);
-      modified_hdr->opt.first.protocol_type = header.opt.complete.protocol_type;
-      modified_hdr->opt.first.label = header.opt.complete.label;
-      break;
-    /*For the other payload types, there is no header switch so all the fields
-     * are in correct position when vfrag->start is copied and only those which
-     * need to be modified are changed */
-    //Initial GSE packet carrying a first fragment of PDU
-    case FIRST_FRAG:
-      //First fragment -> FIRST FRAGMENT + subsequent fragment
-      status = gse_refrag_compute_gse_length(FIRST_FRAG, header,
+      modified_hdr->first_frag_s.frag_id = qos;
+      modified_hdr->first_frag_s.total_length = htons(total_length);
+      modified_hdr->first_frag_s.protocol_type = header.complete_s.protocol_type;
+      modified_hdr->first_frag_s.label = header.complete_s.label;
+    }
+    break;
+
+    /* Initial GSE packet carrying a first fragment of PDU */
+    case GSE_PDU_FIRST_FRAG:
+    {
+      /* First fragment -> FIRST FRAGMENT + subsequent fragment */
+      status = gse_refrag_compute_gse_length(GSE_PDU_FIRST_FRAG, header.lt,
                                              data_field_length, modified_hdr);
-      if(status != STATUS_OK)
+      if(status != GSE_STATUS_OK)
       {
         goto error;
       }
-      break;
-    //Initial GSE packet carrying a subsequent fragment of PDU which is not
-    //the last one
-    case SUBS_FRAG:
-      //Subsequent fragment -> SUBSEQUENT FRAGMENT + subsequent fragment
-      status = gse_refrag_compute_gse_length(SUBS_FRAG, header,
+    }
+    break;
+
+    /* Initial GSE packet carrying a subsequent fragment of PDU which is not
+     * the last one */
+    case GSE_PDU_SUBS_FRAG:
+    {
+      /* Subsequent fragment -> SUBSEQUENT FRAGMENT + subsequent fragment */
+      status = gse_refrag_compute_gse_length(GSE_PDU_SUBS_FRAG, header.lt,
                                              data_field_length, modified_hdr);
-      if(status != STATUS_OK)
+      if(status != GSE_STATUS_OK)
       {
         goto error;
       }
-      break;
-    //Initial GSE packet carrying a last fragment of PDU
-    case LAST_FRAG:
-      //Last fragment -> SUBSEQUENT FRAGMENT + last fragment
-      status = gse_refrag_compute_gse_length(SUBS_FRAG, header,
+    }
+    break;
+
+    /* Initial GSE packet carrying a last fragment of PDU */
+    case GSE_PDU_LAST_FRAG:
+    {
+      /* Last fragment -> SUBSEQUENT FRAGMENT + last fragment */
+      status = gse_refrag_compute_gse_length(GSE_PDU_SUBS_FRAG, header.lt,
                                              data_field_length, modified_hdr);
-      if(status != STATUS_OK)
+      if(status != GSE_STATUS_OK)
       {
         goto error;
       }
       modified_hdr->e = 0x0;
-      break;
+    }
+    break;
+
     default:
+      /* Should not append */
       assert(0);
+      status = GSE_STATUS_INTERNAL_ERROR;
+      goto error;
   }
+
 error:
   return status;
 }
 
-size_t gse_refrag_compute_header_length(payload_type_t payload_type,
-                                        uint8_t label_type)
+static size_t gse_refrag_compute_header_length(gse_payload_type_t payload_type,
+                                               gse_label_type_t label_type)
 {
-  size_t header_length = 0;
+  size_t header_length;
 
-  switch (payload_type)
+  switch(payload_type)
   {
-    //Initial GSE packet carrying a complete PDU or a first fragment of PDU
-    case COMPLETE:
-    case FIRST_FRAG:
-      //complete | first fragment -> FIRST FRAGMENT + ...
-      header_length = gse_compute_header_length(FIRST_FRAG, label_type);
+    /* Initial GSE packet carrying a complete PDU or a first fragment of PDU */
+    case GSE_PDU_COMPLETE:
+    case GSE_PDU_FIRST_FRAG:
+      /* complete | first fragment -> FIRST FRAGMENT + ... */
+      header_length = gse_compute_header_length(GSE_PDU_FIRST_FRAG, label_type);
       break;
-    //Initial GSE packet carrying a subsequent fragment of PDU
-    case SUBS_FRAG:
-    case LAST_FRAG:
-      //subsequent | last fragment -> SUBSEQUENT FRAGMENT + ...
-      header_length = gse_compute_header_length(SUBS_FRAG, label_type);
+
+    /* Initial GSE packet carrying a subsequent fragment of PDU */
+    case GSE_PDU_SUBS_FRAG:
+    case GSE_PDU_LAST_FRAG:
+      /* subsequent | last fragment -> SUBSEQUENT FRAGMENT + ... */
+      header_length = gse_compute_header_length(GSE_PDU_SUBS_FRAG, label_type);
       break;
+
     default:
+      /* Should not append */
       assert(0);
+      header_length = 0;
   }
   return header_length;
 }
 
-status_t gse_refrag_compute_gse_length(payload_type_t payload_type,
-                                       gse_header_t header, size_t data_length,
-                                       gse_header_t *new_header)
+static gse_status_t gse_refrag_compute_gse_length(gse_payload_type_t payload_type,
+                                                  gse_label_type_t label_type,
+                                                  size_t data_length,
+                                                  gse_header_t *new_header)
 {
-  status_t status = STATUS_OK;
+  gse_status_t status = GSE_STATUS_OK;
 
-  uint16_t gse_length = 0;
+  uint16_t gse_length;
 
-  switch (payload_type)
+  switch(payload_type)
   {
-    //There is no complete case because only fragments are considered
+    /* There is no complete case because only fragments are considered */
 
-    //GSE packet carrying a first fragment of PDU
-    case FIRST_FRAG:
+    /* GSE packet carrying a first fragment of PDU */
+    case GSE_PDU_FIRST_FRAG:
       gse_length = GSE_FRAG_ID_LENGTH +
                    GSE_TOTAL_LENGTH_LENGTH +
                    GSE_PROTOCOL_TYPE_LENGTH +
-                   gse_get_label_length(header.lt) +
+                   gse_get_label_length(label_type) +
                    data_length;
       break;
-    //GSE packet carrying a subsequent fragment of PDU
-    case SUBS_FRAG:
-    case LAST_FRAG:
-       gse_length = GSE_FRAG_ID_LENGTH +
-                    data_length;
-       break;
+
+    /* GSE packet carrying a subsequent fragment of PDU */
+    case GSE_PDU_SUBS_FRAG:
+    case GSE_PDU_LAST_FRAG:
+      gse_length = GSE_FRAG_ID_LENGTH +
+                   data_length;
+      break;
+
     default:
-       assert(0);
+      /* Should not append */
+      assert(0);
+      status = GSE_STATUS_INTERNAL_ERROR;
+      goto error;
   }
-  if (gse_length > 0xFFF)
+  if(gse_length > 0xFFF)
   {
-    status = ERR_INVALID_GSE_LENGTH;
+    status = GSE_STATUS_INVALID_GSE_LENGTH;
     goto error;
   }
 
@@ -479,67 +568,82 @@ error:
   return status;
 }
 
-status_t gse_refrag_create_header(vfrag_t *packet, payload_type_t payload_type,
-                                  gse_header_t header, uint8_t qos,
-                                  size_t data_length)
+static gse_status_t gse_refrag_create_header(gse_vfrag_t *packet,
+                                             gse_payload_type_t payload_type,
+                                             gse_label_type_t label_type,
+                                             uint8_t qos,
+                                             size_t data_length)
 {
-  status_t status = STATUS_OK;
-  
-  gse_header_t* created_hdr;
+  gse_status_t status = GSE_STATUS_OK;
+
+  gse_header_t *created_hdr;
 
   assert(packet != NULL);
 
-  created_hdr = ((gse_header_t*)packet->start);
-  switch (payload_type)
+  created_hdr = ((gse_header_t *)packet->start);
+  switch(payload_type)
   {
-    //Initial GSE packet carrying a complete PDU or a last fragment of PDU
-    case COMPLETE:
-    case LAST_FRAG:
-      //Complete | last fragment -> ... + LAST FRAGMENT
-      status = gse_refrag_compute_gse_length(LAST_FRAG, header,
+    /* Initial GSE packet carrying a complete PDU or a last fragment of PDU */
+    case GSE_PDU_COMPLETE:
+    case GSE_PDU_LAST_FRAG:
+    {
+      /* Complete | last fragment -> ... + LAST FRAGMENT */
+      status = gse_refrag_compute_gse_length(GSE_PDU_LAST_FRAG, label_type,
                                              data_length, created_hdr);
-      if(status != STATUS_OK)
+      if(status != GSE_STATUS_OK)
       {
         goto error;
       }
       created_hdr->s = 0x0;
       created_hdr->e = 0x1;
-      created_hdr->lt = 0x3;
-      created_hdr->opt.frag_id = qos;
-      break;
-    //Initial GSE packet carrying a fragment of PDU which is not the last one
-    //or a complete PDU
-    case FIRST_FRAG:
-    case SUBS_FRAG:
-      //First | subsequent fragment -> ... + SUBSEQUENT FRAGMENT
-      status = gse_refrag_compute_gse_length(SUBS_FRAG, header,
-                                        data_length, created_hdr);
-      if(status != STATUS_OK)
+      created_hdr->lt = GSE_LT_REUSE;
+      created_hdr->subs_frag_s.frag_id = qos;
+    }
+    break;
+
+    /* Initial GSE packet carrying a fragment of PDU which is not the last one
+     * or a complete PDU */
+    case GSE_PDU_FIRST_FRAG:
+    case GSE_PDU_SUBS_FRAG:
+    {
+      /* First | subsequent fragment -> ... + SUBSEQUENT FRAGMENT */
+      status = gse_refrag_compute_gse_length(GSE_PDU_SUBS_FRAG, label_type,
+                                             data_length, created_hdr);
+      if(status != GSE_STATUS_OK)
       {
         goto error;
       }
       created_hdr->s = 0x0;
       created_hdr->e = 0x0;
-      created_hdr->lt = 0x3;
-      created_hdr->opt.frag_id = qos;
-      break;
+      created_hdr->lt = GSE_LT_REUSE;
+      created_hdr->subs_frag_s.frag_id = qos;
+    }
+    break;
+
     default:
+      /* Should not append */
       assert(0);
+      status = GSE_STATUS_INTERNAL_ERROR;
+      goto error;
   }
+
 error:
   return status;
 }
 
-uint32_t gse_refrag_compute_crc(vfrag_t *const packet1, size_t length,
-                                size_t label_length)
+static uint32_t gse_refrag_compute_crc(gse_vfrag_t *const packet,
+                                       size_t data_length,
+                                       size_t label_length)
 {
   uint32_t crc;
   unsigned char *data;
 
-  data = packet1->start + GSE_MANDATORY_FIELDS_LENGTH + GSE_FRAG_ID_LENGTH;
-  length += GSE_TOTAL_LENGTH_LENGTH + GSE_PROTOCOL_TYPE_LENGTH + label_length;
+  data = packet->start + GSE_MANDATORY_FIELDS_LENGTH + GSE_FRAG_ID_LENGTH;
+  data_length += GSE_TOTAL_LENGTH_LENGTH +
+                 GSE_PROTOCOL_TYPE_LENGTH +
+                 label_length;
 
-  crc = compute_crc(data, length);
+  crc = compute_crc(data, data_length, GSE_CRC_INIT);
 
   return htonl(crc);
 }

@@ -5,12 +5,12 @@
 ################################################################################
 
 SUBDIRS = \
-  h323 \
-  misc \
-  mp3 \
-  rtp_rtp_icmp \
-  video1 \
-  video2 \
-  video3 \
-  voip \
-  voip+video
+	h323 \
+	misc \
+	mp3 \
+	rtp_rtp_icmp \
+	video1 \
+	video2 \
+	video3 \
+	voip \
+	voip+video

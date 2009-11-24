@@ -168,9 +168,9 @@ static int test_encap(int verbose, char *src_filename, char *cmp_filename)
   int is_failure = 1;
   unsigned long counter;
   gse_encap_t *encap = NULL;
-  vfrag_t *vfrag_pkt = NULL;
+  gse_vfrag_t *vfrag_pkt = NULL;
   uint8_t label[6];
-  vfrag_t *pdu = NULL;
+  gse_vfrag_t *pdu = NULL;
   int i;
   int nbr_pkt = 0;
   int status;
@@ -241,7 +241,7 @@ static int test_encap(int verbose, char *src_filename, char *cmp_filename)
 
   /* Initialize the GSE library */
   status = gse_encap_init(QOS_NBR, FIFO_SIZE, &encap);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error %#.4x when initializing library (%s)\n", status, gse_get_status(status));
     goto close_comparison;
@@ -275,13 +275,13 @@ static int test_encap(int verbose, char *src_filename, char *cmp_filename)
                                         GSE_MAX_HEADER_LENGTH,
                                         GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto release_lib;
     }
     status = gse_encap_receive_pdu(pdu, encap, label, 0, PROTOCOL, qos);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status, gse_get_status(status));
       goto release_lib;
@@ -291,13 +291,13 @@ static int test_encap(int verbose, char *src_filename, char *cmp_filename)
     /* The following might be done several times in case of fragmentation */
     do{
       status = gse_encap_get_packet(&vfrag_pkt, encap, frag_length[nbr_pkt % 5], qos);
-      if((status != STATUS_OK) && (status != FIFO_EMPTY))
+      if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
       {
         DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
         goto release_lib;
       }
 
-      if(status != FIFO_EMPTY)
+      if(status != GSE_STATUS_FIFO_EMPTY)
       {
         cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
         if(cmp_packet == NULL)
@@ -330,13 +330,13 @@ static int test_encap(int verbose, char *src_filename, char *cmp_filename)
       if(vfrag_pkt != NULL)
       {
         status = gse_free_vfrag(vfrag_pkt);
-        if((status != STATUS_OK) && (status != FIFO_EMPTY))
+        if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
         {
           DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
           goto release_lib;
         }
       }
-    }while(status != FIFO_EMPTY);
+    }while(status != GSE_STATUS_FIFO_EMPTY);
   }
 
 
@@ -345,7 +345,7 @@ static int test_encap(int verbose, char *src_filename, char *cmp_filename)
 
 release_lib:
   status = gse_encap_release(encap);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     is_failure = 1;
     DEBUG(verbose, "Error %#.4x when releasing library (%s)\n", status, gse_get_status(status));

@@ -25,25 +25,25 @@ INCLUDES = \
 
 test_deencap_SOURCES = test_deencap.c
 test_deencap_LDADD = \
-  -lpcap \
+	-lpcap \
 	../libgse_deencap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_deencap_interleaving_SOURCES = test_deencap_interleaving.c
 test_deencap_interleaving_LDADD = \
-  -lpcap \
+	-lpcap \
 	../libgse_deencap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_deencap_fault_SOURCES = test_deencap_fault.c
 test_deencap_fault_LDADD = \
-  -lpcap \
+	-lpcap \
 	../libgse_deencap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_deencap_timeout_SOURCES = test_deencap_timeout.c
 test_deencap_timeout_LDADD = \
-  -lpcap \
+	-lpcap \
 	../libgse_deencap.la \
 	$(top_builddir)/src/common/libgse_common.la
 

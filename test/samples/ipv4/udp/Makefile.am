@@ -5,7 +5,7 @@
 ################################################################################
 
 SUBDIRS = . \
-  rtp
+	rtp
 
 TESTS = \
 	$(top_builddir)/test/non_regression_tests.sh

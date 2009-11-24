@@ -165,10 +165,10 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
   int is_failure = 1;
   unsigned long counter;
   gse_deencap_t *deencap = NULL;
-  vfrag_t *gse_packet = NULL;
+  gse_vfrag_t *gse_packet = NULL;
   uint8_t label[6];
   uint8_t ref_label[3][6];
-  vfrag_t *pdu = NULL;
+  gse_vfrag_t *pdu = NULL;
   uint8_t label_type;
   uint16_t protocol;
   uint16_t gse_length;
@@ -238,7 +238,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
 
   /* Initialize the GSE library */
   status = gse_deencap_init(QOS_NBR, &deencap);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error %#.4x when initializing library (%s)\n", status, gse_get_status(status));
     goto close_comparison;
@@ -269,7 +269,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
                                         GSE_MAX_HEADER_LENGTH,
                                         GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto release_lib;
@@ -279,13 +279,13 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     /* The following might be done several times in case of fragmentation */
     status = gse_deencap_packet(gse_packet, deencap, &label_type, label,
                                 &protocol, &pdu, &gse_length);
-    if((status != STATUS_OK) && (status != PDU))
+    if((status != GSE_STATUS_OK) && (status != GSE_STATUS_PDU_RECEIVED))
     {
       DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
       goto free_pdu;
     }
 
-    if(status == PDU)
+    if(status == GSE_STATUS_PDU_RECEIVED)
     {
       counter++;
       cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
@@ -336,7 +336,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
       if(pdu != NULL)
       {
         status = gse_free_vfrag(pdu);
-        if(status != STATUS_OK)
+        if(status != GSE_STATUS_OK)
         {
           DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
           goto release_lib;
@@ -353,7 +353,7 @@ free_pdu:
   if(pdu != NULL)
   {
     status = gse_free_vfrag(pdu);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       is_failure = 1;
       DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
@@ -361,7 +361,7 @@ free_pdu:
   }
 release_lib:
   status = gse_deencap_release(deencap);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     is_failure = 1;
     DEBUG(verbose, "Error %#.4x when releasing library (%s)\n", status, gse_get_status(status));

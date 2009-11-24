@@ -13,7 +13,7 @@ sources = \
 	virtual_buffer.c \
 	header.c \
 	status.c \
-  crc.c	
+	crc.c  
 
 libgse_common_la_SOURCES = $(sources)
 

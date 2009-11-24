@@ -4,7 +4,7 @@
  *
  *          Project:     GSE LIBRARY
  *
- *          Company:     VIVERIS TECHNOLOGIES
+ *          Company:     THALES ALENIA SPACE
  *
  *          Module name: COMMON
  *
@@ -53,11 +53,13 @@
  */
 /****************************************************************************/
 
-#include <stdint.h>
-
 #include "crc.h"
 
-static const uint32_t crctab[] = {
+#include <stdint.h>
+
+/** CRC-32 table */
+static const uint32_t crctab[] =
+{
   0x0,
   0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b,
   0x1a864db2, 0x1e475005, 0x2608edb8, 0x22c9f00f, 0x2f8ad6d6,
@@ -115,22 +117,22 @@ static const uint32_t crctab[] = {
 /**
  *  @brief   Compute CRC32
  *
- *  @param   data    The data
- *  @param   length  Length of the data
- *  @return  CRC32
+ *  @param   data      The data
+ *  @param   length    Length of the data
+ *  @param   crc_init  Initial CRC value
+ *
+ *  @return          The CRC32
  */
-uint32_t compute_crc(unsigned char *data, size_t length)
+uint32_t compute_crc(unsigned char *data, size_t length, uint32_t crc_init)
 {
-  uint32_t crc;
   unsigned char *p;
   size_t len;
   len = 0;
 
 #define COMPUTE(var, ch)  (var) = (var) << 8 ^ crctab[(var) >> 24 ^ (ch)]
-  crc = 0xFFFFFFFF;
   for(len +=length, p = data; length--; ++p) {
-    COMPUTE(crc, *p);
+    COMPUTE(crc_init, *p);
   }
-  return crc;
+  return crc_init;
 }
 

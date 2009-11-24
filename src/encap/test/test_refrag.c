@@ -162,8 +162,8 @@ static int test_refrag(int verbose, size_t frag_length,
   unsigned char *cmp_packet;
   int is_failure = 1;
   unsigned long counter;
-  vfrag_t *vfrag = NULL;
-  vfrag_t *vfrag_pkt = NULL;
+  gse_vfrag_t *vfrag = NULL;
+  gse_vfrag_t *vfrag_pkt = NULL;
   int status;
   uint8_t qos = 0;
 
@@ -246,7 +246,7 @@ static int test_refrag(int verbose, size_t frag_length,
                                         GSE_MAX_HEADER_LENGTH,
                                         GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto close_comparison;
@@ -254,7 +254,7 @@ static int test_refrag(int verbose, size_t frag_length,
 
     /* Refragment the GSE packet */
     status = gse_refrag_packet(vfrag, &vfrag_pkt, 0, 0, qos, frag_length);
-    if((status != STATUS_OK))
+    if((status != GSE_STATUS_OK))
     {
       DEBUG(verbose, "Error %#.4x when refragment packet (%s)\n", status, gse_get_status(status));
       goto free_vfrag;
@@ -312,11 +312,11 @@ static int test_refrag(int verbose, size_t frag_length,
       DEBUG(verbose, "Packet #%lu - Fragment 2 : OK\n", counter);
     }
 
-    // Free packets
+    /* Free packets */
     if(vfrag != NULL)
     {
       status = gse_free_vfrag(vfrag);
-      if(status != STATUS_OK)
+      if(status != GSE_STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
         goto free_packets;
@@ -326,7 +326,7 @@ static int test_refrag(int verbose, size_t frag_length,
     if(vfrag_pkt != NULL)
     {
       status = gse_free_vfrag(vfrag_pkt);
-      if(status != STATUS_OK)
+      if(status != GSE_STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
         goto close_comparison;
@@ -340,11 +340,11 @@ static int test_refrag(int verbose, size_t frag_length,
   is_failure = 0;
 
 free_packets:
-  // Free packets
+  /* Free packets */
   if(vfrag_pkt != NULL)
   {
     status = gse_free_vfrag(vfrag_pkt);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
       is_failure = 1;
@@ -355,7 +355,7 @@ free_vfrag:
   if(vfrag != NULL)
   {
     status = gse_free_vfrag(vfrag);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
       is_failure = 1;

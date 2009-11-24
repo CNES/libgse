@@ -153,9 +153,9 @@ static int test_encap(int verbose, int output_value, size_t frag_length,
   int is_failure = 1;
   unsigned long counter;
   gse_encap_t *encap = NULL;
-  vfrag_t *vfrag_pkt = NULL;
+  gse_vfrag_t *vfrag_pkt = NULL;
   uint8_t label[6];
-  vfrag_t *pdu = NULL;
+  gse_vfrag_t *pdu = NULL;
   int i;
   int status;
   uint8_t qos = 0;
@@ -190,7 +190,7 @@ static int test_encap(int verbose, int output_value, size_t frag_length,
 
   /* Initialize the GSE library */
   status = gse_encap_init(QOS_NBR, FIFO_SIZE, &encap);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error %#.4x when initializing library (%s)\n", status, gse_get_status(status));
     goto close_input;
@@ -224,13 +224,13 @@ static int test_encap(int verbose, int output_value, size_t frag_length,
                                         GSE_MAX_HEADER_LENGTH,
                                         GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
       goto check_status;
     }
     status = gse_encap_receive_pdu(pdu, encap, label, 0, PROTOCOL, qos);
-    if(status != STATUS_OK)
+    if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status, gse_get_status(status));
       goto check_status;
@@ -241,7 +241,7 @@ static int test_encap(int verbose, int output_value, size_t frag_length,
   /* The following might be done several times in case of fragmentation */
   do{
     status = gse_encap_get_packet(&vfrag_pkt, encap, frag_length, qos);
-    if((status != STATUS_OK) && (status != FIFO_EMPTY))
+    if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
     {
       DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
       goto check_status;
@@ -249,12 +249,12 @@ static int test_encap(int verbose, int output_value, size_t frag_length,
     if(vfrag_pkt != NULL)
     {
       status = gse_free_vfrag(vfrag_pkt);
-      if(status != STATUS_OK)
+      if(status != GSE_STATUS_OK)
       {
         goto check_status;
       }
     }
-  }while(status != FIFO_EMPTY);
+  }while(status != GSE_STATUS_FIFO_EMPTY);
 
 
   /* everything went fine */
@@ -270,7 +270,7 @@ check_status:
     is_failure = 1;
   }
   status = gse_encap_release(encap);
-  if(status != STATUS_OK)
+  if(status != GSE_STATUS_OK)
   {
     is_failure = 1;
     DEBUG(verbose, "Error %#.4x when releasing library (%s)\n", status, gse_get_status(status));
