@@ -122,14 +122,19 @@ typedef enum
 
   /* Received PDU status */
 
-  /** DATA length are different from PDU length computed with total length */
+  /** Data length are different from PDU length computed with total length */
   GSE_STATUS_INVALID_DATA_LENGTH      = 0x0701,
   /** CRC32 computed does not correspond to received CRC32 */
   GSE_STATUS_INVALID_CRC              = 0x0702,
   /** Last packet containis less than 4 bytes after header */
   GSE_STATUS_CRC_FRAGMENTED           = 0x0703,
 
-  GSE_STATUS_MAX                      = 0x0800,
+  /* Header fields access */
+
+  /** The GSE packet does not contain the requested field */
+  GSE_STATUS_FIELD_ABSENT             = 0x0801,
+
+  GSE_STATUS_MAX                      = 0x0900,
 } gse_status_t;
 
 /****************************************************************************

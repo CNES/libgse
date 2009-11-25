@@ -24,7 +24,8 @@ libgse_includedir = ${includedir}/gse
 libgse_include_HEADERS = \
 	common/constants.h \
 	common/status.h \
-	common/virtual_buffer.h \
+	common/virtual_fragment.h \
+	common/header_fields.h \
 	encap/encap.h \
 	encap/refrag.h \
 	deencap/deencap.h

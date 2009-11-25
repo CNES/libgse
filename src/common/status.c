@@ -78,6 +78,9 @@ static char *gse_status_string[GSE_STATUS_MAX] =
   [0x0702] = "CRC32 computed does not match the received one: PDU dropped",
   [0x0703] = "Last fragment does not contain enough data for containing a complete CRC : PDU dropped",
   [0x0704 ... 0x07FF] = "Unknown status",
+  [0x0800] = "Warning or error when retrieving a header field value",
+  [0x0801] = "The GSE packet does not contain the requested field",
+  [0x0802 ... 0x08FF] = "Unknown status",
 };
 
 char *gse_get_status(gse_status_t status)

@@ -366,7 +366,7 @@ gse_status_t gse_refrag_packet(gse_vfrag_t *packet1, gse_vfrag_t **packet2,
 
   return status;
 free_packet:
-  gse_free_vfrag(*packet2);
+  gse_free_vfrag(packet2);
 reinit:
   gse_shift_vfrag(packet1, header_shift_bkp, trailer_shift_bkp);
   memcpy(packet1->start, &header, header_length_bkp);

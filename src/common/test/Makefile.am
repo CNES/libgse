@@ -6,11 +6,13 @@
 
 noinst_PROGRAMS = \
 	test_vfrag \
-	test_vfrag_robust
+	test_vfrag_robust \
+	test_header_access
 
 TESTS = \
 	test_vfrag.sh \
-	test_vfrag_robust.sh
+	test_vfrag_robust.sh \
+	test_header_access.sh
 
 INCLUDES = \
 	-I.. 
@@ -20,3 +22,8 @@ test_vfrag_LDADD = ../libgse_common.la
 
 test_vfrag_robust_SOURCES = test_vfrag_robust.c
 test_vfrag_robust_LDADD = ../libgse_common.la
+
+test_header_access_SOURCES = test_header_access.c
+test_header_access_LDADD = \
+	-lpcap \
+	../libgse_common.la

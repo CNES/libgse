@@ -69,7 +69,7 @@ usage: test [-verbose] cmp_file flow\n\
  *
  *****************************************************************************/
 
-static int test_refrag(int verbose, int output_value, size_t frag_length,
+static int test_refrag(int verbose, gse_status_t output_value, size_t frag_length,
                        char *src_filename);
 
 
@@ -144,7 +144,7 @@ quit:
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @return              0 in case of success, 1 otherwise
  */
-static int test_refrag(int verbose, int output_value, size_t frag_length,
+static int test_refrag(int verbose, gse_status_t output_value, size_t frag_length,
                        char *src_filename)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
@@ -157,7 +157,7 @@ static int test_refrag(int verbose, int output_value, size_t frag_length,
   unsigned long counter;
   gse_vfrag_t *vfrag = NULL;
   gse_vfrag_t *vfrag_pkt = NULL;
-  int status = GSE_STATUS_OK;
+  gse_status_t status = GSE_STATUS_OK;
   uint8_t qos = 0;
 
   DEBUG(verbose, "Tested output status %#.4x (%s)\n", output_value, gse_get_status(output_value));
@@ -231,23 +231,21 @@ static int test_refrag(int verbose, int output_value, size_t frag_length,
     /* Free packets */
     if(vfrag != NULL)
     {
-      status = gse_free_vfrag(vfrag);
+      status = gse_free_vfrag(&vfrag);
       if(status != GSE_STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
         goto close_input;
       }
-      vfrag = NULL;
     }
     if(vfrag_pkt != NULL)
     {
-      status = gse_free_vfrag(vfrag_pkt);
+      status = gse_free_vfrag(&vfrag_pkt);
       if(status != GSE_STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
         goto close_input;
       }
-      vfrag_pkt = NULL;
     }
   }
 
@@ -262,7 +260,7 @@ free_vfrag:
   }
   if(vfrag != NULL)
     {
-      status = gse_free_vfrag(vfrag);
+      status = gse_free_vfrag(&vfrag);
       if(status != GSE_STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));

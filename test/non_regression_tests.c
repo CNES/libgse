@@ -826,8 +826,7 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
 
       if(rcv_pdu != NULL)
       {
-        status = gse_free_vfrag(rcv_pdu);
-        rcv_pdu = NULL;
+        status = gse_free_vfrag(&rcv_pdu);
         if(status != GSE_STATUS_OK)
         {
           DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
@@ -844,8 +843,7 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
 free_pdu:
   if(rcv_pdu != NULL)
   {
-    status = gse_free_vfrag(rcv_pdu);
-    rcv_pdu = NULL;
+    status = gse_free_vfrag(&rcv_pdu);
     if(status != GSE_STATUS_OK)
     {
       is_failure = 1;
@@ -859,8 +857,7 @@ free_packets:
     {
       if(refrag_pkt[i] != NULL)
       {
-        status = gse_free_vfrag(refrag_pkt[i]);
-        refrag_pkt[i] = NULL;
+        status = gse_free_vfrag(&refrag_pkt[i]);
         if(status != GSE_STATUS_OK)
         {
           DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
@@ -872,8 +869,7 @@ free_packets:
   {
     if(vfrag_pkt[i] != NULL)
     {
-      status = gse_free_vfrag(vfrag_pkt[i]);
-      vfrag_pkt[i] = NULL;
+      status = gse_free_vfrag(&vfrag_pkt[i]);
       if(status != GSE_STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));

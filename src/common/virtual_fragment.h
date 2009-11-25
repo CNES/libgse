@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          virtual_buffer.h
+ *   @file          virtual_fragment.h
  *
  *          Project:     GSE LIBRARY
  *
@@ -137,7 +137,8 @@ gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const* data,
 /**
  *  @brief   Free a virtual fragment
  *
- *  @param   vfrag         The virtual fragment that will be destroyed
+ *  @param   vfrag         IN: The virtual fragment that will be destroyed
+ *                         OUT: NULL
  *
  *  @return
  *                         - success/informative code among:
@@ -146,7 +147,7 @@ gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const* data,
  *                           - \ref GSE_STATUS_NULL_PTR
  *                           - \ref GSE_STATUS_FRAG_NBR
  */
-gse_status_t gse_free_vfrag(gse_vfrag_t *vfrag);
+gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag);
 
 /**
  *  @brief   Create a virtual fragment from an existing one

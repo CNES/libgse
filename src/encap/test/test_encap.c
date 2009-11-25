@@ -178,7 +178,7 @@ static int test_encap(int verbose, size_t frag_length,
   gse_vfrag_t *pdu = NULL;
   int i;
   int nbr_pkt = 0;
-  int status;
+  gse_status_t status;
   uint8_t qos = 0;
 
   DEBUG(verbose, "Maximum length of fragments is: %d\n", frag_length);
@@ -330,7 +330,7 @@ static int test_encap(int verbose, size_t frag_length,
       }
       if(vfrag_pkt != NULL)
       {
-        status = gse_free_vfrag(vfrag_pkt);
+        status = gse_free_vfrag(&vfrag_pkt);
         if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
         {
           DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status,

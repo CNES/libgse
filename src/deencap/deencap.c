@@ -256,7 +256,7 @@ gse_status_t gse_deencap_release(gse_deencap_t *deencap)
   {
     if(deencap->deencap_ctx[i].partial_pdu != NULL)
     {
-      status = gse_free_vfrag(deencap->deencap_ctx[i].partial_pdu);
+      status = gse_free_vfrag(&(deencap->deencap_ctx[i].partial_pdu));
       if(status != GSE_STATUS_OK)
       {
         stat_mem = status;
@@ -344,8 +344,9 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
     goto free_data;
   }
 
-  /* Destroy the received data since it is not required anymore */
-  gse_free_vfrag(data);
+  /* Destroy the received data since it is not required anymore
+   * The error are not treated because the data are correctly saved */
+  gse_free_vfrag(&data);
 
   if(packet->length < GSE_MIN_PACKET_LENGTH)
   {
@@ -466,7 +467,7 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
                                           deencap->head_offset,
                                           deencap->trail_offset,
                                           packet->start, packet->length);
-      gse_free_vfrag(packet);
+      gse_free_vfrag(&packet);
       if(status != GSE_STATUS_OK)
       {
         goto error;
@@ -520,8 +521,7 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
                                           deencap->trail_offset,
                                           ctx->partial_pdu->start,
                                           ctx->partial_pdu->length);
-      gse_free_vfrag(ctx->partial_pdu);
-      ctx->partial_pdu = NULL;
+      gse_free_vfrag(&(ctx->partial_pdu));
       if(status != GSE_STATUS_OK)
       {
         goto error;
@@ -539,10 +539,10 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
 
   return status;
 free_data:
-  gse_free_vfrag(data);
+  gse_free_vfrag(&data);
   return status;
 free_packet:
-  gse_free_vfrag(packet);
+  gse_free_vfrag(&packet);
 error:
   return status;
 }
@@ -616,8 +616,7 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
   if(ctx->partial_pdu != NULL)
   {
     status = GSE_STATUS_DATA_OVERWRITTEN;
-    gse_free_vfrag(ctx->partial_pdu);
-    ctx->partial_pdu = NULL;
+    gse_free_vfrag(&(ctx->partial_pdu));
   }
   ctx->label_type = header.lt;
   if(ctx->label_type != GSE_LT_6_BYTES)
@@ -646,8 +645,7 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
 
     /* Free the partial PDU because it has been saved in the context
      * The error are not treated because the data are correctly saved */
-    gse_free_vfrag(partial_pdu);
-    partial_pdu = NULL;
+    gse_free_vfrag(&partial_pdu);
   }
   else
   {
@@ -672,13 +670,12 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
 free_vfrag:
   if(ctx != NULL)
   {
-    gse_free_vfrag(ctx->partial_pdu);
-    ctx->partial_pdu = NULL;
+    gse_free_vfrag(&(ctx->partial_pdu));
   }
 free_partial_pdu:
   if(partial_pdu != NULL)
   {
-    gse_free_vfrag(partial_pdu);
+    gse_free_vfrag(&partial_pdu);
   }
   return status;
 }
@@ -740,14 +737,13 @@ static gse_status_t gse_deencap_add_frag(gse_vfrag_t *partial_pdu,
 
   /* Free partial_pdu as it is stored in context
    * The error are not treated because the data are correctly saved */
-  gse_free_vfrag(partial_pdu);
+  gse_free_vfrag(&partial_pdu);
 
   return status;
 free_ctx:
-  gse_free_vfrag(ctx->partial_pdu);
-  ctx->partial_pdu = NULL;
+  gse_free_vfrag(&(ctx->partial_pdu));
 free_partial_pdu:
-  gse_free_vfrag(partial_pdu);
+  gse_free_vfrag(&partial_pdu);
   return status;
 }
 
@@ -796,11 +792,10 @@ static gse_status_t gse_deencap_add_last_frag(gse_vfrag_t *partial_pdu,
 
   return status;
 free_ctx:
-  gse_free_vfrag(ctx->partial_pdu);
-  ctx->partial_pdu = NULL;
+  gse_free_vfrag(&(ctx->partial_pdu));
   return status;
 free_partial_pdu:
-  gse_free_vfrag(partial_pdu);
+  gse_free_vfrag(&partial_pdu);
 error:
   return status;
 }

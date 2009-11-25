@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 
-#include "virtual_buffer.h"
+#include "virtual_fragment.h"
 
 struct gse_encap_s;
 /** Encapsulation structure type definition */

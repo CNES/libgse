@@ -382,13 +382,12 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
 
       if(rcv_pdu != NULL)
       {
-        status = gse_free_vfrag(rcv_pdu);
+        status = gse_free_vfrag(&rcv_pdu);
         if(status != GSE_STATUS_OK)
         {
           DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
           goto free_pdu;
         }
-      rcv_pdu = NULL;
       }
     }while(rcv_pkt_nbr < pkt_nbr);
   }
@@ -399,7 +398,7 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
 free_pdu:
   if(rcv_pdu != NULL)
   {
-    status = gse_free_vfrag(rcv_pdu);
+    status = gse_free_vfrag(&rcv_pdu);
     if(status != GSE_STATUS_OK)
     {
       is_failure = 1;
@@ -411,7 +410,7 @@ free_packets:
   {
     if(vfrag_pkt[i] != NULL)
     {
-      status = gse_free_vfrag(vfrag_pkt[i]);
+      status = gse_free_vfrag(&vfrag_pkt[i]);
       if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));

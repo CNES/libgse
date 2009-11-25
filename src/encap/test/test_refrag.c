@@ -164,7 +164,7 @@ static int test_refrag(int verbose, size_t frag_length,
   unsigned long counter;
   gse_vfrag_t *vfrag = NULL;
   gse_vfrag_t *vfrag_pkt = NULL;
-  int status;
+  gse_status_t status;
   uint8_t qos = 0;
 
   /* open the source dump file */
@@ -315,23 +315,21 @@ static int test_refrag(int verbose, size_t frag_length,
     /* Free packets */
     if(vfrag != NULL)
     {
-      status = gse_free_vfrag(vfrag);
+      status = gse_free_vfrag(&vfrag);
       if(status != GSE_STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
         goto free_packets;
       }
-      vfrag = NULL;
     }
     if(vfrag_pkt != NULL)
     {
-      status = gse_free_vfrag(vfrag_pkt);
+      status = gse_free_vfrag(&vfrag_pkt);
       if(status != GSE_STATUS_OK)
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
         goto close_comparison;
       }
-      vfrag_pkt = NULL;
     }
   }
 
@@ -343,24 +341,22 @@ free_packets:
   /* Free packets */
   if(vfrag_pkt != NULL)
   {
-    status = gse_free_vfrag(vfrag_pkt);
+    status = gse_free_vfrag(&vfrag_pkt);
     if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
       is_failure = 1;
     }
-    vfrag_pkt = NULL;
   }
 free_vfrag:
   if(vfrag != NULL)
   {
-    status = gse_free_vfrag(vfrag);
+    status = gse_free_vfrag(&vfrag);
     if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
       is_failure = 1;
     }
-    vfrag = NULL;
   }
 close_comparison:
   pcap_close(cmp_handle);

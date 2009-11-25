@@ -20,7 +20,7 @@
 #define GSE_ENCAP_CTX_H
 
 #include "header.h"
-#include "virtual_buffer.h"
+#include "virtual_fragment.h"
 
 /****************************************************************************
  *

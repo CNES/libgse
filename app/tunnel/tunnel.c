@@ -972,7 +972,7 @@ int tun2udp(gse_encap_t *encap,
   if(ret > GSE_STATUS_OK)
   {
     fprintf(stderr, "Error when shifting PDU: %s\n", gse_get_status(ret));
-    gse_free_vfrag(vfrag_pdu);
+    gse_free_vfrag(&vfrag_pdu);
     goto quit;
   }
 
@@ -1094,8 +1094,7 @@ int tun2udp(gse_encap_t *encap,
       }
       frag_nbr++;
       /* release the fragment */
-      ret = gse_free_vfrag(vfrag_pkt);
-      vfrag_pkt = NULL;
+      ret = gse_free_vfrag(&vfrag_pkt);
       if(ret > GSE_STATUS_OK)
       {
         fprintf(stderr, "Error when releasing fragment #%u from PDU #%u: %s\n",
@@ -1164,8 +1163,7 @@ int tun2udp(gse_encap_t *encap,
         }
         frag_nbr++;
         /* release the fragment */
-        ret = gse_free_vfrag(refrag_pkt);
-        refrag_pkt = NULL;
+        ret = gse_free_vfrag(&refrag_pkt);
         if(ret > GSE_STATUS_OK)
         {
           fprintf(stderr, "Error when releasing fragment #%u from PDU #%u: %s\n",
@@ -1344,14 +1342,14 @@ int udp2tun(gse_deencap_t *deencap, int from, int to)
       goto free_pdu;
     }
 
-    gse_free_vfrag(pdu);
+    gse_free_vfrag(&pdu);
   }
 
 quit:
   return 0;
 
 free_pdu:
-    gse_free_vfrag(pdu);
+    gse_free_vfrag(&pdu);
 error:
   return 1;
 }

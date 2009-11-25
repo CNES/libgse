@@ -1102,8 +1102,7 @@ void *tun2udp_thread(void *argv)
     {
       fprintf(stderr, "THREAD ENCAP %u: error when shifting PDU: %s\n",
               arg->qos, gse_get_status(ret));
-      gse_free_vfrag(vfrag_pdu);
-      vfrag_pdu = NULL;
+      gse_free_vfrag(&vfrag_pdu);
     }
     /* Encapsulate the IP packet */
     DEBUG(is_debug, stderr, "THREAD ENCAP %u: encapsulate PDU #%u (%u bytes |  protocol %#.4x )\n",
@@ -1125,7 +1124,7 @@ void *tun2udp_thread(void *argv)
   fprintf(stderr, "terminating encapsulation thread %u...\n", arg->qos);
   pthread_exit(0);
 free_vfrag:
-  gse_free_vfrag(vfrag_pdu);
+  gse_free_vfrag(&vfrag_pdu);
   pthread_exit(0);
 error:
   gettimeofday(&last, NULL);
@@ -1184,8 +1183,7 @@ void *get_packet_thread(void *argv)
               arg->qos, local_seq, gse_get_status(ret));
       if(vfrag_pkt != NULL)
       {
-        gse_free_vfrag(vfrag_pkt);
-        vfrag_pkt = NULL;
+        gse_free_vfrag(&vfrag_pkt);
       }
     }
     else if(ret != GSE_STATUS_FIFO_EMPTY)
@@ -1201,8 +1199,7 @@ void *get_packet_thread(void *argv)
                   arg->qos, local_seq, gse_get_status(ret));
           if(refrag_pkt != NULL)
           {
-            gse_free_vfrag(refrag_pkt);
-            refrag_pkt = NULL;
+            gse_free_vfrag(&refrag_pkt);
           }
         }
 
@@ -1276,8 +1273,7 @@ void *get_packet_thread(void *argv)
         DEBUG(is_debug, stderr, "THREAD GET %u: sent packet %u\n", arg->qos, local_seq);
       }
       /* release the fragment */
-      ret = gse_free_vfrag(vfrag_pkt);
-      vfrag_pkt = NULL;
+      ret = gse_free_vfrag(&vfrag_pkt);
       if(ret > GSE_STATUS_OK)
       {
         fprintf(stderr, "THREAD GET %u: error when releasing fragment #%u: %s\n",
@@ -1347,8 +1343,7 @@ void *get_packet_thread(void *argv)
           DEBUG(is_debug, stderr, "THREAD GET %u: sent packet %u\n", arg->qos, local_seq);
         }
         /* release the fragment */
-        ret = gse_free_vfrag(refrag_pkt);
-        refrag_pkt = NULL;
+        ret = gse_free_vfrag(&refrag_pkt);
         if(ret > GSE_STATUS_OK)
         {
           fprintf(stderr, "THREAD GET %u: error when releasing fragment #%u: %s\n",
@@ -1360,8 +1355,7 @@ void *get_packet_thread(void *argv)
     }
     else
     {
-      gse_free_vfrag(vfrag_pkt);
-      vfrag_pkt = NULL;
+      gse_free_vfrag(&vfrag_pkt);
       sleep(0.5);
     }
   }
@@ -1372,13 +1366,11 @@ void *get_packet_thread(void *argv)
 error:
   if(vfrag_pkt != NULL)
   {
-    gse_free_vfrag(vfrag_pkt);
-    vfrag_pkt = NULL;
+    gse_free_vfrag(&vfrag_pkt);
   }
   if(refrag_pkt != NULL)
   {
-    gse_free_vfrag(refrag_pkt);
-    refrag_pkt = NULL;
+    gse_free_vfrag(&refrag_pkt);
   }
   gettimeofday(&last, NULL);
   alive = 0;
@@ -1456,8 +1448,7 @@ void *udp2tun_thread(void *argv)
     {
       fprintf(stderr, "Error when shifting reception fragment: %s\n",
               gse_get_status(ret));
-      gse_free_vfrag(vfrag_pkt);
-      vfrag_pkt = NULL;
+      gse_free_vfrag(&vfrag_pkt);
       goto error;
     }
     //dump_packet("RECEIVE", gse_get_vfrag_start(vfrag_pkt), gse_get_vfrag_length(vfrag_pkt));
@@ -1548,19 +1539,17 @@ void *udp2tun_thread(void *argv)
         goto free_pdu;
       }
 
-      gse_free_vfrag(pdu);
-      pdu = NULL;
+      gse_free_vfrag(&pdu);
     }
   }
 
   fprintf(stderr, "terminating de-encapsulation thread...\n");
   pthread_exit(0);
 free_vfrag:
-  gse_free_vfrag(vfrag_pkt);
+  gse_free_vfrag(&vfrag_pkt);
   pthread_exit(0);
 free_pdu:
-  gse_free_vfrag(pdu);
-  pdu = NULL;
+  gse_free_vfrag(&pdu);
 error:
   gettimeofday(&last, NULL);
   alive = 0;

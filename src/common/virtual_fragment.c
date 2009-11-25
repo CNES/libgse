@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          virtual_buffer.c
+ *   @file          virtual_fragment.c
  *
  *          Project:     GSE LIBRARY
  *
@@ -15,7 +15,7 @@
  */
 /****************************************************************************/
 
-#include "virtual_buffer.h"
+#include "virtual_fragment.h"
 
 #include <stdlib.h>
 #include <assert.h>
@@ -149,8 +149,7 @@ gse_status_t gse_create_vfrag_with_data(gse_vfrag_t **vfrag, size_t max_length,
 
   return status;
 free_vfrag:
-  gse_free_vfrag(*vfrag);
-  *vfrag = NULL;
+  gse_free_vfrag(vfrag);
 error:
   return status;
 }
@@ -201,27 +200,27 @@ error:
   return status;
 }
 
-gse_status_t gse_free_vfrag(gse_vfrag_t *vfrag)
+gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag)
 {
   gse_status_t status = GSE_STATUS_OK;
 
-  if(vfrag == NULL)
+  if(vfrag == NULL || *vfrag == NULL)
   {
     status = GSE_STATUS_NULL_PTR;
     goto error;
   }
 
-  if(gse_get_vfrag_nbr(vfrag) <= 0)
+  if(gse_get_vfrag_nbr(*vfrag) <= 0)
   {
     status = GSE_STATUS_FRAG_NBR;
     goto error;
   }
 
-  vfrag->vbuf->vfrag_count--;
+  (*vfrag)->vbuf->vfrag_count--;
 
-  if(gse_get_vfrag_nbr(vfrag) == 0)
+  if(gse_get_vfrag_nbr(*vfrag) == 0)
   {
-    status = gse_free_vbuf(vfrag->vbuf);
+    status = gse_free_vbuf((*vfrag)->vbuf);
     if(status != GSE_STATUS_OK)
     {
       goto free_vfrag;
@@ -229,7 +228,8 @@ gse_status_t gse_free_vfrag(gse_vfrag_t *vfrag)
   }
 
 free_vfrag:
-  free(vfrag);
+  free(*vfrag);
+  *vfrag = NULL;
 error:
   return status;
 }

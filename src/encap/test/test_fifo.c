@@ -178,7 +178,7 @@ static int test_encap(int verbose, uint8_t qos_nbr,
   uint8_t label[6];
   gse_vfrag_t *pdu = NULL;
   int i;
-  int status;
+  gse_status_t status;
   uint8_t qos = 0;
 
   /* open the source dump file */
@@ -328,7 +328,7 @@ static int test_encap(int verbose, uint8_t qos_nbr,
 
     if(vfrag_pkt != NULL)
     {
-      status = gse_free_vfrag(vfrag_pkt);
+      status = gse_free_vfrag(&vfrag_pkt);
       if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
       {
         DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));

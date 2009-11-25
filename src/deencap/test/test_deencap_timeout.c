@@ -68,7 +68,7 @@ usage: test [-verbose] output_value flow\n\
  *
  *****************************************************************************/
 
-static int test_deencap(int verbose, int output_value, char *src_filename);
+static int test_deencap(int verbose, gse_status_t output_value, char *src_filename);
 
 /****************************************************************************
  *
@@ -135,7 +135,7 @@ quit:
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @return              0 in case of success, 1 otherwise
  */
-static int test_deencap(int verbose, int output_value, char *src_filename)
+static int test_deencap(int verbose, gse_status_t output_value, char *src_filename)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_t *handle;
@@ -152,7 +152,7 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
   uint8_t label_type;
   uint16_t protocol;
   uint16_t gse_length;
-  int status;
+  gse_status_t status;
   int i;
 
   DEBUG(verbose, "Tested status is %#.4x (%s)\n", output_value, gse_get_status(output_value));
@@ -231,7 +231,7 @@ static int test_deencap(int verbose, int output_value, char *src_filename)
     }
     if(pdu != NULL)
     {
-      status = gse_free_vfrag(pdu);
+      status = gse_free_vfrag(&pdu);
       if(status != GSE_STATUS_OK)
       {
         goto check_status;

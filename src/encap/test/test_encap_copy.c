@@ -179,7 +179,7 @@ static int test_encap(int verbose, size_t frag_length,
   uint8_t label[6];
   gse_vfrag_t *pdu = NULL;
   int i;
-  int status;
+  gse_status_t status;
   uint8_t qos = 0;
   gse_vfrag_t *dup_vfrag = NULL;
 
@@ -356,15 +356,13 @@ static int test_encap(int verbose, size_t frag_length,
       }
       DEBUG(verbose, "Packet %d OK\n", i);
     }
-    gse_free_vfrag(dup_vfrag);
-    dup_vfrag = NULL;
+    gse_free_vfrag(&dup_vfrag);
 
     for(i=0 ; i<pkt_nbr ; i++)
     {
       if(vfrag_pkt[i] != NULL)
       {
-        status = gse_free_vfrag(vfrag_pkt[i]);
-        vfrag_pkt[i] = NULL;
+        status = gse_free_vfrag(&vfrag_pkt[i]);
         if((status != GSE_STATUS_OK) && (status != GSE_STATUS_FIFO_EMPTY))
         {
           DEBUG(verbose, "Error %#.4x when destroying packet (%s)\n", status, gse_get_status(status));
@@ -381,14 +379,13 @@ free_vfrag:
   {
     if(vfrag_pkt[i] != NULL)
     {
-      status = gse_free_vfrag(vfrag_pkt[i]);
-      vfrag_pkt[i] = NULL;
+      status = gse_free_vfrag(&vfrag_pkt[i]);
     }
   }
 free_dup_vfrag:
   if(dup_vfrag != NULL)
   {
-    gse_free_vfrag(dup_vfrag);
+    gse_free_vfrag(&dup_vfrag);
   }
 release_lib:
   if(vfrag_pkt != NULL)

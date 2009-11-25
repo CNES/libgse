@@ -82,7 +82,7 @@ gse_status_t gse_release_fifo(fifo_t *fifo)
       i != (fifo->last + 1) % fifo->size;
       i = (i + 1) % fifo->size)
   {
-    status = gse_free_vfrag(fifo->values[i].vfrag);
+    status = gse_free_vfrag(&(fifo->values[i].vfrag));
     if(status != GSE_STATUS_OK)
     {
       stat_mem = status;

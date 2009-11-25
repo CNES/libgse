@@ -10,10 +10,11 @@ SUBDIRS = . \
 noinst_LTLIBRARIES = libgse_common.la
 
 sources = \
-	virtual_buffer.c \
+	virtual_fragment.c \
 	header.c \
 	status.c \
-	crc.c  
+	crc.c \
+  header_fields.c	
 
 libgse_common_la_SOURCES = $(sources)
 

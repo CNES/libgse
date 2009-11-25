@@ -21,7 +21,7 @@
 
 #include <stdint.h>
 
-#include "virtual_buffer.h"
+#include "virtual_fragment.h"
 
 struct gse_deencap_s;
 typedef struct gse_deencap_s gse_deencap_t;

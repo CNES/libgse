@@ -366,7 +366,7 @@ gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
 error:
   return status;
 free_pdu:
-  gse_free_vfrag(pdu);
+  gse_free_vfrag(&pdu);
   return status;
 }
 
@@ -746,7 +746,7 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
   /* Go to the next FIFO element if the initial fragment is empty */
   if(encap_ctx->vfrag->length <= 0)
   {
-    status = gse_free_vfrag(encap_ctx->vfrag);
+    status = gse_free_vfrag(&(encap_ctx->vfrag));
     if(status != GSE_STATUS_OK)
     {
       goto free_packet;
@@ -760,7 +760,7 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
 
   return status;
 free_packet:
-  gse_free_vfrag(*packet);
+  gse_free_vfrag(packet);
 packet_null:
   *packet = NULL;
   return status;

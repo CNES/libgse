@@ -172,7 +172,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
   uint8_t label_type;
   uint16_t protocol;
   uint16_t gse_length;
-  int status;
+  gse_status_t status;
   int i;
   int pkt_nbr = 0;
 
@@ -336,13 +336,12 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
 
       if(pdu != NULL)
       {
-        status = gse_free_vfrag(pdu);
+        status = gse_free_vfrag(&pdu);
         if(status != GSE_STATUS_OK)
         {
           DEBUG(verbose, "Error %#.4x when destroying pdu (%s)\n", status, gse_get_status(status));
           goto release_lib;
         }
-        pdu = NULL;
       }
     }
   }
@@ -353,7 +352,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
 free_pdu:
   if(pdu != NULL)
   {
-    status = gse_free_vfrag(pdu);
+    status = gse_free_vfrag(&pdu);
     if(status != GSE_STATUS_OK)
     {
       is_failure = 1;
