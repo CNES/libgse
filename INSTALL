@@ -14,7 +14,7 @@ Install the library:
  $ make install
 
 The libraries are now located in the /path/to/installation/directory/lib
-directory and the header files in the /path/to/installation/directory/include
+directory and the header files in the /path/to/installation/directory/include/gse
 directory.
 
 Documentation
@@ -31,18 +31,10 @@ If you want to clean the documentation:
  $ make clean-doc
 
 
-Non-regression tool
+Tests
 -------------------
 
-Run the non-regression tool:
+Run the functional tests and non-regression tests:
 
- $ ./test/test <source PCAP file>
-
-The application:
- - outputs the results (status & logs) on stdout,
- - compares the generated GSE packets with IP packets given as input.
-
-For usage details, run:
-
- $ ./test/test -h
+ $ make check
 
