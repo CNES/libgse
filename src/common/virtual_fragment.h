@@ -23,6 +23,10 @@
 
 #include "status.h"
 
+/**
+ * @defgroup gse_virtual_fragment GSE virtual fragment API
+ */
+
 /****************************************************************************
  *
  *   STRUCTURES AND TYPES
@@ -78,7 +82,7 @@ typedef struct
  *                           - \ref GSE_STATUS_BUFF_LENGTH_NULL
  *                           - \ref GSE_STATUS_MALLOC_FAILED
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_create_vfrag(gse_vfrag_t **vfrag, size_t max_length,
                               size_t head_offset, size_t trail_offset);
@@ -111,7 +115,7 @@ gse_status_t gse_create_vfrag(gse_vfrag_t **vfrag, size_t max_length,
  *                          - \ref GSE_STATUS_MULTIPLE_VBUF_ACCESS
  *                          - \ref GSE_STATUS_DATA_TOO_LONG
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_create_vfrag_with_data(gse_vfrag_t **vfrag, size_t max_length,
                                         size_t head_offset, size_t trail_offset,
@@ -135,7 +139,7 @@ gse_status_t gse_create_vfrag_with_data(gse_vfrag_t **vfrag, size_t max_length,
  *                         - \ref GSE_STATUS_MULTIPLE_VBUF_ACCESS
  *                         - \ref GSE_STATUS_DATA_TOO_LONG
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const* data,
                            size_t data_length);
@@ -153,7 +157,7 @@ gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const* data,
  *                           - \ref GSE_STATUS_NULL_PTR
  *                           - \ref GSE_STATUS_FRAG_NBR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag);
 
@@ -177,7 +181,7 @@ gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag);
  *                          - \ref GSE_STATUS_FRAG_NBR
  *                          - \ref GSE_STATUS_MALLOC_FAILED
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_duplicate_vfrag(gse_vfrag_t **vfrag, gse_vfrag_t *father, size_t length);
 
@@ -200,7 +204,7 @@ gse_status_t gse_duplicate_vfrag(gse_vfrag_t **vfrag, gse_vfrag_t *father, size_
  *                          - \ref GSE_STATUS_PTR_OUTSIDE_BUFF
  *                          - \ref GSE_STATUS_FRAG_PTRS
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_shift_vfrag(gse_vfrag_t *vfrag, int start_shift, int end_shift);
 
@@ -221,7 +225,7 @@ gse_status_t gse_shift_vfrag(gse_vfrag_t *vfrag, int start_shift, int end_shift)
  *                           - \ref GSE_STATUS_NULL_PTR
  *                           - \ref GSE_STATUS_OFFSET_TOO_HIGH
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_reset_vfrag(gse_vfrag_t *vfrag, size_t *length,
                              size_t head_offset, size_t trail_offset);
@@ -236,7 +240,7 @@ gse_status_t gse_reset_vfrag(gse_vfrag_t *vfrag, size_t *length,
  *  @return         A pointer on the start of the virtual fragment on success,
  *                  NULL on failure
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 unsigned char *gse_get_vfrag_start(gse_vfrag_t *vfrag);
 
@@ -249,7 +253,7 @@ unsigned char *gse_get_vfrag_start(gse_vfrag_t *vfrag);
  *
  *  @return         The length of the virtual fragment
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 size_t gse_get_vfrag_length(gse_vfrag_t *vfrag);
 
@@ -268,7 +272,7 @@ size_t gse_get_vfrag_length(gse_vfrag_t *vfrag);
  *                    - \ref GSE_STATUS_NULL_PTR
  *                    - \ref GSE_STATUS_PTR_OUTSIDE_BUFF
  *
- *  @ingroup gse_common
+ *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_set_vfrag_length(gse_vfrag_t *vfrag, size_t length);
 

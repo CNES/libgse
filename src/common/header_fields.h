@@ -23,6 +23,10 @@
 
 #include "virtual_fragment.h"
 
+/**
+ * @defgroup gse_head_access GSE header fields access API
+ */
+
 /****************************************************************************
  *
  *   FUNCTIONS
@@ -42,7 +46,7 @@
  *                             - warning/error code among:
  *                               - \ref GSE_STATUS_NULL_PTR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 gse_status_t gse_get_start_indicator(unsigned char *packet,
                                      uint8_t *start_indicator);
@@ -60,7 +64,7 @@ gse_status_t gse_get_start_indicator(unsigned char *packet,
  *                           - warning/error code among:
  *                             - \ref GSE_STATUS_NULL_PTR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 gse_status_t gse_get_end_indicator(unsigned char *packet,
                                    uint8_t *end_indicator);
@@ -78,7 +82,7 @@ gse_status_t gse_get_end_indicator(unsigned char *packet,
  *                        - warning/error code among:
  *                          - \ref GSE_STATUS_NULL_PTR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 gse_status_t gse_get_label_type(unsigned char *packet, uint8_t *label_type);
 
@@ -95,7 +99,7 @@ gse_status_t gse_get_label_type(unsigned char *packet, uint8_t *label_type);
  *                        - warning/error code among:
  *                          - \ref GSE_STATUS_NULL_PTR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 gse_status_t gse_get_gse_length(unsigned char *packet, uint16_t *gse_length);
 
@@ -113,7 +117,7 @@ gse_status_t gse_get_gse_length(unsigned char *packet, uint16_t *gse_length);
  *                     - warning/error code among:
  *                       - \ref GSE_STATUS_NULL_PTR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 gse_status_t gse_get_frag_id(unsigned char *packet, uint8_t *frag_id);
 
@@ -131,7 +135,7 @@ gse_status_t gse_get_frag_id(unsigned char *packet, uint8_t *frag_id);
  *                          - warning/error code among:
  *                            - \ref GSE_STATUS_NULL_PTR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 gse_status_t gse_get_total_length(unsigned char *packet, uint16_t *total_length);
 
@@ -149,7 +153,7 @@ gse_status_t gse_get_total_length(unsigned char *packet, uint16_t *total_length)
  *                           - warning/error code among:
  *                             - \ref GSE_STATUS_NULL_PTR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 gse_status_t gse_get_protocol_type(unsigned char *packet,
                                    uint16_t *protocol_type);
@@ -169,7 +173,7 @@ gse_status_t gse_get_protocol_type(unsigned char *packet,
  *                   - warning/error code among:
  *                     - \ref GSE_STATUS_NULL_PTR
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 gse_status_t gse_get_label(unsigned char *packet, uint8_t label[6]);
 

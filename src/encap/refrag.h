@@ -23,6 +23,11 @@
 
 #include "virtual_fragment.h"
 
+/**
+ * @defgroup gse_refrag GSE refragmentation API
+ */
+
+
 /****************************************************************************
  *
  *   FUNCTION PROTOTYPES
@@ -75,6 +80,8 @@
  *                           - \ref GSE_STATUS_PTR_OUTSIDE_BUFF
  *                           - \ref GSE_STATUS_FRAG_PTRS
  *                           - \ref GSE_STATUS_INVALID_QOS
+ *
+ *  @ingroup gse_refrag
  */
 gse_status_t gse_refrag_packet(gse_vfrag_t *packet1, gse_vfrag_t **packet2,
                                size_t head_offset, size_t trail_offset,

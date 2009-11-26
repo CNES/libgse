@@ -28,7 +28,7 @@ struct gse_encap_s;
 typedef struct gse_encap_s gse_encap_t;
 
 /**
- * @defgroup gse_encap GSE deencapsulation and refragmentation API
+ * @defgroup gse_encap GSE encapsulation API
  */
 
 /****************************************************************************

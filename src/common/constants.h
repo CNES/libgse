@@ -25,20 +25,38 @@
  * @defgroup gse_common GSE common API
  */
 
-/**< Maximum length of a PDU (in Bytes) */
+/** Maximum length of a PDU (in Bytes)
+ *
+ *  @ingroup gse_common
+ */
 #define GSE_MAX_PDU_LENGTH 65535
-/**< Maximum length of a GSE packet (in Bytes) \
-  * 4095 corresponds to the maximum for GSE length field 2 corresponds to the \
-  * bytes which are not counted in GSE length field */
+/** Maximum length of a GSE packet (in Bytes) \
+ *  4095 corresponds to the maximum for GSE length field 2 corresponds to the \
+ *  bytes which are not counted in GSE length field
+ *
+ *  @ingroup gse_common
+ */
 #define GSE_MAX_PACKET_LENGTH (4095 + 2)
-/**< Maximum length of a GSE header (in Bytes) */
+/** Maximum length of a GSE header (in Bytes)
+ *
+ *  @ingroup gse_common
+ */
 #define GSE_MAX_HEADER_LENGTH 13
-/**< Maximum length of a GSE trailer (in Bytes) (length of CRC32) */
+/** Maximum length of a GSE trailer (in Bytes) (length of CRC32)
+ *
+ *  @ingroup gse_common
+ */
 #define GSE_MAX_TRAILER_LENGTH 4
-/**< Maximum offset between a fragmented PDU and a refragmented one */
+/** Maximum offset between a fragmented PDU and a refragmented one
+ *
+ *  @ingroup gse_common
+ */
 #define GSE_MAX_REFRAG_HEAD_OFFSET 3
 
-/** Type of label */
+/** Type of label
+ *
+ *  @ingroup gse_head_access
+ */
 typedef enum
 {
   GSE_LT_6_BYTES  = 0,   /**< 6-bytes label '00' */
@@ -56,7 +74,7 @@ typedef enum
  *  @return                the label length on success,
  *                         -1 if the label type is unknown
  *
- *  @ingroup gse_common
+ *  @ingroup gse_head_access
  */
 static inline int gse_get_label_length(gse_label_type_t label_type)
 {

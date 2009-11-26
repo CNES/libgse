@@ -19,13 +19,20 @@
 #ifndef GSE_STATUS_H
 #define GSE_STATUS_H
 
+/**
+ * @defgroup gse_status_codes GSE status codes API
+ */
+
 /****************************************************************************
  *
  *   STRUCTURES AND TYPES
  *
  ****************************************************************************/
 
-/** Error return codes */
+/** Error return codes
+ *
+ *  @ingroup gse_status_codes
+ */
 typedef enum
 {
   /** There is no error or warning */
@@ -162,7 +169,7 @@ typedef enum
  *
  *  @return             String containing status description
  *
- *  @ingroup gse_common
+ *  @ingroup gse_status_codes
  */
 char *gse_get_status(gse_status_t status);
 

@@ -1,6 +1,6 @@
 /****************************************************************************/
 /**
- *   @file          gse_doc.h
+ *   @file          gse_pages.h
  *
  *          Project:     GSE LIBRARY
  *
@@ -33,14 +33,21 @@
  * <p>The APIs for GSE encapsulation and deencapsulation are also available on
  * separate pages:
  *  <ul>
- *    <li>\ref gse_common</li>
+ *    <li>\ref gse_head_access</li>
+ *    <li>\ref gse_status_codes</li>
+ *    <li>\ref gse_virtual_fragment</li>
  *    <li>\ref gse_encap</li>
+ *    <li>\ref gse_refrag</li>
  *    <li>\ref gse_deencap</li>
  *  </ul>
  * </p>
  * 
  * <h2>License</h2>
+ *
+ * <p>The library is the property of Thales Alenia Space</p>
  * 
+ * <h2>Organization</h2>
+ *
  * <p>
  * The sources are in the src directory. They are separated into
  * three subdirectories:
