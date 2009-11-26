@@ -99,7 +99,7 @@ typedef enum
   /** Header is not valid */
   GSE_STATUS_INVALID_HEADER           = 0x0506,
 
-  /* Deencapsulation context status */
+  /* Deencapsulation context error/warning status */
 
   /** The deencapsulation context does not exist while receiving a subsequent
    *  fragment of PDU
@@ -107,18 +107,10 @@ typedef enum
   GSE_STATUS_CTX_NOT_INIT             = 0x0601,
   /** The PDU was not completly received in 256 BBFrames */
   GSE_STATUS_TIMEOUT                  = 0x0602,
-  /** A PDU and useful information are returned */
-  GSE_STATUS_PDU_RECEIVED             = 0x0603,
-  /** Padding is received */
-  GSE_STATUS_PADDING_DETECTED         = 0x0604,
   /** The packet is too long for the deencapsulation buffer */
-  GSE_STATUS_NO_SPACE_IN_BUFF         = 0x0605,
+  GSE_STATUS_NO_SPACE_IN_BUFF         = 0x0603,
   /** The packet is to small for a GSE packet */
-  GSE_STATUS_PACKET_TOO_SMALL         = 0x0606,
-  /** The context is not empty when receiving a first fragment, previous data
-   *  is overwritten
-   */
-  GSE_STATUS_DATA_OVERWRITTEN         = 0x0607,
+  GSE_STATUS_PACKET_TOO_SMALL         = 0x0604,
 
   /* Received PDU status */
 
@@ -129,12 +121,26 @@ typedef enum
   /** Last packet containis less than 4 bytes after header */
   GSE_STATUS_CRC_FRAGMENTED           = 0x0703,
 
+  /* Deencapsulation informative code (should not be treated as error) */
+
+  /** Padding is received */
+  GSE_STATUS_PADDING_DETECTED         = 0x0801,
+  /** The context is not empty when receiving a first fragment, previous data
+   *  is overwritten
+   */
+  GSE_STATUS_DATA_OVERWRITTEN         = 0x0802,
+
+  /* Deencapsualtion success code */
+
+  /** A PDU and useful information are returned */
+  GSE_STATUS_PDU_RECEIVED             = 0x0901,
+
   /* Header fields access */
 
   /** The GSE packet does not contain the requested field */
-  GSE_STATUS_FIELD_ABSENT             = 0x0801,
+  GSE_STATUS_FIELD_ABSENT             = 0x0A01,
 
-  GSE_STATUS_MAX                      = 0x0900,
+  GSE_STATUS_MAX                      = 0x0B00,
 } gse_status_t;
 
 /****************************************************************************
@@ -155,6 +161,8 @@ typedef enum
  *  @param   status     The Status code
  *
  *  @return             String containing status description
+ *
+ *  @ingroup gse_common
  */
 char *gse_get_status(gse_status_t status);
 

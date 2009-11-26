@@ -36,11 +36,11 @@ fi
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_deencap_fault 0x0605 ./input/deencap_too_much_data.pcap || ./test_deencap_fault verbose 0x0605 ./input/deencap_too_much_data.pcap
+./test_deencap_fault 0x0603 ./input/deencap_too_much_data.pcap || ./test_deencap_fault verbose 0x0603 ./input/deencap_too_much_data.pcap
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_deencap_fault 0x0606 ./input/deencap_too_small.pcap || ./test_deencap_fault verbose 0x0606 ./input/deencap_too_small.pcap
+./test_deencap_fault 0x0604 ./input/deencap_too_small.pcap || ./test_deencap_fault verbose 0x0604 ./input/deencap_too_small.pcap
 if [ "$?" -ne "0" ]; then
   exit 1
 fi

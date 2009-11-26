@@ -26,6 +26,10 @@
 struct gse_deencap_s;
 typedef struct gse_deencap_s gse_deencap_t;
 
+/**
+ * @defgroup gse_deencap GSE deencapsulation API
+ */
+
 /****************************************************************************
  *
  *   FUNCTION PROTOTYPES
@@ -51,6 +55,8 @@ typedef struct gse_deencap_s gse_deencap_t;
  *                       - \ref GSE_STATUS_MALLOC_FAILED
  *                       - \ref GSE_STATUS_INVALID_QOS
  *                       - \ref GSE_STATUS_NULL_PTR
+ *
+ *  @ingroup gse_deencap
  */
 gse_status_t gse_deencap_init(uint8_t qos_nbr, gse_deencap_t **deencap);
 
@@ -65,6 +71,8 @@ gse_status_t gse_deencap_init(uint8_t qos_nbr, gse_deencap_t **deencap);
  *                     - warning/error code among:
  *                       - \ref GSE_STATUS_NULL_PTR
  *                       - \ref GSE_STATUS_FRAG_NBR
+ *
+ *  @ingroup gse_deencap
  */
 gse_status_t gse_deencap_release(gse_deencap_t *deencap);
 
@@ -83,6 +91,8 @@ gse_status_t gse_deencap_release(gse_deencap_t *deencap);
  *                           - \ref GSE_STATUS_OK
  *                         - warning/error code among:
  *                           - \ref GSE_STATUS_NULL_PTR
+ *
+ *  @ingroup gse_deencap
  */
 gse_status_t gse_deencap_set_offsets(gse_deencap_t *deencap,
                                      size_t head_offset,
@@ -106,7 +116,8 @@ gse_status_t gse_deencap_set_offsets(gse_deencap_t *deencap,
  *                          Only '00' is implemented
  *  @param   label          OUT: The packet label if return code is PDU
  *  @param   protocol       OUT: The PDU protocol if return code is PDU
- *  @param   pdu            OUT: The PDU if return code is \ref PDU,
+ *  @param   pdu            OUT: The PDU if return code is
+ *                               \ref GSE_STATUS_PDU_RECEIVED,
  *                               NULL otherwise
  *  @param   packet_length  OUT: The length of the GSE packet on success
  *                                except padding detected (in bytes)
@@ -140,11 +151,13 @@ gse_status_t gse_deencap_set_offsets(gse_deencap_t *deencap,
  *                            - \ref GSE_STATUS_NO_SPACE_IN_BUFF
  *                            - \ref GSE_STATUS_INVALID_DATA_LENGTH
  *                            - \ref GSE_STATUS_INVALID_CRC
+ *
+ *  @ingroup gse_deencap
  */
 gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
                                 uint8_t *label_type, uint8_t label[6],
                                 uint16_t *protocol, gse_vfrag_t **pdu,
-                                uint16_t *gse_length);
+                                uint16_t *packet_length);
 
 /**
  *  @brief   Signal that a new BB Frame has been received
@@ -163,6 +176,8 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
  *                           - \ref GSE_STATUS_OK
  *                         - warning/error code among:
  *                           - \ref GSE_STATUS_NULL_PTR
+ *
+ *  @ingroup gse_deencap
  */
 gse_status_t gse_deencap_new_bbframe(gse_deencap_t *deencap);
 

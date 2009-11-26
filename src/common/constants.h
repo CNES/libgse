@@ -21,6 +21,10 @@
 
 #include <stdint.h>
 
+/**
+ * @defgroup gse_common GSE common API
+ */
+
 /**< Maximum length of a PDU (in Bytes) */
 #define GSE_MAX_PDU_LENGTH 65535
 /**< Maximum length of a GSE packet (in Bytes) \
@@ -51,6 +55,8 @@ typedef enum
  *
  *  @return                the label length on success,
  *                         -1 if the label type is unknown
+ *
+ *  @ingroup gse_common
  */
 static inline int gse_get_label_length(gse_label_type_t label_type)
 {

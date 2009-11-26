@@ -27,6 +27,9 @@ struct gse_encap_s;
 /** Encapsulation structure type definition */
 typedef struct gse_encap_s gse_encap_t;
 
+/**
+ * @defgroup gse_encap GSE deencapsulation and refragmentation API
+ */
 
 /****************************************************************************
  *
@@ -52,6 +55,8 @@ typedef struct gse_encap_s gse_encap_t;
  *                            - \ref GSE_STATUS_QOS_NBR_NULL
  *                            - \ref GSE_STATUS_FIFO_SIZE_NULL
  *                            - \ref GSE_STATUS_MALLOC_FAILED
+ *
+ *  @ingroup gse_encap
  */
 gse_status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
                             gse_encap_t **encap);
@@ -68,6 +73,8 @@ gse_status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
  *                     - \ref GSE_STATUS_NULL_PTR
  *                     - \ref GSE_STATUS_PTHREAD_MUTEX
  *                     - \ref GSE_STATUS_FRAG_NBR
+ *
+ *  @ingroup gse_encap
  */
 gse_status_t gse_encap_release(gse_encap_t *encap);
 
@@ -86,6 +93,8 @@ gse_status_t gse_encap_release(gse_encap_t *encap);
  *                           - \ref GSE_STATUS_OK
  *                         - warning/error code among:
  *                           - \ref GSE_STATUS_NULL_PTR
+ *
+ *  @ingroup gse_encap
  */
 gse_status_t gse_encap_set_offsets(gse_encap_t *encap,
                                    size_t head_offset, size_t trail_offset);
@@ -116,6 +125,8 @@ gse_status_t gse_encap_set_offsets(gse_encap_t *encap,
  *                            - \ref GSE_STATUS_INVALID_QOS
  *                            - \ref GSE_STATUS_PTHREAD_MUTEX
  *                            - \ref GSE_STATUS_FIFO_FULL
+ *
+ *  @ingroup gse_encap
  */
 gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
                                    uint8_t label[6], uint8_t label_type,
@@ -154,6 +165,8 @@ gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
  *                             - \ref GSE_STATUS_MALLOC_FAILED
  *                             - \ref GSE_STATUS_EMPTY_FRAG
  *                             - \ref GSE_STATUS_FRAG_NBR
+ *
+ *  @ingroup gse_encap
  */
 gse_status_t gse_encap_get_packet(gse_vfrag_t **packet, gse_encap_t *encap,
                                   size_t desired_length, uint8_t qos);
@@ -192,6 +205,8 @@ gse_status_t gse_encap_get_packet(gse_vfrag_t **packet, gse_encap_t *encap,
  *                             - \ref GSE_STATUS_MALLOC_FAILED
  *                             - \ref GSE_STATUS_EMPTY_FRAG
  *                             - \ref GSE_STATUS_FRAG_NBR
+ *
+ *  @ingroup gse_encap
  */
 gse_status_t gse_encap_get_packet_copy(gse_vfrag_t **packet, gse_encap_t *encap,
                                        size_t desired_length, uint8_t qos);
