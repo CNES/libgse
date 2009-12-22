@@ -1,9 +1,17 @@
 /****************************************************************************/
 /**
- * @file    test_fifo.c
- * @brief   GSE FIFO test
- * @author  Didier Barvaux / Viveris Technologies
- * @author  Julien Bernard / Viveris Technologies
+ *   @file          test_fifo.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: ENCAP
+ *
+ *   @brief         GSE FIFO test
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
  */
 /****************************************************************************/
 
@@ -99,6 +107,7 @@ int main(int argc, char *argv[])
   char *src_filename = NULL;
   char *cmp_filename = NULL;
   char *qos_nbr = 0;
+  int verbose;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
@@ -117,7 +126,7 @@ int main(int argc, char *argv[])
     /* get the name of the file that contains the packets to
        (de-)encapsulate */
     src_filename = argv[3];
-    failure = test_encap(0, atoi(qos_nbr), src_filename, cmp_filename);
+    verbose = 0;
   }
   if(argc == 5)
   {
@@ -133,8 +142,9 @@ int main(int argc, char *argv[])
     /* get the name of the file that contains the packets to
        (de-)encapsulate */
     src_filename = argv[4];
-    failure = test_encap(1, atoi(qos_nbr), src_filename, cmp_filename);
+    verbose = 1;
   }
+  failure = test_encap(verbose, atoi(qos_nbr), src_filename, cmp_filename);
 
 quit:
   return failure;

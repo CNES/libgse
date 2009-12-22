@@ -1,9 +1,17 @@
 /****************************************************************************/
 /**
- * @file    test_refrag.c
- * @brief   GSE refragmentation tests
- * @author  Didier Barvaux / Viveris Technologies
- * @author  Julien Bernard / Viveris Technologies
+ *   @file          test_refrag.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: ENCAP
+ *
+ *   @brief         GSE refragmentation tests
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
  */
 /****************************************************************************/
 
@@ -95,6 +103,7 @@ int main(int argc, char *argv[])
   char *src_filename = NULL;
   char *cmp_filename = NULL;
   char *frag_length = NULL;
+  int verbose;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
@@ -109,7 +118,7 @@ int main(int argc, char *argv[])
     frag_length = argv[1];
     cmp_filename = argv[2];
     src_filename = argv[3];
-    failure = test_refrag(0, atoi(frag_length), src_filename, cmp_filename);
+    verbose = 0;
   }
   if(argc == 5)
   {
@@ -121,8 +130,9 @@ int main(int argc, char *argv[])
     frag_length = argv[2];
     cmp_filename = argv[3];
     src_filename = argv[4];
-    failure = test_refrag(1, atoi(frag_length), src_filename, cmp_filename);
+    verbose = 1;
   }
+  failure = test_refrag(verbose, atoi(frag_length), src_filename, cmp_filename);
 
 quit:
   return failure;

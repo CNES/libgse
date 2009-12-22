@@ -1,9 +1,20 @@
 /****************************************************************************/
 /**
- * @file    test_encap_deencap.c
- * @brief   GSE encapsulation and deencapsulation test
- * @author  Didier Barvaux / Viveris Technologies
- * @author  Julien Bernard / Viveris Technologies
+ *   @file          test_encap_deencap.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: TESTS
+ *
+ *   @brief         GSE encapsulation and deencapsulation test
+ *                  This test is used to test maximum PDU size encapsulation
+ *                  and deencapsulation beacause it would have been too long to
+ *                  create a comparison file
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
  */
 /****************************************************************************/
 
@@ -47,16 +58,22 @@
 usage: test [-verbose] cmp_file flow\n\
   verbose         Print DEBUG information\n\
   frag_length     maximum length of the GSE packets\n\
+                  (0 for maximum fragment length)\n\
   flow            flow of Ethernet frames (PCAP format)\n"
 
 
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
 
+/** Number of FIFOs */
 #define QOS_NBR 4
+/** Size of FIFOs */
 #define FIFO_SIZE 100
+/** Maximum number of fragments for one PDU */
 #define PKT_MAX 100
+/** Maximum number of PDU in the source file */
 #define PDU_MAX 10
+/** Protocol to put in the protocol type field */
 #define PROTOCOL 9029
 
 /** DEBUG macro */

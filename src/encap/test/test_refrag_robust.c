@@ -1,9 +1,17 @@
 /****************************************************************************/
 /**
- * @file    test_refrag_robust.c
- * @brief   GSE refragmentation robustness tests
- * @author  Didier Barvaux / Viveris Technologies
- * @author  Julien Bernard / Viveris Technologies
+ *   @file          test_refrag_robust.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: ENCAP
+ *
+ *   @brief         GSE refragmentation robustness tests
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
  */
 /****************************************************************************/
 
@@ -93,7 +101,8 @@ int main(int argc, char *argv[])
 {
   char *src_filename = NULL;
   char *frag_length = NULL;
-  unsigned int output_value;
+  unsigned int output_value = 0;
+  int verbose;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
@@ -108,7 +117,7 @@ int main(int argc, char *argv[])
     output_value = strtol(argv[1], NULL, 16);
     frag_length = argv[2];
     src_filename = argv[3];
-    failure = test_refrag(0, output_value, atoi(frag_length), src_filename);
+    verbose = 0;
   }
   if(argc == 5)
   {
@@ -120,8 +129,9 @@ int main(int argc, char *argv[])
     output_value = strtol(argv[2], NULL, 16);
     frag_length = argv[3];
     src_filename = argv[4];
-    failure = test_refrag(1, output_value, atoi(frag_length), src_filename);
+    verbose = 1;
   }
+  failure = test_refrag(verbose, output_value, atoi(frag_length), src_filename);
 
 quit:
   return failure;

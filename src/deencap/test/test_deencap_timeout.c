@@ -1,9 +1,17 @@
 /****************************************************************************/
 /**
- * @file    test_deencap_timeout.c
- * @brief   GSE deencapsulation timeout test
- * @author  Didier Barvaux / Viveris Technologies
- * @author  Julien Bernard / Viveris Technologies
+ *   @file          test_deencap_timeout.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: DEENCAP
+ *
+ *   @brief         GSE deencapsulation timeout test
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
  */
 /****************************************************************************/
 
@@ -52,8 +60,11 @@ usage: test [-verbose] output_value flow\n\
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
 
+/** The number of FIFOs */
 #define QOS_NBR 5
+/** The type of label carried by the GSE packets */
 #define LABEL_TYPE 0x0
+/* The protocol carried by the GSE packets */
 #define PROTOCOL 0x2345
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
@@ -90,6 +101,7 @@ int main(int argc, char *argv[])
 {
   char *src_filename = NULL;
   unsigned int output_value = 0;
+  int verbose;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
@@ -103,7 +115,7 @@ int main(int argc, char *argv[])
   {
     output_value = strtol(argv[1], NULL, 16);
     src_filename = argv[2];
-    failure = test_deencap(0, output_value, src_filename);
+    verbose = 0;
   }
   if(argc == 4)
   {
@@ -114,8 +126,9 @@ int main(int argc, char *argv[])
     }
     output_value = strtoul(argv[2], NULL, 16);
     src_filename = argv[3];
-    failure = test_deencap(1, output_value, src_filename);
+    verbose = 1;
   }
+  failure = test_deencap(verbose, output_value, src_filename);
 
 quit:
   return failure;

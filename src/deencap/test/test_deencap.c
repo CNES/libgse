@@ -1,9 +1,17 @@
 /****************************************************************************/
 /**
- * @file    test_deencap.c
- * @brief   GSE deencapsulation tests
- * @author  Didier Barvaux / Viveris Technologies
- * @author  Julien Bernard / Viveris Technologies
+ *   @file          test_deencap.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: DEENCAP
+ *
+ *   @brief         GSE deencapsulation tests
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
  */
 /****************************************************************************/
 
@@ -53,8 +61,11 @@ usage: test [-verbose] cmp_file flow\n\
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
 
+/** The number of FIFOs */
 #define QOS_NBR 5
+/** The type of label carried by the GSE packets */
 #define LABEL_TYPE 0x0
+/* The protocol carried by the GSE packets */
 #define PROTOCOL 0x2345
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
@@ -95,6 +106,7 @@ int main(int argc, char *argv[])
 {
   char *src_filename = NULL;
   char *cmp_filename = NULL;
+  int verbose;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
@@ -112,7 +124,7 @@ int main(int argc, char *argv[])
     /* get the name of the file that contains the packets to
        (de-)encapsulate */
     src_filename = argv[2];
-    failure = test_deencap(0, src_filename, cmp_filename);
+    verbose = 0;
   }
   if(argc == 4)
   {
@@ -127,8 +139,9 @@ int main(int argc, char *argv[])
     /* get the name of the file that contains the packets to
        (de-)encapsulate */
     src_filename = argv[3];
-    failure = test_deencap(1, src_filename, cmp_filename);
+    verbose = 1;
   }
+  failure = test_deencap(verbose, src_filename, cmp_filename);
 
 quit:
   return failure;

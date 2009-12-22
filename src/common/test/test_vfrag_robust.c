@@ -1,8 +1,17 @@
 /****************************************************************************/
 /**
- * @file    test_vfrag_robust.c
- * @brief   Virtual fragment robustness tests
- * @author  Didier Barvaux / Viveris Technologies
+ *   @file          test_vfrag_robust.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: COMMON
+ *
+ *   @brief         Virtual fragment robustness tests
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
  */
 /****************************************************************************/
 
@@ -19,6 +28,7 @@
 #include <string.h>
 #include <net/ethernet.h>
 #include <stdint.h>
+#include <assert.h>
 
 /* GSE includes */
 #include "virtual_fragment.h"
@@ -29,9 +39,13 @@
  *
  *****************************************************************************/
 
+/** Length of data to write in the virtual fragment */
 #define DATA_LENGTH 64
+/** Length of data to write in the virtual fragment with overflow */
 #define BAD_DATA_LENGTH 128
+/** Length of the virtual fragment */
 #define VFRAG_LENGTH 64
+/** Length of the duplicated virtual fragment */
 #define DUP_LENGTH 32
 
 /* DEBUG macro */
@@ -58,6 +72,8 @@ static int test_vfrag_robust(int verbose);
 /**
  * @brief Main function for the GSE virtual buffer robustness test program
  *
+ * @param argc  the number of program arguments
+ * @param argv  the program arguments
  * @return      the unix return code:
  *               \li 0 in case of success,
  *               \li 1 in case of failure
@@ -65,26 +81,28 @@ static int test_vfrag_robust(int verbose);
 int main(int argc, char *argv[])
 {
   int res = 1;
+  int verbose = 0;
 
-  if(argc > 2)
+  if(argc > 2 || argc < 1)
   {
     printf("USAGE : test_vfrag_robust [verbose]\n");
-    goto quit;
   }
-  if(argc == 1)
+  else 
   {
-    res = test_vfrag_robust(0);
-    goto quit;
-  }
-  if(argc == 2)
-  {
-    if(!strcmp(argv[1], "verbose"))
+    if(argc == 2)
     {
-      res = test_vfrag_robust(1);
-      goto quit;
+      if(!strcmp(argv[1], "verbose"))
+      {
+        verbose = 1;
+      }
+      else
+      {
+        printf("USAGE : test_vfrag_robust [verbose]\n");
+        goto quit;
+      }
     }
+    res = test_vfrag_robust(verbose);
   }
-  printf("USAGE : test_vfrag_robust [verbose]\n");
 
 quit:
   return res;
@@ -99,29 +117,34 @@ quit:
 /**
  * @brief Test the virtual buffer creation, duplication and release
  *
- * @param   verbose  Print debug is verbose is 1
- * @return  0 on sucess, 1 on failure
+ * @param   verbose  Print debug if verbose is 1
+ * @return           0 on sucess, 1 on failure
  */
 static int test_vfrag_robust(int verbose)
 {
   int is_failure = 1;
-  unsigned char *data = NULL;
+  unsigned char *data;
   gse_vfrag_t *vfrag;
   gse_vfrag_t *dup_vfrag;
   gse_vfrag_t *dup_vfrag_2;
-  gse_status_t status = GSE_STATUS_OK;
+  gse_status_t status;
   unsigned int i;
 
-
   data = malloc(sizeof(unsigned char) * BAD_DATA_LENGTH);
+  if(data == NULL)
+  {
+    DEBUG(verbose, "Malloc failed for data\n");
+    goto quit;
+  }
 
-  /* Create data */
+  /* Create fake data for the test */
   for(i = 0 ; i < BAD_DATA_LENGTH ; i++)
   {
     data[i] = i;
   }
 
-  /*******************************TEST_ROBUST_1*******************************/
+  /****************************** TEST_ROBUST_1 ******************************/
+  assert(BAD_DATA_LENGTH > DATA_LENGTH);
 
   /* Create a fragment with too much data */
   DEBUG(verbose, "\nCreate a fragment with max_length < data_length...\n");
@@ -136,10 +159,15 @@ static int test_vfrag_robust(int verbose)
       goto failure;
     }
   }
+  else
+  {
+    DEBUG(verbose, "ERROR: fragment was created with to much data...\n");
+    goto failure;
+  }
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  /*******************************TEST_ROBUST_2*******************************/
+  /****************************** TEST_ROBUST_2 ******************************/
 
   /* Create a fragment */
   DEBUG(verbose, "Create a correct fragment and duplicate it\n");
@@ -152,7 +180,7 @@ static int test_vfrag_robust(int verbose)
     goto failure;
   }
 
-  /* Duplicate the fragment and print informations */
+  /* Duplicate the fragment */
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status != GSE_STATUS_OK)
   {
@@ -160,7 +188,6 @@ static int test_vfrag_robust(int verbose)
           gse_get_status(status));
     goto failure;
   }
-
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
@@ -175,6 +202,11 @@ static int test_vfrag_robust(int verbose)
       goto failure;
     }
   }
+  else
+  {
+     DEBUG(verbose, "ERROR: Pointer shifted outside buffer...\n");
+     goto failure;
+  }
   DEBUG(verbose, "\tEnd pointer:\n");
   status = gse_shift_vfrag(dup_vfrag, 0, DATA_LENGTH + 5);
   if(status != GSE_STATUS_OK)
@@ -185,6 +217,11 @@ static int test_vfrag_robust(int verbose)
     {
       goto failure;
     }
+  }
+  else
+  {
+     DEBUG(verbose, "ERROR: Pointer shifted outside buffer...\n");
+     goto failure;
   }
   DEBUG(verbose, "Move the start pointer behind the end pointer\n");
   status = gse_shift_vfrag(dup_vfrag, DUP_LENGTH + 1, 0);
@@ -197,8 +234,14 @@ static int test_vfrag_robust(int verbose)
       goto failure;
     }
   }
+  else
+  {
+     DEBUG(verbose, "ERROR: Start pointer shifted behind end pointer...\n");
+     goto failure;
+  }
 
-  /*******************************TEST_ROBUST_3*******************************/
+  /****************************** TEST_ROBUST_3 ******************************/
+  assert(vfrag->vbuf->vfrag_count > 1);
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
@@ -224,11 +267,12 @@ static int test_vfrag_robust(int verbose)
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  /*******************************TEST_ROBUST_4*******************************/
+  /****************************** TEST_ROBUST_4 ******************************/
+  assert(vfrag->vbuf->vfrag_count >= 2);
 
   DEBUG(verbose, "Duplicate fragment while buffer contains %d fragments...\n",
           vfrag->vbuf->vfrag_count);
-  /* Duplicate the fragment and print informations */
+  /* Duplicate the fragment */
   status = gse_duplicate_vfrag(&dup_vfrag_2, vfrag, DUP_LENGTH);
   if(status != GSE_STATUS_OK)
   {
@@ -263,7 +307,7 @@ static int test_vfrag_robust(int verbose)
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  /*******************************TEST_ROBUST_5*******************************/
+  /****************************** TEST_ROBUST_5 ******************************/
 
   /* Create a fragment with data size 0 */
   DEBUG(verbose, "Create a fragment with data size 0 and duplicate it...\n");
@@ -286,6 +330,11 @@ static int test_vfrag_robust(int verbose)
       goto failure;
     }
   }
+  else
+  {
+    DEBUG(verbose, "ERROR: Fragment duplicated although it was empty...\n");
+    goto failure;
+  }
 
   status = gse_free_vfrag(&vfrag);
   if(status != GSE_STATUS_OK)
@@ -296,13 +345,11 @@ static int test_vfrag_robust(int verbose)
   }
   DEBUG(verbose, "\nThe fragment and the buffer are destroyed\n");
 
-
-  free(data);
   is_failure = 0;
 
 failure:
-  if(is_failure != 0)
-    free(data);
+  free(data);
+quit:
   return is_failure;
 }
 

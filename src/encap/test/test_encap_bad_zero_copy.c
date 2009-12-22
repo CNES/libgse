@@ -1,9 +1,17 @@
 /****************************************************************************/
 /**
- * @file    test_encap_bad_zero_copy.c
- * @brief   GSE encapsulation bad zero copy usage test
- * @author  Didier Barvaux / Viveris Technologies
- * @author  Julien Bernard / Viveris Technologies
+ *   @file          test_encap_bad_zero_copy.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: ENCAP
+ *
+ *   @brief         GSE encapsulation bad zero copy usage test
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
  */
 /****************************************************************************/
 
@@ -93,6 +101,7 @@ int main(int argc, char *argv[])
   char *src_filename = NULL;
   unsigned int output_value = 0;
   size_t frag_length = 0;
+  int verbose;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
@@ -107,7 +116,7 @@ int main(int argc, char *argv[])
     output_value = strtol(argv[1], NULL, 16);
     frag_length = atoi(argv[2]);
     src_filename = argv[3];
-    failure = test_encap(0, output_value, frag_length, src_filename);
+    verbose = 0;
   }
   if(argc == 5)
   {
@@ -119,8 +128,9 @@ int main(int argc, char *argv[])
     output_value = strtoul(argv[2], NULL, 16);
     frag_length = atoi(argv[3]);
     src_filename = argv[4];
-    failure = test_encap(1, output_value, frag_length, src_filename);
+    verbose = 1;
   }
+  failure = test_encap(verbose, output_value, frag_length, src_filename);
 
 quit:
   return failure;
