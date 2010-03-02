@@ -106,7 +106,7 @@ gse_status_t gse_create_vfrag(gse_vfrag_t **vfrag, size_t max_length,
   if(*vfrag == NULL)
   {
     status = GSE_STATUS_MALLOC_FAILED;
-    goto error;
+    goto free_vbuf;
   }
   (*vfrag)->vbuf = vbuf;
   (*vfrag)->start = ((*vfrag)->vbuf->start + head_offset),
@@ -118,11 +118,15 @@ gse_status_t gse_create_vfrag(gse_vfrag_t **vfrag, size_t max_length,
      ((*vfrag)->end) < ((*vfrag)->vbuf->start))
   {
     status = GSE_STATUS_INTERNAL_ERROR;
-    goto error;
+    goto free_vfrag;
   }
   vbuf->vfrag_count++;
 
   return status;
+free_vfrag:
+  free(*vfrag);
+free_vbuf:
+  gse_free_vbuf(vbuf);
 error:
   *vfrag = NULL;
   return status;
@@ -197,6 +201,64 @@ gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const* data,
   }
 
 error:
+  return status;
+}
+
+gse_status_t gse_create_vfrag_from_buf(gse_vfrag_t **vfrag, unsigned char *buffer,
+                                       unsigned int head_offset, unsigned int trail_offset,
+                                       unsigned int data_length)
+{
+  int status = GSE_STATUS_OK;
+  gse_vbuf_t *vbuf;           
+                               
+  if(vfrag == NULL || buffer == NULL)
+  {
+    status = GSE_STATUS_NULL_PTR;
+    goto error;
+  }
+
+  vbuf = malloc(sizeof(gse_vbuf_t));
+  if(vbuf == NULL)
+  {
+    status = GSE_STATUS_MALLOC_FAILED;
+    goto error;
+  }
+
+  vbuf->start = buffer;
+  vbuf->length = head_offset + data_length + trail_offset;
+  vbuf->end = vbuf->start + vbuf->length;
+  vbuf->vfrag_count = 0;
+
+  *vfrag = malloc(sizeof(gse_vfrag_t));
+  if(*vfrag == NULL)
+  {
+    status = GSE_STATUS_MALLOC_FAILED;
+    goto free_vbuf;
+  }
+
+  (*vfrag)->vbuf = vbuf;
+  (*vfrag)->start = ((*vfrag)->vbuf->start + head_offset),
+  (*vfrag)->length = data_length;
+  (*vfrag)->end = (*vfrag)->start + (*vfrag)->length;
+  assert(((*vfrag)->end) <= ((*vfrag)->vbuf->end));
+  assert(((*vfrag)->end) >= ((*vfrag)->vbuf->start));
+  assert((vbuf->end - (*vfrag)->end) == (int)trail_offset);
+  if(((*vfrag)->end) > ((*vfrag)->vbuf->end) ||
+     ((*vfrag)->end) < ((*vfrag)->vbuf->start) ||
+     (vbuf->end - (*vfrag)->end) != (int)trail_offset)
+  {
+    status = GSE_STATUS_INTERNAL_ERROR;
+    goto free_vfrag;
+  }
+  vbuf->vfrag_count++;
+
+  return status;
+free_vfrag:
+  free(*vfrag);
+free_vbuf:
+  free(vbuf);
+error:
+  *vfrag = NULL;
   return status;
 }
 
@@ -278,11 +340,13 @@ gse_status_t gse_duplicate_vfrag(gse_vfrag_t **vfrag, gse_vfrag_t *father,
      ((*vfrag)->end) < ((*vfrag)->vbuf->start))
   {
     status = GSE_STATUS_INTERNAL_ERROR;
-    goto error;
+    goto free_vfrag;
   }
   (*vfrag)->vbuf->vfrag_count++;
 
   return status;
+free_vfrag:
+  free(*vfrag);
 error:
   *vfrag = NULL;
   return status;
@@ -403,6 +467,21 @@ gse_status_t gse_set_vfrag_length(gse_vfrag_t *vfrag, size_t length)
 error:
   return status;
 }
+
+size_t rohc_get_vfrag_available_head(gse_vfrag_t *vfrag)
+{
+  assert(vfrag != NULL);
+
+  return (vfrag->start - vfrag->vbuf->start);
+}
+
+size_t rohc_get_vfrag_available_trail(gse_vfrag_t *vfrag)
+{
+  assert(vfrag != NULL);
+
+  return (vfrag->vbuf->end - vfrag->end);
+}
+
 
 /****************************************************************************
  *

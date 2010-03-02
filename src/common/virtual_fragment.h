@@ -145,6 +145,36 @@ gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const* data,
                            size_t data_length);
 
 /**
+ *  @brief   Transform a buffer into a virtual fragment
+ *
+ *  The virtual buffer containing the fragment will contain the allocated
+ *  memory of the buffer.\n
+ *  The allocated space in the buffer must at least be
+ *  max_length + head_offset + trail_offset.\n
+ *  All length are expressed in bytes.\n
+ *
+ *  @param   vfrag        OUT: The virtual fragment on success,
+ *                             NULL on error
+ *  @param   buffer       The buffer to transform
+ *  @param   head_offset  The offset applied before the data in the buffer
+ *  @param   trail_offset The offset applied after the data in the buffer
+ *  @param   data_length  The length of the data in the buffer
+ *
+ *  @return
+ *                        - success/informative code among:
+ *                          - \ref GSE_STATUS_OK
+ *                        - warning/error code among:
+ *                          - \ref GSE_STATUS_NULL_PTR
+ *                          - \ref GSE_STATUS_MALLOC_FAILED
+ *                          - \ref GSE_STATUS_INTERNAL_ERROR
+ *
+ *  @ingroup gse_virtual_fragment
+ */
+gse_status_t gse_create_vfrag_from_buf(gse_vfrag_t **vfrag, unsigned char *buffer,
+                                       unsigned int head_offset, unsigned int trail_offset,
+                                       unsigned int data_length);
+
+/**
  *  @brief   Free a virtual fragment
  *
  *  @param   vfrag         IN: The virtual fragment that will be destroyed
@@ -275,5 +305,23 @@ size_t gse_get_vfrag_length(gse_vfrag_t *vfrag);
  *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_set_vfrag_length(gse_vfrag_t *vfrag, size_t length);
+
+/**
+ *  @brief   Get the length available in buffer before virtual fragment (in bytes)
+ *
+ *  @param   vfrag  The virtual fragment
+ *
+ *  @return         The header offset
+ */
+size_t gse_get_vfrag_available_head(gse_vfrag_t *vfrag);
+
+/**
+ *  @brief   Get the length available in buffer after virtual fragment (in bytes)
+ *
+ *  @param   vfrag  The virtual fragment
+ *
+ *  @return         The trailer offset
+ */
+size_t gse_get_vfrag_available_trail(gse_vfrag_t *vfrag);
 
 #endif
