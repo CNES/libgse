@@ -3,14 +3,14 @@ Introduction
 
 This piece of software is an implementation of the Generic Stream Encapsulation
 (GSE) standard defined by ETSI for Linux (or other Unix-compatible OS). The
-library may be used to add GSE encapsulation/de-encapsulation capabilities to an
-application.
+library may be used to add GSE encapsulation/de-encapsulation capabilities to
+an application.
 
 License
 -------
 
-Proprietary license.
-
+The GSE library is released under the LGPL version licence either version 3, or
+(at your option) any later version
 
 Library
 -------

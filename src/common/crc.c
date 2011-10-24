@@ -1,21 +1,7 @@
-/****************************************************************************/
-/**
- *   @file          crc.c
- *
- *          Project:     GSE LIBRARY
- *
- *          Company:     THALES ALENIA SPACE
- *
- *          Module name: COMMON
- *
- *   @brief         CRC32 computation
- *
- *   @author        Julien BERNARD / Viveris Technologies
- *
- */
-/****************************************************************************/
-/****************************************************************************/
 /*
+ *
+ * Most part of this code is under the following copyright:
+ *
  *-
  * Copyright (c) 1991, 1993
  *  The Regents of the University of California.  All rights reserved.
@@ -50,8 +36,29 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
+ *
+ *
+ * The modifications in this file are under the following copyright:
+ *
+ * Copyright © 2011 TAS
+ *
  */
-/****************************************************************************/
+
+/**
+ *   @file          crc.c
+ *
+ *          Project:     GSE LIBRARY
+ *
+ *          Company:     THALES ALENIA SPACE
+ *
+ *          Module name: COMMON
+ *
+ *   @brief         CRC32 computation
+ *
+ *   @author        Julien BERNARD / Viveris Technologies
+ *
+ */
 
 #include "crc.h"
 
@@ -135,4 +142,3 @@ uint32_t compute_crc(unsigned char *data, size_t length, uint32_t crc_init)
   }
   return crc_init;
 }
-

@@ -1,21 +1,13 @@
-/****************************************************************************/
-/**
- *   @file          crc.h
+/*
  *
- *          Project:     GSE LIBRARY
- *
- *          Company:     THALES ALENIA SPACE
- *
- *          Module name: COMMON
- *
- *   @brief         CRC32 computation
- *
- *   @author        Julien BERNARD / Viveris Technologies
- *
+ * Most part of this code is under the following copyright:
  *
  *-
  * Copyright (c) 1991, 1993
  *  The Regents of the University of California.  All rights reserved.
+ *
+ * This code is derived from software contributed to Berkeley by
+ * James W. Williams of NASA Goddard Space Flight Center.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -47,8 +39,14 @@
  *
  *  @(#)extern.h  8.1 (Berkeley) 6/6/93
  * $FreeBSD: src/usr.bin/cksum/extern.h,v 1.6 2003/03/13 23:32:28 robert Exp $
+ *
+ *
+ *
+ * The modifications in this file are under the following copyright:
+ *
+ * Copyright © 2011 TAS
+ *
  */
-/****************************************************************************/
 
 #ifndef CRC_H
 #define CRC_H
