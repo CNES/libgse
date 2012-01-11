@@ -260,12 +260,6 @@ gse_status_t gse_refrag_packet(gse_vfrag_t *packet1, gse_vfrag_t **packet2,
     goto error;
   }
 
-  /* Check if wanted length allows at least 1 bit of data */
-  if((header_length + 1) > max_length)
-  {
-    status = GSE_STATUS_LENGTH_TOO_SMALL;
-    goto error;
-  }
   if(header_length > packet1->length)
   {
     status = GSE_STATUS_INVALID_HEADER;
@@ -283,6 +277,13 @@ gse_status_t gse_refrag_packet(gse_vfrag_t *packet1, gse_vfrag_t **packet2,
   if(payload_type == GSE_PDU_COMPLETE)
   {
     header_shift = GSE_MAX_REFRAG_HEAD_OFFSET;
+  }
+
+  /* Check if wanted length allows at least 1 bit of data */
+  if((header_length + header_shift + 1) > max_length)
+  {
+    status = GSE_STATUS_LENGTH_TOO_SMALL;
+    goto error;
   }
 
   /* Compute the remaining length of the data after first fragment creation */

@@ -288,6 +288,8 @@ static int test_refrag(int verbose, gse_status_t output_value, size_t frag_lengt
     }
   }
 
+  DEBUG(verbose, "Everything went fine but it shouldn't\n");
+
 free_vfrag:
   if(status == output_value)
   {
