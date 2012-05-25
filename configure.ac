@@ -32,6 +32,47 @@ AC_CHECK_FUNCS([malloc calloc free memcpy memcmp bzero pthread_mutex_lock pthrea
 # check for pkg-config
 PKG_PROG_PKG_CONFIG
 
+
+# allow users to specify a special location for libpcap includes
+AC_ARG_WITH(libpcap_includes,
+            AS_HELP_STRING([--with-libpcap-includes=DIR],
+                           [libpcap include directory]),
+            [with_libpcap_includes="$withval"],
+            [with_libpcap_includes="no"])
+if test "x$with_libpcap_includes" != "xno"; then
+	CPPFLAGS="${CPPFLAGS} -I${with_libpcap_includes}"
+fi
+
+
+# allow users to specify a special location for libpcap libraries
+AC_ARG_WITH(libpcap_libraries,
+            AS_HELP_STRING([--with-libpcap-libraries=DIR],
+                           [libpcap library directory]),
+            [with_libpcap_libraries="$withval"],
+            [with_libpcap_libraries="no"])
+if test "x$with_libpcap_libraries" != "xno"; then
+	LDFLAGS="${LDFLAGS}  -L${with_libpcap_libraries}"
+fi
+
+# check for libpcap presence
+LPCAP=""
+AC_CHECK_LIB(pcap, pcap_open_offline, , LPCAP="no")
+AC_CHECK_LIB(pcap, pcap_datalink, , LPCAP="no")
+AC_CHECK_LIB(pcap, pcap_next, , LPCAP="no")
+AC_CHECK_LIB(pcap, pcap_close, , LPCAP="no")
+
+# abort if libpcap is not found
+if test "x$LPCAP" = "xno"; then
+	echo
+	echo "ERROR: libpcap library/headers not found"
+	echo
+	echo "Go get it from http://www.tcpdump.org/ or use the --with-libpcap-* "
+	echo "options, if you have it installed in unusual place. Also check if "
+	echo "your libpcap depends on another shared library that may be installed "
+	echo "in an unusual place."
+	exit 1
+fi
+
 AC_SUBST(AM_CFLAGS, "-g -Wall -W -Werror -Wstrict-prototypes")
 
 AM_DEP_TRACK
