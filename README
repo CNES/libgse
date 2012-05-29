@@ -10,7 +10,10 @@ License
 -------
 
 The GSE library is released under the LGPL version licence either version 3, or
-(at your option) any later version
+(at your option) any later version.
+The full text is available in the COPYING.LESSER file.
+Most part of the src/common/crc.h and src/common/crc.c files is under the BSD
+license whose text is given in COPYING.BSD.
 
 Library
 -------
