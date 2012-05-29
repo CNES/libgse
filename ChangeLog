@@ -1,5 +1,5 @@
-18 Jan 2010 - release 1.0.0
-  first release of GSE library
+29 May 2012 - release 1.0.1
+  first public release of GSE library
   some standard secifications are not implemented
     - no "3-byte label", "label re-use" and "no label" support
     - no extension support
