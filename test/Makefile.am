@@ -27,11 +27,10 @@ AM_LDFLAGS = -L$(top_srcdir)/src/
 
 test_encap_deencap_SOURCES = test_encap_deencap.c
 test_encap_deencap_LDADD = \
-	-lpcap \
-	-lgse
+	$(top_builddir)/src/libgse.la \
+	-lpcap 
 
 non_regression_tests_SOURCES = non_regression_tests.c
 non_regression_tests_LDADD = \
-	-lpcap \
-	-lgse
-
+	$(top_builddir)/src/libgse.la \
+	-lpcap
