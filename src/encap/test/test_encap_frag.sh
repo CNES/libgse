@@ -1,8 +1,20 @@
 #!/bin/sh
 
-./test_encap 39 ./output/encap_frag.pcap ./input/encap_frag.pcap || ./test_encap verbose 39 ./output/encap_frag.pcap ./input/encap_frag.pcap
+APP="test_encap"
+
+# parse arguments
+SCRIPT="$0"
+if [ "x$MAKELEVEL" != "x" ] ; then
+	BASEDIR="${srcdir}"
+	APP="./${APP}"
+else
+	BASEDIR=$( dirname "${SCRIPT}" )
+	APP="${BASEDIR}/${APP}"
+fi
+
+${APP} 39 ${BASEDIR}/output/encap_frag.pcap ${BASEDIR}/input/encap_frag.pcap || ${APP} verbose 39 ${BASEDIR}/output/encap_frag.pcap ${BASEDIR}/input/encap_frag.pcap
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_encap 39 ./output/encap_mult_frag.pcap ./input/encap_mult_frag.pcap || ./test_encap verbose 39 ./output/encap_mult_frag.pcap ./input/encap_mult_frag.pcap
+${APP} 39 ${BASEDIR}/output/encap_mult_frag.pcap ${BASEDIR}/input/encap_mult_frag.pcap || ${APP} verbose 39 ${BASEDIR}/output/encap_mult_frag.pcap ${BASEDIR}/input/encap_mult_frag.pcap
 

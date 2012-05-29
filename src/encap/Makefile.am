@@ -14,10 +14,17 @@ sources = \
 	encap.c \
 	refrag.c
 
-libgse_encap_la_SOURCES = $(sources)
+headers = \
+	fifo.h \
+	encap.h \
+	refrag.h \
+	encap_ctx.h
+
+
+libgse_encap_la_SOURCES = $(sources) $(headers)
 
 AM_LDFLAGS = -lpthread 
 
 INCLUDES = \
-	-I../common
+	-I$(top_srcdir)/src/common
 

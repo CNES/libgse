@@ -1,8 +1,20 @@
 #!/bin/sh
 
-./test_refrag 39 ./output/refrag.pcap ./input/refrag.pcap || ./test_refrag verbose 39 ./output/refrag.pcap ./input/refrag.pcap
+APP="test_refrag"
+
+# parse arguments
+SCRIPT="$0"
+if [ "x$MAKELEVEL" != "x" ] ; then
+	BASEDIR="${srcdir}"
+	APP="./${APP}"
+else
+	BASEDIR=$( dirname "${SCRIPT}" )
+	APP="${BASEDIR}/${APP}"
+fi
+
+${APP} 39 ${BASEDIR}/output/refrag.pcap ${BASEDIR}/input/refrag.pcap || ${APP} verbose 39 ${BASEDIR}/output/refrag.pcap ${BASEDIR}/input/refrag.pcap
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_refrag 14 ./output/refrag_min.pcap ./input/refrag_min.pcap || ./test_refrag verbose 14 ./output/refrag_min.pcap ./input/refrag_min.pcap
+${APP} 14 ${BASEDIR}/output/refrag_min.pcap ${BASEDIR}/input/refrag_min.pcap || ${APP} verbose 14 ${BASEDIR}/output/refrag_min.pcap ${BASEDIR}/input/refrag_min.pcap
 

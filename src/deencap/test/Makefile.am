@@ -10,7 +10,7 @@ noinst_PROGRAMS = \
 	test_deencap_fault \
 	test_deencap_timeout
 
-TESTS = \
+TESTS_DEENCAP = \
 	test_deencap_complete.sh \
 	test_deencap_frag.sh \
 	test_deencap_interleaving.sh \
@@ -19,31 +19,39 @@ TESTS = \
 	test_deencap_timeout.sh \
 	test_deencap_fault.sh
 
+TESTS = \
+	$(TESTS_DEENCAP)
+
+EXTRA_DIST = \
+	$(TESTS_DEENCAP) \
+	input \
+	output
+
 INCLUDES = \
-	-I.. \
+	-I$(top_srcdir)/src/deencap \
 	-I$(top_srcdir)/src/common
 
 test_deencap_SOURCES = test_deencap.c
 test_deencap_LDADD = \
 	-lpcap \
-	../libgse_deencap.la \
+	$(top_builddir)/src/deencap/libgse_deencap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_deencap_interleaving_SOURCES = test_deencap_interleaving.c
 test_deencap_interleaving_LDADD = \
 	-lpcap \
-	../libgse_deencap.la \
+	$(top_builddir)/src/deencap/libgse_deencap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_deencap_fault_SOURCES = test_deencap_fault.c
 test_deencap_fault_LDADD = \
 	-lpcap \
-	../libgse_deencap.la \
+	$(top_builddir)/src/deencap/libgse_deencap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_deencap_timeout_SOURCES = test_deencap_timeout.c
 test_deencap_timeout_LDADD = \
 	-lpcap \
-	../libgse_deencap.la \
+	$(top_builddir)/src/deencap/libgse_deencap.la \
 	$(top_builddir)/src/common/libgse_common.la
 

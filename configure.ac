@@ -1,8 +1,9 @@
 # Process this file with autoconf to produce a configure script.
 AC_INIT(gse, 1.0.0, [Viveris Technologies])
+# Use tar-pax (POSIX 1003.1-2001) to handle filename longer than 99 characters
+AM_INIT_AUTOMAKE([1.9 tar-pax])
 AC_CONFIG_SRCDIR([src])
 AM_CONFIG_HEADER([config.h])
-AM_INIT_AUTOMAKE
 
 # Disable static libraries by default
 AC_DISABLE_STATIC

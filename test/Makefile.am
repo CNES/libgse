@@ -4,8 +4,7 @@
 #	Description: create the GSE test program
 ################################################################################
 
-SUBDIRS = . \
-	samples
+SUBDIRS = . samples
 
 noinst_PROGRAMS = \
 	test_encap_deencap \
@@ -14,12 +13,17 @@ noinst_PROGRAMS = \
 TESTS = \
 	test_encap_deencap.sh
 
-INCLUDES = \
-	-I../src/common \
-	-I../src/encap \
-	-I../src/deencap
+EXTRA_DIST = \
+	encap_deencap_max_pdu_length.pcap \
+	test_encap_deencap.sh \
+	non_regression_tests.sh
 
-AM_LDFLAGS = -L../src/
+INCLUDES = \
+	-I$(top_srcdir)/src/common \
+	-I$(top_srcdir)/src/encap \
+	-I$(top_srcdir)/src/deencap
+
+AM_LDFLAGS = -L$(top_srcdir)/src/
 
 test_encap_deencap_SOURCES = test_encap_deencap.c
 test_encap_deencap_LDADD = \

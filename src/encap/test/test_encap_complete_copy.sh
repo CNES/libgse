@@ -1,8 +1,20 @@
 #!/bin/sh
 
-./test_encap_copy 0 ./output/encap_complete.pcap ./input/encap_complete.pcap || ./test_encap_copy verbose 0 ./output/encap_complete.pcap ./input/encap_complete.pcap
+APP="test_encap_copy"
+
+# parse arguments
+SCRIPT="$0"
+if [ "x$MAKELEVEL" != "x" ] ; then
+	BASEDIR="${srcdir}"
+	APP="./${APP}"
+else
+	BASEDIR=$( dirname "${SCRIPT}" )
+	APP="${BASEDIR}/${APP}"
+fi
+
+${APP} 0 ${BASEDIR}/output/encap_complete.pcap ${BASEDIR}/input/encap_complete.pcap || ${APP} verbose 0 ${BASEDIR}/output/encap_complete.pcap ${BASEDIR}/input/encap_complete.pcap
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-./test_encap_copy 0 ./output/encap_mult_complete.pcap ./input/encap_mult_complete.pcap || ./test_encap_copy verbose 0 ./output/encap_mult_complete.pcap ./input/encap_mult_complete.pcap
+${APP} 0 ${BASEDIR}/output/encap_mult_complete.pcap ${BASEDIR}/input/encap_mult_complete.pcap || ${APP} verbose 0 ${BASEDIR}/output/encap_mult_complete.pcap ${BASEDIR}/input/encap_mult_complete.pcap
 

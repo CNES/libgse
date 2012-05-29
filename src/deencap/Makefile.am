@@ -12,8 +12,11 @@ noinst_LTLIBRARIES = libgse_deencap.la
 sources = \
 	deencap.c
 
-libgse_deencap_la_SOURCES = $(sources)
+headers = \
+	deencap.h
+
+libgse_deencap_la_SOURCES = $(sources) $(headers)
 
 INCLUDES = \
-	-I../common
+	-I$(top_srcdir)/src/common
 

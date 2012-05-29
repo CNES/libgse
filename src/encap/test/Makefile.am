@@ -14,7 +14,7 @@ noinst_PROGRAMS = \
 	test_refrag \
 	test_refrag_robust
 
-TESTS = \
+TESTS_ENCAP = \
 	test_encap_complete.sh \
 	test_encap_complete_copy.sh \
 	test_encap_frag_dflt_length.sh \
@@ -22,61 +22,77 @@ TESTS = \
 	test_encap_frag_copy.sh \
 	test_encap_frag_dflt_length_copy.sh \
 	test_encap_robust.sh \
-	test_encap_length_min.sh \
+	test_encap_length_min.sh
+
+TESTS_FIFO = \
 	test_fifo.sh \
-	test_fifo_mult.sh \
+	test_fifo_mult.sh
+
+TESTS_REFRAG = \
 	test_refrag.sh \
 	test_refrag_robust.sh
 
+TESTS = \
+	$(TESTS_ENCAP) \
+	$(TESTS_FIFO) \
+	$(TESTS_REFRAG)
+
+EXTRA_DIST = \
+	$(TESTS_ENCAP) \
+	$(TESTS_FIFO) \
+	$(TESTS_REFRAG) \
+	input \
+	output
+
 INCLUDES = \
-	-I.. \
+	-I$(top_srcdir)/src/encap \
 	-I$(top_srcdir)/src/common
 
 test_encap_SOURCES = test_encap.c
 test_encap_LDADD = \
 	-lpcap \
-	../libgse_encap.la \
+	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_encap_copy_SOURCES = test_encap_copy.c
 test_encap_copy_LDADD = \
 	-lpcap \
-	../libgse_encap.la \
+	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_encap_robust_SOURCES = test_encap_robust.c
 test_encap_robust_LDADD = \
 	-lpcap \
-	../libgse_encap.la \
+	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_encap_length_min_SOURCES = test_encap_length_min.c
 test_encap_length_min_LDADD = \
 	-lpcap \
-	../libgse_encap.la \
+	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_encap_bad_zero_copy_SOURCES = test_encap_bad_zero_copy.c
 test_encap_bad_zero_copy_LDADD = \
 	-lpcap \
-	../libgse_encap.la \
+	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_fifo_SOURCES = test_fifo.c
 test_fifo_LDADD = \
 	-lpcap \
-	../libgse_encap.la \
+	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_refrag_SOURCES = test_refrag.c
 test_refrag_LDADD = \
 	-lpcap \
-	../libgse_encap.la \
+	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
 test_refrag_robust_SOURCES = test_refrag_robust.c
 test_refrag_robust_LDADD = \
 	-lpcap \
-	../libgse_encap.la \
+	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 

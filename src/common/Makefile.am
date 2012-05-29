@@ -14,7 +14,15 @@ sources = \
 	header.c \
 	status.c \
 	crc.c \
-  header_fields.c	
+	header_fields.c	
+headers = \
+	constants.h \
+	virtual_fragment.h \
+	header.h \
+	status.h \
+	crc.h \
+	header_fields.h \
+	gse_pages.h
 
-libgse_common_la_SOURCES = $(sources)
+libgse_common_la_SOURCES = $(sources) $(headers)
 

@@ -1,4 +1,16 @@
 #!/bin/sh
 
-./test_fifo 1 ./output/encap_mult_frag.pcap ./input/encap_mult_frag.pcap || ./test_fifo verbose 1 ./output/encap_mult_frag.pcap ./input/encap_mult_frag.pcap
+APP="test_fifo"
+
+# parse arguments
+SCRIPT="$0"
+if [ "x$MAKELEVEL" != "x" ] ; then
+	BASEDIR="${srcdir}"
+	APP="./${APP}"
+else
+	BASEDIR=$( dirname "${SCRIPT}" )
+	APP="${BASEDIR}/${APP}"
+fi
+
+${APP} 1 ${BASEDIR}/output/encap_mult_frag.pcap ${BASEDIR}/input/encap_mult_frag.pcap || ${APP} verbose 1 ${BASEDIR}/output/encap_mult_frag.pcap ${BASEDIR}/input/encap_mult_frag.pcap
 
