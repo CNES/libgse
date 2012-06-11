@@ -29,7 +29,6 @@ cscope.out
 */debian/tmp
 *.libs
 *.egg-info
-
 app/tunnel/gsetunnel
 app/tunnel/gsetunnel_thread
 src/common/test/test_header_access
