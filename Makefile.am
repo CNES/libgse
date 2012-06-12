@@ -19,7 +19,21 @@ dist_doc_DATA = \
 	README
 	
 EXTRA_DIST = \
-	doc/doxygen
+	doc/doxygen \
+	debian/changelog \
+	debian/compat \
+	debian/control \
+	debian/copyright \
+	debian/docs \
+	debian/libgse-dev.dirs \
+	debian/libgse-dev.install \
+	debian/libgse.dirs \
+	debian/libgse.install \
+	debian/postinst \
+	debian/postrm \
+	debian/preinst \
+	debian/prerm \
+	debian/rules
 
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = gse.pc
