@@ -74,7 +74,18 @@ if test "x$LPCAP" = "xno"; then
 	exit 1
 fi
 
-AC_SUBST(AM_CFLAGS, "-g -Wall -W -Werror -Wstrict-prototypes")
+# check if -Werror must be appended to CFLAGS
+WERROR=""
+AC_ARG_ENABLE(fail_on_warning,
+              AS_HELP_STRING([--enable-fail-on-warning],
+                             [build fails on warnings if enabled [[default=no]]]),
+              fail_on_warning=$enableval,
+              fail_on_warning=no)
+if test "x$fail_on_warning" != "xno"; then
+	WERROR="-Werror"
+fi
+
+AC_SUBST(AM_CFLAGS, "-g -Wall -W ${WERROR} -Wstrict-prototypes")
 
 AM_DEP_TRACK
 
