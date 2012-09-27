@@ -36,14 +36,6 @@ ${APP} 0x0601 ${BASEDIR}/input/deencap_context_not_init.pcap || ${APP} verbose 0
 if [ "$?" -ne "0" ]; then
   exit 1
 fi
-${APP} 0x0501 ${BASEDIR}/input/deencap_lt_not_supported_frag.pcap || ${APP} verbose 0x0501 ${BASEDIR}/input/deencap_lt_not_supported_frag.pcap
-if [ "$?" -ne "0" ]; then
-  exit 1
-fi
-${APP} 0x0501 ${BASEDIR}/input/deencap_lt_not_supported_complete.pcap || ${APP} verbose 0x0501 ${BASEDIR}/input/deencap_lt_not_supported_complete.pcap
-if [ "$?" -ne "0" ]; then
-  exit 1
-fi
 ${APP} 0x0501 ${BASEDIR}/input/deencap_wrong_lt.pcap || ${APP} verbose 0x0501 ${BASEDIR}/input/deencap_wrong_lt.pcap
 if [ "$?" -ne "0" ]; then
   exit 1

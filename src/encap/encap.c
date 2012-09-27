@@ -360,11 +360,6 @@ gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
     status = GSE_STATUS_PDU_LENGTH;
     goto free_pdu;
   }
-  if(label_type != GSE_LT_6_BYTES)
-  {
-    status = GSE_STATUS_INVALID_LT;
-    goto free_pdu;
-  }
   if(protocol < GSE_MIN_ETHER_TYPE)
   {
     status = GSE_STATUS_EXTENSION_NOT_SUPPORTED;

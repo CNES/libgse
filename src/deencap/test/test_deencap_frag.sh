@@ -12,6 +12,8 @@ else
 	APP="${BASEDIR}/${APP}"
 fi
 
+echo "${APP} ${BASEDIR}/output/deencap_frag.pcap ${BASEDIR}/input/deencap_frag.pcap || ${APP} verbose ${BASEDIR}/output/deencap_frag.pcap ${BASEDIR}/input/deencap_frag.pcap"
+
 ${APP} ${BASEDIR}/output/deencap_frag.pcap ${BASEDIR}/input/deencap_frag.pcap || ${APP} verbose ${BASEDIR}/output/deencap_frag.pcap ${BASEDIR}/input/deencap_frag.pcap
 if [ "$?" -ne "0" ]; then
   exit 1

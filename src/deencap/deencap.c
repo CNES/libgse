@@ -383,14 +383,6 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
     goto free_packet;
   }
 
-  /* Determine the length of the label of the GSE packet */
-  label_length = gse_get_label_length(header.lt);
-  if(label_length < 0)
-  {
-    status = GSE_STATUS_INVALID_LT;
-    goto free_packet;
-  }
-
   /* Get the payload type with S and E values:
    *    - '00': subsequent fragment (but not the last one)
    *    - '01': last fragment
@@ -418,6 +410,13 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
     {
       payload_type = GSE_PDU_SUBS_FRAG;
     }
+  }
+
+  /* Determine the length of the label of the GSE packet */
+  label_length = gse_get_label_length(header.lt);
+  if(label_length < 0)
+  {
+    goto free_packet;
   }
 
   /* Determine the length of the GSE header */
@@ -470,23 +469,15 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
         status = GSE_STATUS_EXTENSION_NOT_SUPPORTED;
         goto free_packet;
       }
-      /* Discard packet if label type is not supported */
       *label_type = header.lt;
-      if(*label_type != GSE_LT_6_BYTES)
-      {
-        status = GSE_STATUS_INVALID_LT;
-        goto free_packet;
-      }
       memcpy(label, header.complete_s.label.six_bytes_label,
              label_length);
       /* Check if label is not '00:00:00:00:00:00' */
-      if(label_length == 6)
+      if(label_length == 6 &&
+         memcmp(label, "\x0\x0\x0\x0\x0\x0", 6) == 0)
       {
-        if(memcmp(label, "\x0\x0\x0\x0\x0\x0", 6) == 0)
-        {
-          status = GSE_STATUS_INVALID_LABEL;
-          goto free_packet;
-        }
+        status = GSE_STATUS_INVALID_LABEL;
+        goto free_packet;
       }
       *protocol = ntohs(header.complete_s.protocol_type);
       *pdu = packet;
@@ -621,7 +612,7 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
   assert(partial_pdu != NULL);
   assert(deencap != NULL);
 
-  /* Check if a context can be created for this Frag ID */
+  /* Check if a context can exist for this Frag ID */
   if(header.first_frag_s.frag_id >= gse_deencap_get_qos_nbr(deencap))
   {
     status = GSE_STATUS_INVALID_QOS;
@@ -648,11 +639,6 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
     gse_free_vfrag(&(ctx->partial_pdu));
   }
   ctx->label_type = header.lt;
-  if(ctx->label_type != GSE_LT_6_BYTES)
-  {
-    status = GSE_STATUS_INVALID_LT;
-    goto free_partial_pdu;
-  }
   ctx->total_length = ntohs(header.first_frag_s.total_length);
   pdu_length = gse_deencap_compute_pdu_length(ctx->total_length, header.lt);
 
@@ -685,13 +671,11 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
          gse_get_label_length(header.lt));
 
   /* Check if label is not '00:00:00:00:00:00' */
-  if(header.lt == GSE_LT_6_BYTES)
+  if(header.lt == GSE_LT_6_BYTES &&
+     memcmp(&(ctx->label), "\x0\x0\x0\x0\x0\x0", 6) == 0)
   {
-    if(memcmp(&(ctx->label), "\x0\x0\x0\x0\x0\x0", 6) == 0)
-    {
-      status = GSE_STATUS_INVALID_LABEL;
-      goto free_vfrag;
-    }
+    status = GSE_STATUS_INVALID_LABEL;
+    goto free_vfrag;
   }
   ctx->bbframe_nbr = 0;
 
@@ -725,6 +709,7 @@ static gse_status_t gse_deencap_add_frag(gse_vfrag_t *partial_pdu,
     goto free_partial_pdu;
   }
 
+  /* Check if a context can exist for this Frag ID */
   if(header.subs_frag_s.frag_id >= gse_deencap_get_qos_nbr(deencap))
   {
     status = GSE_STATUS_INVALID_QOS;
@@ -787,6 +772,27 @@ static gse_status_t gse_deencap_add_last_frag(gse_vfrag_t *partial_pdu,
   assert(partial_pdu != NULL);
   assert(deencap != NULL);
 
+  if(header.lt != GSE_LT_REUSE)
+  {
+    status = GSE_STATUS_INVALID_LT;
+    goto free_partial_pdu;
+  }
+
+  /* Check if a context can exist for this Frag ID */
+  if(header.subs_frag_s.frag_id >= gse_deencap_get_qos_nbr(deencap))
+  {
+    status = GSE_STATUS_INVALID_QOS;
+    goto free_partial_pdu;
+  }
+
+  ctx = &(deencap->deencap_ctx[header.subs_frag_s.frag_id]);
+  /* Check if context exists for this Frag ID */
+  if(ctx->partial_pdu == NULL)
+  {
+    status = GSE_STATUS_CTX_NOT_INIT;
+    goto free_partial_pdu;
+  }
+
   /* Move end pointer to the end of the data field */
   status = gse_shift_vfrag(partial_pdu, 0, GSE_MAX_TRAILER_LENGTH * -1);
   if(status != GSE_STATUS_OK)
@@ -804,7 +810,6 @@ static gse_status_t gse_deencap_add_last_frag(gse_vfrag_t *partial_pdu,
     goto error;
   }
 
-  ctx = &(deencap->deencap_ctx[header.subs_frag_s.frag_id]);
   /* Chek PDU length according to Total Length */
   if(gse_deencap_compute_pdu_length(ctx->total_length, ctx->label_type)
      != ctx->partial_pdu->length)

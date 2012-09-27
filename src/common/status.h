@@ -122,7 +122,7 @@ typedef enum
 
   /* Header status */
 
-  /** Label Type is not supported */
+  /** Label Type is invalid or incorrect */
   GSE_STATUS_INVALID_LT               = 0x0501,
   /** The GSE length field is incorrect */
   GSE_STATUS_INVALID_GSE_LENGTH       = 0x0502,
