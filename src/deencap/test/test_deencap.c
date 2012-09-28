@@ -80,7 +80,7 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [-verbose] cmp_file flow\n\
+usage: test [verbose] cmp_file flow\n\
   verbose         Print DEBUG information\n\
   cmp_file        compare the generated packets with the reference packets\n\
                   stored in cmp_file (PCAP format)\n\
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
 {
   char *src_filename = NULL;
   char *cmp_filename = NULL;
-  int verbose;
+  int verbose = 0;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */
@@ -319,9 +319,11 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     /* The following might be done several times in case of fragmentation */
     status = gse_deencap_packet(gse_packet, deencap, &label_type, label,
                                 &protocol, &pdu, &gse_length);
-    if((status != GSE_STATUS_OK) && (status != GSE_STATUS_PDU_RECEIVED) && (status != GSE_STATUS_DATA_OVERWRITTEN))
+    if((status != GSE_STATUS_OK) && (status != GSE_STATUS_PDU_RECEIVED) &&
+       (status != GSE_STATUS_DATA_OVERWRITTEN))
     {
-      DEBUG(verbose, "Error %#.4x when getting packet (%s)\n", status, gse_get_status(status));
+      DEBUG(verbose, "Error %#.4x when getting packet #%d (%s)\n",
+            status, pkt_nbr, gse_get_status(status));
       goto free_pdu;
     }
     DEBUG(verbose, "GSE packet #%d received, packet length = %d\n", pkt_nbr, gse_length);

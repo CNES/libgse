@@ -14,6 +14,10 @@ TESTS = \
 TESTS_ENVIRONMENT = builddir=$(top_builddir)
 
 EXTRA_DIST = \
+	source.pcap \
 	fragmented.pcap \
-	refragmented.pcap \
-	source.pcap
+	refragmented.pcap\
+	fragmented_label_0.pcap \
+	fragmented_label_3.pcap \
+	refragmented_label_0.pcap \
+	refragmented_label_3.pcap

@@ -80,7 +80,7 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [-verbose] cmp_file flow\n\
+usage: test [verbose] cmp_file flow\n\
   verbose         Print DEBUG information\n\
   cmp_file        compare the generated packets with the reference packets\n\
                   stored in cmp_file (PCAP format)\n\

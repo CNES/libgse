@@ -17,7 +17,8 @@ TESTS_DEENCAP = \
 	test_deencap_incomplete_pdu_overwritten.sh \
 	test_deencap_padding.sh \
 	test_deencap_timeout.sh \
-	test_deencap_fault.sh
+	test_deencap_fault.sh \
+	test_deencap_labels.sh
 
 TESTS = \
 	$(TESTS_DEENCAP)

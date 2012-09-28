@@ -5,12 +5,19 @@ APP="test_deencap_timeout"
 # parse arguments
 SCRIPT="$0"
 if [ "x$MAKELEVEL" != "x" ] ; then
-	BASEDIR="${srcdir}"
-	APP="./${APP}"
+    BASEDIR="${srcdir}"
+    APP="./${APP}"
 else
-	BASEDIR=$( dirname "${SCRIPT}" )
-	APP="${BASEDIR}/${APP}"
+    BASEDIR=$( dirname "${SCRIPT}" )
+    APP="${BASEDIR}/${APP}"
 fi
 
-${APP} 0x0602 ${BASEDIR}/input/deencap_frag.pcap || ${APP} verbose 0x0602 ${BASEDIR}/input/deencap_frag.pcap
+gse_args="0x0602 ${BASEDIR}/input/deencap_frag.pcap"
+
+for args in "${gse_args}"; do
+  ${APP} ${args} || ${APP} verbose ${args}
+  if [ "$?" -ne "0" ]; then
+    exit 1
+  fi
+done
 

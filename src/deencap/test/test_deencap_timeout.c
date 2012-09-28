@@ -80,7 +80,7 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [-verbose] output_value flow\n\
+usage: test [verbose] output_value flow\n\
   verbose         Print DEBUG information\n\
   output_value    Attended output error value (see status)\n\
   flow            flow of Ethernet frames to deencapsulate (PCAP format)\n"

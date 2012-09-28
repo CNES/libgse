@@ -80,7 +80,7 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [-verbose] cmp_file flow\n\
+usage: test [verbose] output_value frag_length flow\n\
   verbose         Print DEBUG information\n\
   output_value    Attended output error value (see status)\n\
   frag_length     length of first refragmented GSE packet\n\
@@ -131,7 +131,7 @@ int main(int argc, char *argv[])
   char *src_filename = NULL;
   char *frag_length = NULL;
   unsigned int output_value = 0;
-  int verbose;
+  int verbose = 0;
   int failure = 1;
 
   /* parse program arguments, print the help message in case of failure */

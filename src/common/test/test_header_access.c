@@ -27,9 +27,8 @@
  *
  */
 
-/****************************************************************************/
 /**
- *   @file         test_header_access.c 
+ *   @file         test_header_access.c
  *
  *          Project:     GSE LIBRARY
  *
@@ -63,6 +62,7 @@
 
 /* GSE includes */
 #include "header_fields.h"
+#include "constants.h"
 #include "status.h"
 
 /****************************************************************************
@@ -74,12 +74,15 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE header acces with a flow of packets\n\n\
-usage: test [-verbose] src_file \n\
+usage: test [verbose] src_file \n\
   verbose         Print DEBUG information\n\
   src_file        the flow of packets\n"
 
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
+
+/** The number of packets to test */
+#define PACKET_NBR 6
 
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
@@ -205,9 +208,7 @@ static int test_header_access(int verbose, char *src_filename)
   /* for each packet in the dump */
   while((packet = (unsigned char *) pcap_next(handle, &header)) != NULL)
   {
-
-    counter++;
-    if(counter > 4)
+    if(counter >= PACKET_NBR)
     {
        DEBUG(verbose, "Too much packet in PCAP capture !\n");
        goto close_input;
@@ -217,7 +218,7 @@ static int test_header_access(int verbose, char *src_filename)
     if(header.len <= link_len_src || header.len != header.caplen)
     {
       DEBUG(verbose, "packet #%u: bad PCAP packet (len = %u, caplen = %u)\n",
-             counter - 1, header.len, header.caplen);
+             counter, header.len, header.caplen);
       goto close_input;
     }
 
@@ -229,6 +230,13 @@ static int test_header_access(int verbose, char *src_filename)
       is_failure = 1;
       goto close_input;
     }
+    counter++;
+  }
+
+  if(counter < PACKET_NBR)
+  {
+    DEBUG(verbose, "only %d packet analysed instead of %d\n", counter, PACKET_NBR);
+    goto close;
   }
 
   /* everything went fine */
@@ -237,10 +245,11 @@ static int test_header_access(int verbose, char *src_filename)
 close_input:
   if(is_failure && in_packet != NULL && verbose)
   {
-    char desc[10];
-    sprintf(desc, "packet #%u", counter - 1);
+    char desc[16];
+    sprintf(desc, "packet #%u", counter + 1);
     dump_packet(desc, in_packet, in_size);
   }
+close:
   pcap_close(handle);
 error:
   return is_failure;
@@ -255,17 +264,60 @@ error:
  */
 static int check_header_fields(int verbose, int counter, unsigned char *in_packet)
 {
-  uint8_t s_ref[4] = {1, 1, 0, 0};
-  uint8_t e_ref[4] = {1, 0, 0, 1};
-  uint8_t lt_ref[4] = {0, 0, 3, 3};
-  uint16_t gse_length_ref[4] = {112, 37, 37, 37};
-  uint8_t frag_id_ref[4] = {0, 0, 1, 2};
-  uint16_t total_length_ref[4] = {0, 102, 0, 0};
-  uint16_t protocol_type_ref[4] = {9029, 10000, 0, 0};
-  uint8_t label_ref[4][6] = {{0, 1, 2, 3, 4, 5},
-                             {5, 4, 3, 2, 1, 0},
-                             {0, 0, 0, 0, 0, 0},
-                             {0, 0, 0, 0, 0, 0}};
+  uint8_t s_ref[PACKET_NBR] =
+  {
+    /* GSE */
+    1, 1, 0, 0,
+    /* labels */ 1, 1,
+  };
+  uint8_t e_ref[PACKET_NBR] =
+  {
+    /* GSE */
+    1, 0, 0, 1,
+    /* labels */ 1, 1,
+  };
+  uint8_t lt_ref[PACKET_NBR] =
+  {
+    /* GSE */
+    0, 0, 3, 3,
+    /* labels */ 1, 2,
+  };
+  uint16_t gse_length_ref[PACKET_NBR] =
+  {
+    /* GSE */
+    112, 37, 37, 37,
+    /* labels */ 109, 106,
+  };
+  uint8_t frag_id_ref[PACKET_NBR] =
+
+    /* GSE */{
+    0, 0, 1, 2,
+    /* labels */ 0, 0,
+  };
+  /* for the following fields, '0' mean absent */
+  uint16_t total_length_ref[PACKET_NBR] =
+  {
+    /* GSE */
+    0, 102, 0, 0,
+    /* labels */ 0, 0,
+  };
+  uint16_t protocol_type_ref[PACKET_NBR] =
+  {
+    /* GSE */
+    9029, 10000, 0, 0,
+    /* labels */ 9029, 9029,
+  };
+  uint8_t label_ref[PACKET_NBR][6] =
+  {
+    /* GSE */
+    {0, 1, 2, 3, 4, 5},
+    {5, 4, 3, 2, 1, 0},
+    {0, 0, 0, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0},
+    /* labels */
+    {0, 1, 2, 0, 0, 0},
+    {0, 0, 0, 0, 0, 0},
+  };
 
   uint8_t s;
   uint8_t e;
@@ -276,19 +328,20 @@ static int check_header_fields(int verbose, int counter, unsigned char *in_packe
   uint16_t protocol_type;
   uint8_t label[6];
   gse_status_t status;
+  int label_length;
+  int i;
 
-  /* Check start indicator */
   status = gse_get_start_indicator(in_packet, &s);
   if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error when getting start indicator in packet #%u (%s)\n",
-           counter - 1, gse_get_status(status));
+          counter + 1, gse_get_status(status));
     goto error;
   }
-  if(s != s_ref[counter - 1])
+  if(s != s_ref[counter])
   {
     DEBUG(verbose, "Bad start indicator value in packet #%u (%u instead of %u)\n",
-           counter - 1, s, s_ref[counter - 1]);
+          counter + 1, s, s_ref[counter]);
     goto error;
   }
 
@@ -297,13 +350,13 @@ static int check_header_fields(int verbose, int counter, unsigned char *in_packe
   if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error when getting end indicator in packet #%u (%s)\n",
-           counter - 1, gse_get_status(status));
+          counter + 1, gse_get_status(status));
     goto error;
   }
-  if(e != e_ref[counter - 1])
+  if(e != e_ref[counter])
   {
     DEBUG(verbose, "Bad end indicator value in packet #%u (%u instead of %u)\n",
-           counter - 1, e, e_ref[counter - 1]);
+          counter + 1, e, e_ref[counter]);
     goto error;
   }
 
@@ -312,13 +365,13 @@ static int check_header_fields(int verbose, int counter, unsigned char *in_packe
   if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error when getting label type in packet #%u (%s)\n",
-           counter - 1, gse_get_status(status));
+          counter + 1, gse_get_status(status));
     goto error;
   }
-  if(lt != lt_ref[counter - 1])
+  if(lt != lt_ref[counter])
   {
     DEBUG(verbose, "Bad label type value in packet #%u (%u instead of %u)\n",
-           counter - 1, lt, lt_ref[counter - 1]);
+          counter + 1, lt, lt_ref[counter]);
     goto error;
   }
 
@@ -327,13 +380,13 @@ static int check_header_fields(int verbose, int counter, unsigned char *in_packe
   if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error when getting gse length in packet #%u (%s)\n",
-           counter - 1, gse_get_status(status));
+          counter + 1, gse_get_status(status));
     goto error;
   }
-  if(gse_length != gse_length_ref[counter - 1])
+  if(gse_length != gse_length_ref[counter])
   {
     DEBUG(verbose, "Bad gse length value in packet #%u (%u instead of %u)\n",
-           counter - 1, gse_length, gse_length_ref[counter - 1]);
+          counter + 1, gse_length, gse_length_ref[counter]);
     goto error;
   }
 
@@ -342,30 +395,38 @@ static int check_header_fields(int verbose, int counter, unsigned char *in_packe
   if(status != GSE_STATUS_OK && status != GSE_STATUS_FIELD_ABSENT)
   {
     DEBUG(verbose, "Error when getting frag_id in packet #%u (%s)\n",
-           counter - 1, gse_get_status(status));
+          counter + 1, gse_get_status(status));
     goto error;
   }
   if(status != GSE_STATUS_FIELD_ABSENT &&
-     frag_id != frag_id_ref[counter - 1])
+     frag_id != frag_id_ref[counter])
   {
     DEBUG(verbose, "Bad frag_id value in packet #%u (%u instead of %u)\n",
-           counter - 1, frag_id, frag_id_ref[counter - 1]);
+          counter + 1, frag_id, frag_id_ref[counter]);
     goto error;
   }
+
 
   /* Check total length */
   status = gse_get_total_length(in_packet, &total_length);
   if(status != GSE_STATUS_OK && status != GSE_STATUS_FIELD_ABSENT)
   {
     DEBUG(verbose, "Error when getting total_length in packet #%u (%s)\n",
-           counter - 1, gse_get_status(status));
+          counter + 1, gse_get_status(status));
     goto error;
   }
   if(status != GSE_STATUS_FIELD_ABSENT &&
-     total_length != total_length_ref[counter - 1])
+     total_length != total_length_ref[counter])
   {
     DEBUG(verbose, "Bad total_length value in packet #%u (%u instead of %u)\n",
-           counter - 1, total_length, total_length_ref[counter - 1]);
+          counter + 1, total_length, total_length_ref[counter]);
+    goto error;
+  }
+  else if(status == GSE_STATUS_FIELD_ABSENT && total_length_ref[counter] != 0)
+  {
+    DEBUG(verbose, "Total Length field absent in packet #%u "
+          "while it should have been %u\n", counter + 1,
+          total_length_ref[counter]);
     goto error;
   }
 
@@ -374,14 +435,21 @@ static int check_header_fields(int verbose, int counter, unsigned char *in_packe
   if(status != GSE_STATUS_OK && status != GSE_STATUS_FIELD_ABSENT)
   {
     DEBUG(verbose, "Error when getting protocol_type in packet #%u (%s)\n",
-           counter - 1, gse_get_status(status));
+          counter + 1, gse_get_status(status));
     goto error;
   }
   if(status != GSE_STATUS_FIELD_ABSENT &&
-     protocol_type != protocol_type_ref[counter - 1])
+     protocol_type != protocol_type_ref[counter])
   {
     DEBUG(verbose, "Bad protocol_type value in packet #%u (%u instead of %u)\n",
-           counter - 1, protocol_type, protocol_type_ref[counter - 1]);
+          counter + 1, protocol_type, protocol_type_ref[counter]);
+    goto error;
+  }
+  else if(status == GSE_STATUS_FIELD_ABSENT && protocol_type_ref[counter] != 0)
+  {
+    DEBUG(verbose, "Protocol Type field absent in packet #%u "
+          "while it should have been %u\n", counter + 1,
+          protocol_type_ref[counter]);
     goto error;
   }
 
@@ -390,25 +458,55 @@ static int check_header_fields(int verbose, int counter, unsigned char *in_packe
   if(status != GSE_STATUS_OK && status != GSE_STATUS_FIELD_ABSENT)
   {
     DEBUG(verbose, "Error when getting label in packet #%u (%s)\n",
-           counter - 1, gse_get_status(status));
+          counter + 1, gse_get_status(status));
     goto error;
   }
-  if(status != GSE_STATUS_FIELD_ABSENT &&
-     memcmp(label, label_ref[counter - 1], 6 * sizeof(uint8_t)))
+  label_length = gse_get_label_length(lt_ref[counter]);
+  if(label_length < 0)
+  {
+    DEBUG(verbose, "Error when getting label length in packet #%u\n",
+          counter + 1);
+    goto error;
+  }
+  if(memcmp(label, label_ref[counter], label_length))
   {
     int i;
-    DEBUG(verbose, "Bad label value in packet #%u ( ", counter - 1);
-    for(i = 0; i < 6; i++)
+    DEBUG(verbose, "Bad label value in packet #%u ( ", counter + 1);
+    for(i = 0; i < label_length; i++)
     {
       DEBUG(verbose, "0x%.2x ", label[i]);
     }
     DEBUG(verbose, "instead of ");
-    for(i = 0; i < 6; i++)
+    for(i = 0; i < label_length; i++)
     {
-      DEBUG(verbose, "0x%.2x ", label_ref[counter - 1][i]);
+      DEBUG(verbose, "0x%.2x ", label_ref[counter][i]);
     }
     DEBUG(verbose, ")\n");
     goto error;
+  }
+  else if(status == GSE_STATUS_FIELD_ABSENT &&
+          memcmp(label_ref[counter], "\x0\x0\x0\x0\x0\x0", 6 * sizeof(uint8_t)))
+  {
+    DEBUG(verbose, "Label field absent in packet #%u "
+          "while it should have been ", counter + 1);
+    for(i = 0; i < 6; i++)
+    {
+      DEBUG(verbose, "0x%.2x ", label_ref[counter][i]);
+    }
+    DEBUG(verbose, ")\n");
+
+    goto error;
+  }
+  /* check that the remaining ref label is 0 */
+  for(i = label_length; i < 6; i++)
+  {
+    if(label_ref[counter][i] != 0)
+    {
+      DEBUG(verbose, "reference label at octet %d is not null but the "
+                     "received label was only %d bytes long\n", i + 1,
+                     label_length);
+      goto error;
+    }
   }
 
   return 0;
@@ -444,3 +542,4 @@ static void dump_packet(char *descr, unsigned char *packet, unsigned int length)
   fprintf(stderr, "\n");
   fprintf(stderr, "-------------------------------\n");
 }
+

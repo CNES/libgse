@@ -5,16 +5,22 @@ APP="test_refrag"
 # parse arguments
 SCRIPT="$0"
 if [ "x$MAKELEVEL" != "x" ] ; then
-	BASEDIR="${srcdir}"
-	APP="./${APP}"
+    BASEDIR="${srcdir}"
+    APP="./${APP}"
 else
-	BASEDIR=$( dirname "${SCRIPT}" )
-	APP="${BASEDIR}/${APP}"
+    BASEDIR=$( dirname "${SCRIPT}" )
+    APP="${BASEDIR}/${APP}"
 fi
 
-${APP} 39 ${BASEDIR}/output/refrag.pcap ${BASEDIR}/input/refrag.pcap || ${APP} verbose 39 ${BASEDIR}/output/refrag.pcap ${BASEDIR}/input/refrag.pcap
-if [ "$?" -ne "0" ]; then
-  exit 1
-fi
-${APP} 14 ${BASEDIR}/output/refrag_min.pcap ${BASEDIR}/input/refrag_min.pcap || ${APP} verbose 14 ${BASEDIR}/output/refrag_min.pcap ${BASEDIR}/input/refrag_min.pcap
+gse_args="39 ${BASEDIR}/output/refrag.pcap ${BASEDIR}/input/refrag.pcap"
+gse_min_args="14 ${BASEDIR}/output/refrag_min.pcap ${BASEDIR}/input/refrag_min.pcap"
+
+
+for args in "${gse_args}" \
+            "${gse_min_args}"; do
+  ${APP} ${args} || ${APP} verbose ${args}
+  if [ "$?" -ne "0" ]; then
+    exit 1
+  fi
+done
 

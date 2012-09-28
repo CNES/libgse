@@ -84,7 +84,7 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [-verbose] cmp_file flow\n\
+usage: test [verbose] cmp_file flow\n\
   verbose         Print DEBUG information\n\
   frag_length     maximum length of the GSE packets\n\
                   (0 for maximum fragment length)\n\

@@ -115,13 +115,13 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [verbose [-lvl LEVEL]] [-h] [-s] [-r REFRAG_FILENAME] FRAG_FILENAME FLOW\n\
-  verbose          Print DEBUG information level 1\n\
-  -lvl             Modify DEBUG level\n\
-  LEVEL            New DEBUG level [0, 2]\n\
+usage: test [--verbose (-v) LEVEL] [-h] [-s] [--label-type LT] [-r REFRAG_FILENAME] -c FRAG_FILENAME -i FLOW\n\
+  --verbose        Print DEBUG information level 1\n\
+  LEVEL            The DEBUG level [0, 2]\n\
   -h               Print this usage and exit\n\
   -s               Save output packets instead of compare them\n\
   -r               Activate refragmentation\n\
+  LT               The label_type (0, 1, 2, 3) (default: 0)\n\
   REFRAG_FILENAME  Save the refragmented packets or compare them\n\
                    with the reference packets stored in refrag_file (PCAP format)\n\
   FRAG_FILENAME    Save the fragmented packets or compare them\n\
@@ -171,8 +171,10 @@ static const size_t refrag_length[20] = {
  *
  *****************************************************************************/
 
-static int test_encap_deencap(int verbose, int save, char *src_filename,
-                              char *frag_filename, char *refrag_filename);
+static int test_encap_deencap(int verbose, uint8_t label_type, int save,
+                              char *src_filename,
+                              char *frag_filename,
+                              char *refrag_filename);
 static int open_pcap(char *filename, int verbose, pcap_t **handle,
                      uint32_t *link_len);
 static int get_gse_packets(int verbose,
@@ -233,100 +235,116 @@ int main(int argc, char *argv[])
   char *src_filename = NULL;
   char *frag_filename = NULL;
   char *refrag_filename = NULL;
+  char *label_type = 0;
   int save = 0;
   int refrag = 0;
   int failure = 1;
   int verbose = 0;
-  int args_used;
+  int ref;
 
-  /* parse program arguments, print the help message in case of failure */
-  if(argc <= 1)
+  for(ref = argc; (ref > 0 && argc > 1); ref--)
   {
-    printf(TEST_USAGE);
-    goto quit;
-  }
-
-  for(argc--, argv++; argc > 0; argc -= args_used, argv += args_used)
-  {
-    args_used = 1;
-
-    if(!strcmp(*argv, "verbose"))
+    if(!(strcmp(argv[1], "--verbose")) || !(strcmp(argv[1], "-v")))
     {
       verbose = 1;
-    }
-    else if(!strcmp(*argv, "-lvl"))
-    {
-      args_used++;
-      verbose = atoi(argv[1]);
-      if((verbose < 0)  || (verbose > 2))
+      argv += 1;
+      argc -= 1;
+      if(argc > 1 && argv[1][0] != '-')
       {
-         printf(TEST_USAGE);
-         goto quit;
+        verbose = atoi(argv[1]);
+        if((verbose < 0)  || (verbose > 2))
+        {
+          fprintf(stderr, "Wrong verbose value\n");
+          fprintf(stderr, TEST_USAGE);
+          goto quit;
+        }
+        argv += 1;
+        argc -= 1;
       }
     }
-    else if(!strcmp(*argv, "-h"))
+    else if(!strcmp(argv[1], "--label-type"))
     {
-      /* print help */
-      printf(TEST_USAGE);
+      if(!argv[2])
+      {
+        fprintf(stderr, "Missing LT\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
+      }
+      label_type = argv[2];
+      if(atoi(label_type) < 0 && atoi(label_type) > 3)
+      {
+        fprintf(stderr, "Bad Label Type\n");
+        goto quit;
+      }
+      argv += 2;
+      argc -= 2;
+    }
+    else if(!strcmp(argv[1], "-c"))
+    {
+      if(!argv[2])
+      {
+        fprintf(stderr, "Missing FRAG_FILENAME\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
+      }
+      frag_filename = argv[2];
+      argv += 2;
+      argc -= 2;
+    }
+    else if(!strcmp(argv[1], "-i"))
+    {
+      if(!argv[2])
+      {
+        fprintf(stderr, "Missing FLOW\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
+      }
+      src_filename = argv[2];
+      argv += 2;
+      argc -= 2;
+    }
+    else if(!strcmp(argv[1], "-h"))
+    {
+      fprintf(stderr, TEST_USAGE);
       goto quit;
     }
-    else if(!strcmp(*argv, "-r"))
+    else if(!strcmp(argv[1], "-r"))
     {
-      refrag = 1;
-      args_used++;
-      if(refrag_filename == NULL)
+      if(!argv[2])
       {
-        refrag_filename = argv[1];
+        fprintf(stderr, "Missing REFRAG_FILENAME\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
       }
+      refrag = 1;
+      refrag_filename = argv[2];
+      argv += 2;
+      argc -= 2;
     }
-    else if(!strcmp(*argv, "-s"))
+    else if(!strcmp(argv[1], "-s"))
     {
-      /* do we save or compare packets */
       save = 1;
-    }
-    else if(frag_filename == NULL)
-    {
-      /* get the name of the file where the fragmented packets used for
-         comparison are stored */
-      frag_filename = argv[0];
-    }
-    else if(src_filename == NULL)
-    {
-      /* get the name of the file that contains the packets to
-         encapsulate */
-      src_filename = argv[0];
+      argv += 1;
+      argc -= 1;
     }
     else
     {
-      /* do not accept more than 2 arguments without option name */
-      printf(TEST_USAGE);
-      goto quit;
-    }
+      fprintf(stderr, "unknown option %s\n", argv[1]);
+      fprintf(stderr, TEST_USAGE);
+       goto quit;
+     }
   }
 
-  /* the fragment filename is mandatory */
-  if(frag_filename == NULL)
+  if(!src_filename || !frag_filename)
   {
-    printf(TEST_USAGE);
+    fprintf(stderr, "missing mandatory options\n");
+    fprintf(stderr, TEST_USAGE);
     goto quit;
   }
 
-  /* the source filename is mandatory */
-  if(src_filename == NULL)
-  {
-    printf(TEST_USAGE);
-    goto quit;
-  }
-
-  if(refrag)
-  {
-    if(refrag_filename == NULL)
-    {
-      printf(TEST_USAGE);
-      goto quit;
-    }
-  }
-  failure = test_encap_deencap(verbose, save, src_filename, frag_filename,
+  failure = test_encap_deencap(verbose,
+                               (label_type ? atoi(label_type):0),
+                               save, src_filename, frag_filename,
                                refrag_filename);
 
 quit:
@@ -343,14 +361,16 @@ quit:
  * @brief Test the GSE library with a flow of IP or GSE packets to encapsulate
  *
  * @param verbose       0 for no debug messages, 1 for debug, 2 for more debug
- * @param frag_length   The maximum length of the fragments (0 for default)
+ * @param label_type    the label type
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @param gse_frag_filename  The name of the PCAP file that contains the reference packets
  *                      used for comparison
  * @return              0 in case of success, 1 otherwise
  */
-static int test_encap_deencap(int verbose, int save, char *src_filename,
-                              char *frag_filename, char *refrag_filename)
+static int test_encap_deencap(int verbose, uint8_t label_type, int save,
+                              char *src_filename,
+                              char *frag_filename,
+                              char *refrag_filename)
 {
   pcap_t *src_handle;
   pcap_t *frag_handle = NULL;
@@ -520,7 +540,7 @@ static int test_encap_deencap(int verbose, int save, char *src_filename,
       goto release_lib;
     }
 
-    status = gse_encap_receive_pdu(pdu, encap, label, 0, PROTOCOL, qos);
+    status = gse_encap_receive_pdu(pdu, encap, label, label_type, PROTOCOL, qos);
     if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when receiving PDU #%lu (%s)\n", status, counter,

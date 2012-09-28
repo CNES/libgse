@@ -22,7 +22,9 @@ TESTS_ENCAP = \
 	test_encap_frag_copy.sh \
 	test_encap_frag_dflt_length_copy.sh \
 	test_encap_robust.sh \
-	test_encap_length_min.sh
+	test_encap_length_min.sh \
+	test_encap_labels.sh \
+	test_encap_labels_copy.sh
 
 TESTS_FIFO = \
 	test_fifo.sh \
@@ -30,7 +32,8 @@ TESTS_FIFO = \
 
 TESTS_REFRAG = \
 	test_refrag.sh \
-	test_refrag_robust.sh
+	test_refrag_robust.sh \
+	test_refrag_labels.sh
 
 TESTS = \
 	$(TESTS_ENCAP) \

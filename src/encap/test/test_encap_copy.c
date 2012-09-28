@@ -80,13 +80,13 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [-verbose] cmp_file flow\n\
-  verbose         Print DEBUG information\n\
-  frag_length     maximum length of the GSE packets\n\
+usage: test [--verbose (-v)] [--label-type lt] [-l frag_length] -c cmp_file -i input_flow\n\
+  --verbose       print DEBUG information\n\
+  --label_type    the label_type (0, 1, 2, 3) (default: 0)\n\
+  frag_length     length of the GSE packets\n\
   cmp_file        compare the generated packets with the reference packets\n\
                   stored in cmp_file (PCAP format)\n\
-  flow            flow of Ethernet frames to encapsulate (PCAP format)\n"
-
+  input_flow      flow of Ethernet frames to encapsulate (PCAP format)\n"
 
 /** The length of the Linux Cooked Sockets header */
 #define LINUX_COOKED_HDR_LEN  16
@@ -109,7 +109,7 @@ usage: test [-verbose] cmp_file flow\n\
  *
  *****************************************************************************/
 
-static int test_encap(int verbose, size_t frag_length,
+static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
                       char *src_filename, char *cmp_filename);
 static int compare_packets(int verbose,
                            unsigned char *pkt1, int pkt1_size,
@@ -137,44 +137,92 @@ int main(int argc, char *argv[])
   char *src_filename = NULL;
   char *cmp_filename = NULL;
   char *frag_length = 0;
-  int verbose;
+  int verbose = 0;
+  char *label_type = 0;
   int failure = 1;
+  int ref;
 
   /* parse program arguments, print the help message in case of failure */
-  if((argc < 4) || (argc > 5))
+  for(ref = argc; (ref > 0 && argc > 1); ref--)
   {
-    printf(TEST_USAGE);
+    if(!(strcmp(argv[1], "--verbose")) || !(strcmp(argv[1], "-v")))
+    {
+      verbose = 1;
+      argv += 1;
+      argc -= 1;
+    }
+    else if(!strcmp(argv[1], "--label-type"))
+    {
+      if(!argv[2])
+      {
+        fprintf(stderr, "Missing label type\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
+      }
+      label_type = argv[2];
+      if(atoi(label_type) < 0 && atoi(label_type) > 3)
+      {
+        fprintf(stderr, "Bad label type\n");
+        goto quit;
+      }
+      argv += 2;
+      argc -= 2;
+    }
+    else if(!strcmp(argv[1], "-l"))
+    {
+      if(!argv[2])
+      {
+        fprintf(stderr, "Missing frag_length\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
+      }
+      frag_length = argv[2];
+      argv += 2;
+      argc -= 2;
+    }
+    else if(!strcmp(argv[1], "-c"))
+    {
+      if(!argv[2])
+      {
+        fprintf(stderr, "Missing cmp_file\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
+      }
+      cmp_filename = argv[2];
+      argv += 2;
+      argc -= 2;
+    }
+    else if(!strcmp(argv[1], "-i"))
+    {
+      if(!argv[2])
+      {
+        fprintf(stderr, "Missing input_flow\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
+      }
+      src_filename = argv[2];
+      argv += 2;
+      argc -= 2;
+    }
+    else
+    {
+      fprintf(stderr, "unknown option %s\n", argv[1]);
+      fprintf(stderr, TEST_USAGE);
+      goto quit;
+    }
+  }
+
+  if(!src_filename || !cmp_filename)
+  {
+    fprintf(stderr, "missing mandatory options\n");
+    fprintf(stderr, TEST_USAGE);
     goto quit;
   }
 
-  if(argc == 4)
-  {
-    frag_length = argv[1];
-    /* get the name of the file where the reference packets used for
-       comparison are stored */
-    cmp_filename = argv[2];
-    /* get the name of the file that contains the packets to
-       (de-)encapsulate */
-    src_filename = argv[3];
-    verbose = 0;
-  }
-  if(argc == 5)
-  {
-    if(strcmp(argv[1], "verbose"))
-    {
-      printf(TEST_USAGE);
-      goto quit;
-    }
-    frag_length = argv[2];
-    /* get the name of the file where the reference packets used for
-       comparison are stored */
-    cmp_filename = argv[3];
-    /* get the name of the file that contains the packets to
-       (de-)encapsulate */
-    src_filename = argv[4];
-    verbose = 1;
-  }
-  failure = test_encap(verbose, atoi(frag_length), src_filename, cmp_filename);
+  failure = test_encap(verbose,
+                       (label_type ? atoi(label_type):0),
+                       (frag_length ? atoi(frag_length):0),
+                       src_filename, cmp_filename);
 
 quit:
   return failure;
@@ -191,12 +239,14 @@ quit:
  * @brief Test the GSE library with a flow of IP or GSE packets to encapsulate
  *
  * @param verbose       0 for no debug messages, 1 for debug
+ * @param label_type    The label type
+ * @param frag_length   The maximum length of the fragments (0 for default)
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @param cmp_filename  The name of the PCAP file that contains the reference packets
  *                      used for comparison
  * @return              0 in case of success, 1 otherwise
  */
-static int test_encap(int verbose, size_t frag_length,
+static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
                       char *src_filename, char *cmp_filename)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
@@ -308,7 +358,7 @@ static int test_encap(int verbose, size_t frag_length,
 
     /* Encapsulate the input packets, use in_packet and in_size as
        input */
-    for(i=0 ; i<6 ; i++)
+    for(i=0 ; i<gse_get_label_length(label_type) ; i++)
       label[i] = i;
     status = gse_create_vfrag_with_data(&pdu, in_size,
                                         GSE_MAX_HEADER_LENGTH,
@@ -328,7 +378,7 @@ static int test_encap(int verbose, size_t frag_length,
       goto release_lib;
     }
 
-    status = gse_encap_receive_pdu(pdu, encap, label, 0, PROTOCOL, qos);
+    status = gse_encap_receive_pdu(pdu, encap, label, label_type, PROTOCOL, qos);
     if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when encapsulating pdu (%s)\n", status, gse_get_status(status));
