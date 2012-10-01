@@ -64,6 +64,7 @@
 /* GSE includes */
 #include "constants.h"
 #include "deencap.h"
+#include "header_fields.h"
 
 /****************************************************************************
  *
@@ -103,6 +104,16 @@ usage: test [verbose] cmp_file flow\n\
       printf(format, ##__VA_ARGS__); \
   } while(0)
 
+typedef struct
+{
+  unsigned char data1[4];
+  size_t length1;
+  unsigned char data2[14];
+  size_t length2;
+  uint16_t extension_type;
+  int verbose;
+} ext_verif_t;
+
 /****************************************************************************
  *
  *   PROTOTYPES OF PRIVATE FUNCTIONS
@@ -113,7 +124,12 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename);
 static int compare_packets(int verbose,
                            unsigned char *pkt1, int pkt1_size,
                            unsigned char *pkt2, int pkt2_size);
-
+static int ext_cb(unsigned char *ext,
+                  size_t *length,
+                  uint16_t *protocol_type,
+                  uint16_t extension_type,
+                  void *opaque);
+static void set_opaque(ext_verif_t *opaque, int verbose);
 
 /****************************************************************************
  *
@@ -216,7 +232,8 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
   uint16_t gse_length;
   gse_status_t status;
   int i;
-  int pkt_nbr = 0;
+  unsigned int pkt_nbr = 0;
+  ext_verif_t opaque;
 
   for(i=0 ; i<6 ; i++)
     ref_label[i] = i;
@@ -283,6 +300,15 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     goto close_comparison;
   }
 
+  set_opaque(&opaque, verbose);
+  status = gse_deencap_set_extension_callback(deencap, ext_cb, &opaque);
+  if(status != GSE_STATUS_OK)
+  {
+    DEBUG(verbose, "Error %#.4x when setting ext callback (%s)\n",
+          status, gse_get_status(status));
+    goto close_comparison;
+  }
+
   /* for each packet in the dump */
   counter = 0;
   while((packet = (unsigned char *) pcap_next(handle, &header)) != NULL)
@@ -303,7 +329,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     in_packet = packet + link_len_src;
     in_size = header.len - link_len_src;
 
-    /* Encapsulate the input packets, use in_packet and in_size as
+    /* Deecapsulate the input packets, use in_packet and in_size as
        input */
     status = gse_create_vfrag_with_data(&gse_packet, in_size,
                                         GSE_MAX_HEADER_LENGTH,
@@ -312,6 +338,21 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     if(status != GSE_STATUS_OK)
     {
       DEBUG(verbose, "Error %#.4x when creating virtual fragment (%s)\n", status, gse_get_status(status));
+      goto release_lib;
+    }
+
+    /* check the extension reading function */
+    status = gse_deencap_get_header_ext(gse_get_vfrag_start(gse_packet), ext_cb, &opaque);
+    if(status != GSE_STATUS_OK && status != GSE_STATUS_EXTENSION_UNAVAILABLE)
+    {
+      DEBUG(verbose, "Error %#.4x when getting extension in packet (%s)\n", status,
+            gse_get_status(status));
+      status = gse_free_vfrag(&gse_packet);
+      if(status != GSE_STATUS_OK)
+      {
+        is_failure = 1;
+        DEBUG(verbose, "Error %#.4x when destroying GSE packet (%s)\n", status, gse_get_status(status));
+      }
       goto release_lib;
     }
 
@@ -356,7 +397,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
       }
       DEBUG(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
             counter, label_type, protocol, label[0]);
-      for(i = 1 ; i < gse_get_label_length(label_type) ; i++)
+      for(i = 1; i < gse_get_label_length(label_type); i++)
       {
         DEBUG(verbose, ":%.2d", label[i]);
       }
@@ -368,7 +409,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
               LABEL_TYPE, PROTOCOL);
         goto free_pdu;
       }
-      for(i = 0 ; i < gse_get_label_length(label_type) ; i++)
+      for(i = 0; i < gse_get_label_length(label_type); i++)
       {
         if(label[i] != ref_label[i])
         {
@@ -505,4 +546,159 @@ static int compare_packets(int verbose,
 
 skip:
   return valid;
+}
+
+static int ext_cb(unsigned char *ext,
+                  size_t *length,
+                  uint16_t *protocol_type,
+                  uint16_t extension_type,
+                  void *opaque)
+{
+  ext_verif_t *ext_info = (ext_verif_t *)opaque;
+  gse_ext_type_t current_type;
+  size_t current_length = 0;
+
+  current_type.null_1 = (extension_type >> 12) & 0xF;
+  current_type.null_2 = (extension_type >> 8) & 0x08;
+  current_type.h_len = (extension_type >> 8) & 0x07;
+  current_type.h_type = extension_type & 0xFF;
+
+  while(current_length < *length)
+  {
+    if(current_type.null_1 != 0 || current_type.null_2 != 0)
+    {
+      /* got protocol type: end of extensions */
+      break;
+    }
+
+    switch(current_type.h_len)
+    {
+      case(0x1):
+        current_length += 2;
+        break;
+
+      case(0x2):
+        current_length += 4;
+        break;
+
+      case(0x3):
+        current_length += 6;
+        break;
+
+      case(0x4):
+        current_length += 8;
+        break;
+
+      case(0x5):
+        current_length += 10;
+        break;
+
+      default:
+        DEBUG(ext_info->verbose, "wrong type\n");
+        goto error;
+    }
+    if(current_length <= *length)
+    {
+      memcpy(&current_type, ext + current_length - 2, sizeof(gse_ext_type_t));
+    }
+    else
+    {
+      DEBUG(ext_info->verbose, "Cannot find extension end\n");
+      goto error;
+    }
+  }
+
+  *protocol_type = (current_type.null_1 & 0xF) << 12 |
+                   (current_type.null_2 & 0x08) << 8 |
+                   (current_type.h_len & 0x07) << 8 |
+                   (current_type.h_type & 0xFF);
+  /* check the Protocol Type we got in extensions */
+  if(*protocol_type != PROTOCOL)
+  {
+    DEBUG(ext_info->verbose, "Protocol type is incorrect\n");
+    goto error;
+  }
+
+  *length = current_length;
+
+  if(ext_info->length1 != *length && ext_info->length2 != *length)
+  {
+    DEBUG(ext_info->verbose, "Extensions length are incorrect: "
+          "%u instead of %u or %u\n",
+          *length, ext_info->length1, ext_info->length2);
+    goto error;
+  }
+  if(memcmp(ext, ext_info->data1, *length) && (memcmp(ext, ext_info->data2, *length)))
+  {
+    unsigned int i;
+    DEBUG(ext_info->verbose, "Extensions data are incorrect:\n");
+    for(i = 0; i < *length; i++)
+    {
+      DEBUG(ext_info->verbose, "0x%.2X ", ext[i]);
+    }
+    DEBUG(ext_info->verbose, "\ninstead of:\n");
+    for(i = 0; i < ext_info->length1; i++)
+    {
+      DEBUG(ext_info->verbose, "0x%.2X ", ext_info->data1[i]);
+    }
+    DEBUG(ext_info->verbose, "\nor:\n");
+    for(i = 0; i < ext_info->length2; i++)
+    {
+      DEBUG(ext_info->verbose, "0x%.2X ", ext_info->data2[i]);
+    }
+    DEBUG(ext_info->verbose, "\n");
+    goto error;
+  }
+  if(ext_info->extension_type != extension_type)
+  {
+    DEBUG(ext_info->verbose, "Extension type is incorrect\n");
+    goto error;
+  }
+
+  return *length;
+
+error:
+  return -1;
+}
+
+static void set_opaque(ext_verif_t *opaque, int verbose)
+{
+  unsigned int i;
+
+  opaque->verbose = verbose;
+
+  opaque->length1 = 4;
+
+  for(i = 0; i < 2; i++)
+  {
+   /* first ext data */
+    opaque->data1[i] = i;
+    opaque->data2[i] = i;
+  }
+  /* first extension type field */
+  /* H-LEN */
+  opaque->data1[2] = (PROTOCOL >> 8) & 0xFF;
+  /* H-TYPE */
+  opaque->data1[3] = PROTOCOL & 0xFF;
+
+  /* first extension type field */
+  /* H-LEN */
+  opaque->data2[2] = 0x05;
+  /* H-TYPE */
+  opaque->data2[3] = 0xCD;
+
+  opaque->length2 = 14;
+
+  for(i = 4; i < 12; i++)
+  {
+    /* second ext data */
+    opaque->data2[i] = i;
+  }
+  /* second extension type field */
+  /* PROTOCOL */
+  opaque->data2[12] = 0x23;
+  opaque->data2[13] = 0x45;
+  /* 00000 | H-LEN | H-TYPE
+   * 00000 |  010  |  0xAB  */
+  opaque->extension_type = 0x02AB;
 }

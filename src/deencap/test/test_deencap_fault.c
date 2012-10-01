@@ -291,6 +291,7 @@ check_status:
   else
   {
     is_failure = 1;
+    DEBUG(verbose, "Wrong output status %d (%s)\n", status, gse_get_status(status));
   }
   status = gse_deencap_release(deencap);
   if(status != GSE_STATUS_OK)

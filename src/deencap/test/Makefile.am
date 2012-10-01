@@ -13,6 +13,8 @@ noinst_PROGRAMS = \
 TESTS_DEENCAP = \
 	test_deencap_complete.sh \
 	test_deencap_frag.sh \
+	test_deencap_complete_ext.sh \
+	test_deencap_frag_ext.sh \
 	test_deencap_interleaving.sh \
 	test_deencap_incomplete_pdu_overwritten.sh \
 	test_deencap_padding.sh \

@@ -1175,7 +1175,7 @@ static int deencap_pkt(int verbose,
 
     DEBUG_L2(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
              pdu_counter, label_type, protocol, rcv_label[0]);
-    for(j = 1 ; j < gse_get_label_length(label_type) ; j++)
+    for(j = 1; j < gse_get_label_length(label_type); j++)
     {
       DEBUG_L2(verbose, ":%.2d", rcv_label[j]);
     }

@@ -293,7 +293,6 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
     unsigned char *in_packet;
     size_t in_size;
 
-
     /* check Ethernet frame length */
     if(header.len <= link_len_src || header.len != header.caplen)
     {
@@ -353,7 +352,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
       }
       DEBUG(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
             counter, label_type, protocol, label[0]);
-      for(i = 1 ; i < gse_get_label_length(label_type) ; i++)
+      for(i = 1; i < gse_get_label_length(label_type); i++)
       {
         DEBUG(verbose, ":%.2d", label[i]);
       }
@@ -365,7 +364,7 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
               LABEL_TYPE, PROTOCOL);
         goto free_pdu;
       }
-      for(i = 0 ; i < gse_get_label_length(label_type) ; i++)
+      for(i = 0; i < gse_get_label_length(label_type); i++)
       {
         if(label[i] != ref_label[counter - 1][i])
         {

@@ -12,7 +12,8 @@ noinst_PROGRAMS = \
 	test_encap_bad_zero_copy \
 	test_fifo \
 	test_refrag \
-	test_refrag_robust
+	test_refrag_robust \
+	test_add_ext
 
 TESTS_ENCAP = \
 	test_encap_complete.sh \
@@ -24,7 +25,10 @@ TESTS_ENCAP = \
 	test_encap_robust.sh \
 	test_encap_length_min.sh \
 	test_encap_labels.sh \
-	test_encap_labels_copy.sh
+	test_encap_labels_copy.sh \
+	test_encap_complete_ext.sh  \
+	test_encap_frag_ext.sh \
+	test_add_ext.sh
 
 TESTS_FIFO = \
 	test_fifo.sh \
@@ -99,3 +103,8 @@ test_refrag_robust_LDADD = \
 	$(top_builddir)/src/encap/libgse_encap.la \
 	$(top_builddir)/src/common/libgse_common.la
 
+test_add_ext_SOURCES = test_add_ext.c
+test_add_ext_LDADD = \
+	-lpcap \
+	../libgse_encap.la \
+	$(top_builddir)/src/common/libgse_common.la

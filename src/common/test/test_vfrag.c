@@ -67,9 +67,13 @@
  *
  *****************************************************************************/
 
-/** Length of data to write in the virtual fragment */
+/** Length of data to write in the virtual fragment before reallocation */
+#define FIRST_DATA_LENGTH 16
+/** Length of data to write in the virtual fragment after reallocation */
 #define DATA_LENGTH 64
-/** Length of the virtual fragment */
+/** Length of the virtual fragment before reallocation */
+#define FIRST_VFRAG_LENGTH 16
+/** Length of the virtual fragment after reallocation */
 #define VFRAG_LENGTH 64
 /** Length of the duplicated virtual fragment */
 #define DUP_LENGTH 32
@@ -168,7 +172,7 @@ static int test_vfrag(int verbose)
   unsigned int i;
 
 
-  orig_data = malloc(sizeof(unsigned char) * DATA_LENGTH + HEAD_LENGTH);
+  orig_data = malloc(sizeof(unsigned char) * FIRST_DATA_LENGTH + HEAD_LENGTH);
   if(orig_data == NULL)
   {
     DEBUG(verbose, "Malloc failed for data\n");
@@ -181,13 +185,13 @@ static int test_vfrag(int verbose)
     goto free_data;
   }
 
-  /* Mover the start pointer of data to check if we can create a correct virtual
+  /* Move the start pointer of data to check if we can create a correct virtual
    * fragment from a buffer */
   data = orig_data + HEAD_LENGTH;
 
   DEBUG(verbose, "The original data are '");
   /* Create data */
-  for(i = 0 ; i < DATA_LENGTH ; i++)
+  for(i = 0 ; i < FIRST_DATA_LENGTH ; i++)
   {
     data[i] = i;
     DEBUG(verbose, "%x", data[i]);
@@ -197,9 +201,7 @@ static int test_vfrag(int verbose)
   /******************************* TEST_FUNC_1 *******************************/
 
   /* Create a fragment and print informations */
-//  status = gse_create_vfrag_with_data(&vfrag, VFRAG_LENGTH, HEAD_LENGTH, 0, data,
-//                                      DATA_LENGTH);
-  status = gse_create_vfrag_from_buf(&vfrag, orig_data, HEAD_LENGTH, 0, DATA_LENGTH);
+  status = gse_create_vfrag_from_buf(&vfrag, orig_data, HEAD_LENGTH, 0, FIRST_DATA_LENGTH);
   if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error %#.4x when creating fragment (%s)\n", status,
@@ -230,8 +232,8 @@ static int test_vfrag(int verbose)
          data, orig_data);
   
   /* Check the different values and the data*/
-  if(vfrag->length != VFRAG_LENGTH ||
-     vfrag->vbuf->length != VFRAG_LENGTH  + HEAD_LENGTH ||
+  if(vfrag->length != FIRST_VFRAG_LENGTH ||
+     vfrag->vbuf->length != FIRST_VFRAG_LENGTH  + HEAD_LENGTH ||
      vfrag->start != vfrag->vbuf->start + HEAD_LENGTH ||
      vfrag->vbuf->vfrag_count != 1 ||
      data != vfrag->start ||
@@ -246,7 +248,105 @@ static int test_vfrag(int verbose)
 
   /******************************* TEST_FUNC_2 *******************************/
 
-  /* Duplicate a f/ragment and print informations */
+  /* Create a backup of the data to compareat the end because data will be freed */
+  data_cmp = malloc(vfrag->length * sizeof(unsigned char)); 
+  if(data_cmp == NULL)
+  {
+    DEBUG(verbose, "Malloc failed for data_cmp\n");
+    goto free_vfrag;
+  }
+  memcpy(data_cmp, vfrag->start, vfrag->length);
+
+
+  /* Reallocate the virtual fragment iwith data starting at head length + 1
+   * and print information */
+  status = gse_reallocate_vfrag(vfrag, HEAD_LENGTH + 1, DATA_LENGTH, HEAD_LENGTH, 0);
+  if(status != GSE_STATUS_OK)
+  {
+    DEBUG(verbose, "Error %#.4x when reallocating fragment (%s)\n", status,
+          gse_get_status(status));
+    free(data_cmp);
+    goto free_zero;
+  }
+
+  DEBUG(verbose, "The virtual fragment was reallocated:\n");
+  DEBUG(verbose, "\tIts size is %d, the virtual buffer size is %d\n"
+        "\tIts start address is %p, the virtual buffer start address is %p\n"
+        "\tIts end address is %p, the virtual buffer end address is %p\n"
+        "\tNumber of fragments is %d\n",
+         vfrag->length, vfrag->vbuf->length,
+         vfrag->start, vfrag->vbuf->start,
+         vfrag->end, vfrag->vbuf->end,
+         vfrag->vbuf->vfrag_count);
+  
+  /* Check the different values and the data*/
+  if(vfrag->length != FIRST_VFRAG_LENGTH ||
+     vfrag->vbuf->length != DATA_LENGTH  + HEAD_LENGTH ||
+     vfrag->start != vfrag->vbuf->start + HEAD_LENGTH + 1 ||
+     vfrag->vbuf->vfrag_count != 1 ||
+     memcmp(vfrag->start, data_cmp, vfrag->length))
+  {
+    DEBUG(verbose, "ERROR: Data are incorrect or this list contains incorrect value\n");
+    free(data_cmp);
+    goto free_vfrag;
+  }
+  free(data_cmp);
+
+  DEBUG(verbose, "\n***********************************************************\n\n");
+
+  /******************************* TEST_FUNC_3 *******************************/
+
+  /* Move the start pointer of data to check if we can create a correct virtual
+   * fragment from a buffer */
+  data = vfrag->vbuf->start + HEAD_LENGTH;
+
+  DEBUG(verbose, "The new data are '");
+  /* Create data */
+  for(i = 0 ; i < DATA_LENGTH ; i++)
+  {
+    data[i] = i;
+    DEBUG(verbose, "%x", data[i]);
+  }
+  DEBUG(verbose, "'.\n");
+
+  DEBUG(verbose, "Shift the virtual fragment to fit the data:\n");
+  status = gse_shift_vfrag(vfrag, -1, vfrag->vbuf->end - vfrag->end);
+  if(status != GSE_STATUS_OK)
+  {
+    DEBUG(verbose, "Error %#.4x when shifting fragment (%s)\n", status,
+          gse_get_status(status));
+    goto free_zero;
+  }
+
+  DEBUG(verbose, "\tIts size is %d, the virtual buffer size is %d\n"
+        "\tIts start address is %p, the virtual buffer start address is %p\n"
+        "\tIts end address is %p, the virtual buffer end address is %p\n"
+        "\tNumber of fragments is %d\n"
+        "\tThe data address in buffer is %p, the original buffer address is %p\n",
+         vfrag->length, vfrag->vbuf->length,
+         vfrag->start, vfrag->vbuf->start,
+         vfrag->end, vfrag->vbuf->end,
+         vfrag->vbuf->vfrag_count,
+         data, orig_data);
+  
+  /* Check the different values and the data*/
+  if(vfrag->length != VFRAG_LENGTH ||
+     vfrag->vbuf->length != VFRAG_LENGTH  + HEAD_LENGTH ||
+     vfrag->start != vfrag->vbuf->start + HEAD_LENGTH ||
+     vfrag->vbuf->vfrag_count != 1 ||
+     data != vfrag->start ||
+     memcmp(vfrag->start, data, vfrag->length))
+  {
+    DEBUG(verbose, "ERROR: Data are incorrect or this list contains incorrect value\n");
+    goto free_vfrag;
+  }
+
+  DEBUG(verbose, "\n***********************************************************\n\n");
+
+
+  /******************************* TEST_FUNC_4 *******************************/
+
+  /* Duplicate a fragment and print informations */
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status != GSE_STATUS_OK)
   {
@@ -286,7 +386,7 @@ static int test_vfrag(int verbose)
     DEBUG(verbose, "'.\n");
   }
 
-  /* Check the different values and the data*/
+  /* Check the different values and the data */
   if(dup_vfrag->length != DUP_LENGTH ||
      dup_vfrag->vbuf->length != VFRAG_LENGTH + HEAD_LENGTH ||
      dup_vfrag->start != vfrag->start ||
@@ -320,7 +420,7 @@ static int test_vfrag(int verbose)
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  /******************************* TEST_FUNC_3 *******************************/
+  /******************************* TEST_FUNC_5 *******************************/
 
   DEBUG(verbose, "Reset virtual fragment:\n'");
 
@@ -340,22 +440,31 @@ static int test_vfrag(int verbose)
 
   DEBUG(verbose, "New data are written into the virtual fragment:\n'");
 
+
   /* Create new data */
+  orig_data = malloc(sizeof(unsigned char) * DATA_LENGTH);
+  if(orig_data == NULL)
+  {
+    DEBUG(verbose, "Malloc failed for data\n");
+    goto quit;
+  }
   for(i = 0 ; i < DATA_LENGTH ; i++)
   {
-    data[i] = DATA_LENGTH - i;
+    orig_data[i] = DATA_LENGTH - i;
     DEBUG(verbose, "%x", data[i]);
   }
   DEBUG(verbose, "'.\nThe data are copied in the virtual fragment...\n");
 
   /* Copy the data and print informations */
-  status = gse_copy_data(vfrag, data, DATA_LENGTH);
+  status = gse_copy_data(vfrag, orig_data, DATA_LENGTH);
   if(status != GSE_STATUS_OK)
   {
     DEBUG(verbose, "Error %#.4x when copying data in fragment (%s)\n", status,
           gse_get_status(status));
+    free(orig_data);
     goto free_vfrag;
   }
+  free(orig_data);
 
   DEBUG(verbose, "\nThe virtual fragment data are now '");
   for(i = 0 ; i < vfrag->length ; i++)
@@ -371,7 +480,7 @@ static int test_vfrag(int verbose)
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  /******************************* TEST_FUNC_4 *******************************/
+  /******************************* TEST_FUNC_6 *******************************/
 
   /* Create a fragment from virtual fragment data */
   status = gse_create_vfrag_with_data(&created_vfrag, CREATED_LENGTH, OFFSET, OFFSET,
@@ -491,7 +600,7 @@ static int test_vfrag(int verbose)
     goto free_data_cmp;
   }
 
-  /******************************* TEST_FUNC_5 *******************************/
+  /******************************* TEST_FUNC_7 *******************************/
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 

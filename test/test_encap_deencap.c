@@ -365,6 +365,7 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
     DEBUG(verbose, "%d packets got in FIFO %d\n", pkt_nbr, qos_idx);
 
     do{
+
       do{
         status = gse_deencap_packet(vfrag_pkt[rcv_pkt_nbr], deencap, &label_type, rcv_label,
                                     &protocol, &rcv_pdu, &gse_length);
@@ -407,7 +408,7 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
       }
       DEBUG(verbose, "Complete PDU #%lu:\nLabel Type: %d | Protocol: %#.4x | Label: %.2d",
             pdu_counter, label_type, protocol, rcv_label[0]);
-      for(i = 1 ; i < gse_get_label_length(label_type) ; i++)
+      for(i = 1; i < gse_get_label_length(label_type); i++)
       {
         DEBUG(verbose, ":%.2d", rcv_label[i]);
       }
@@ -417,7 +418,7 @@ static int test_encap(int verbose, size_t frag_length, char *filename)
         DEBUG(verbose, "---------- BAD PARAMETERS VALUE ----------\n");
         goto free_pdu;
       }
-      for(i = 0 ; i < gse_get_label_length(label_type) ; i++)
+      for(i = 0; i < gse_get_label_length(label_type); i++)
       {
         if(rcv_label[i] != label[i])
         {

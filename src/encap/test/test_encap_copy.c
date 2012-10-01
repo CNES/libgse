@@ -80,10 +80,11 @@
 /** The program usage */
 #define TEST_USAGE \
 "GSE test application: test the GSE library with a flow of IP packets\n\n\
-usage: test [--verbose (-v)] [--label-type lt] [-l frag_length] -c cmp_file -i input_flow\n\
+usage: test [--verbose (-v)] [--label-type lt] [-l frag_length] [--ext ext_nbr] -c cmp_file -i input_flow\n\
   --verbose       print DEBUG information\n\
   --label_type    the label_type (0, 1, 2, 3) (default: 0)\n\
   frag_length     length of the GSE packets\n\
+  ext_nbr      the number of header extensions (max 2)\n\
   cmp_file        compare the generated packets with the reference packets\n\
                   stored in cmp_file (PCAP format)\n\
   input_flow      flow of Ethernet frames to encapsulate (PCAP format)\n"
@@ -95,6 +96,7 @@ usage: test [--verbose (-v)] [--label-type lt] [-l frag_length] -c cmp_file -i i
 #define FIFO_SIZE 100
 #define PKT_MAX 5
 #define PROTOCOL 9029
+#define EXT_LEN 14
 
 /** DEBUG macro */
 #define DEBUG(verbose, format, ...) \
@@ -103,6 +105,15 @@ usage: test [--verbose (-v)] [--label-type lt] [-l frag_length] -c cmp_file -i i
       printf(format, ##__VA_ARGS__); \
   } while(0)
 
+typedef struct
+{
+  unsigned char *data;
+  size_t length;
+  uint16_t extension_type;
+  int verbose;
+} ext_data_t;
+
+
 /****************************************************************************
  *
  *   PROTOTYPES OF PRIVATE FUNCTIONS
@@ -110,11 +121,15 @@ usage: test [--verbose (-v)] [--label-type lt] [-l frag_length] -c cmp_file -i i
  *****************************************************************************/
 
 static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
-                      char *src_filename, char *cmp_filename);
+                      int ext_nbr, char *src_filename, char *cmp_filename);
 static int compare_packets(int verbose,
                            unsigned char *pkt1, int pkt1_size,
                            unsigned char *pkt2, int pkt2_size);
-
+static int ext_cb(unsigned char *ext,
+                  size_t *length,
+                  uint16_t *extension_type,
+                  uint16_t protocol_type,
+                  void *opaque);
 
 /****************************************************************************
  *
@@ -141,6 +156,7 @@ int main(int argc, char *argv[])
   char *label_type = 0;
   int failure = 1;
   int ref;
+  char *ext_nbr = 0;
 
   /* parse program arguments, print the help message in case of failure */
   for(ref = argc; (ref > 0 && argc > 1); ref--)
@@ -165,6 +181,18 @@ int main(int argc, char *argv[])
         fprintf(stderr, "Bad label type\n");
         goto quit;
       }
+      argv += 2;
+      argc -= 2;
+    }
+    else if(!strcmp(argv[1], "--ext"))
+    {
+      if(!argv[2])
+      {
+        fprintf(stderr, "Missing extension number\n");
+        fprintf(stderr, TEST_USAGE);
+        goto quit;
+      }
+      ext_nbr = argv[2];
       argv += 2;
       argc -= 2;
     }
@@ -222,6 +250,7 @@ int main(int argc, char *argv[])
   failure = test_encap(verbose,
                        (label_type ? atoi(label_type):0),
                        (frag_length ? atoi(frag_length):0),
+                       (ext_nbr ? atoi(ext_nbr):0),
                        src_filename, cmp_filename);
 
 quit:
@@ -241,13 +270,14 @@ quit:
  * @param verbose       0 for no debug messages, 1 for debug
  * @param label_type    The label type
  * @param frag_length   The maximum length of the fragments (0 for default)
+ * @param ext_nbr       The number of extensions
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @param cmp_filename  The name of the PCAP file that contains the reference packets
  *                      used for comparison
  * @return              0 in case of success, 1 otherwise
  */
 static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
-                      char *src_filename, char *cmp_filename)
+                      int ext_nbr, char *src_filename, char *cmp_filename)
 {
   char errbuf[PCAP_ERRBUF_SIZE];
   pcap_t *handle;
@@ -336,12 +366,63 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
 
   vfrag_pkt = calloc(PKT_MAX, sizeof(gse_vfrag_t*));
 
+  /* handle extensions */
+  if(ext_nbr > 0)
+  {
+    ext_data_t opaque;
+    unsigned char data[EXT_LEN];
+
+    opaque.length = 4;
+
+    for(i = 0; i < 2; i++)
+    {
+      /* first ext data */
+      data[i] = i;
+    }
+
+    if(ext_nbr > 1)
+    {
+      /* first extension type field */
+      /* H-LEN */
+      data[2] = 0x05;
+      /* H-TYPE */
+      data[3] = 0xCD;
+
+      for(i = 4; i < 12; i++)
+      {
+        /* second ext data */
+        data[i] = i;
+      }
+      /* second extension type field */
+      /* PROTOCOL */
+      data[12] = 0x23;
+      data[13] = 0x45;
+      opaque.length += 10;
+    }
+    else
+    {
+      /* first extension type field */
+      /* H-LEN */
+      data[2] = (PROTOCOL >> 8) & 0xFF;
+      /* H-TYPE */
+      data[3] = PROTOCOL & 0xFF;
+    }
+    opaque.data = data;
+    /* 00000 | H-LEN | H-TYPE
+     * 00000 |  010  |  0xAB  */
+    opaque.extension_type = 0x02AB;
+    opaque.verbose = verbose;
+
+    gse_encap_set_extension_callback(encap, ext_cb, &opaque);
+  }
+
   /* for each packet in the dump */
   counter = 0;
   while((packet = (unsigned char *) pcap_next(handle, &header)) != NULL)
   {
     unsigned char *in_packet;
     size_t in_size;
+    size_t head_len;
 
     counter++;
 
@@ -358,10 +439,16 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
 
     /* Encapsulate the input packets, use in_packet and in_size as
        input */
-    for(i=0 ; i<gse_get_label_length(label_type) ; i++)
+    for(i = 0 ; i < gse_get_label_length(label_type) ; i++)
       label[i] = i;
+
+    head_len = GSE_MAX_HEADER_LENGTH;
+    if(ext_nbr > 0)
+    {
+      head_len += EXT_LEN;
+    }
     status = gse_create_vfrag_with_data(&pdu, in_size,
-                                        GSE_MAX_HEADER_LENGTH,
+                                        head_len,
                                         GSE_MAX_TRAILER_LENGTH,
                                         in_packet, in_size);
     if(status != GSE_STATUS_OK)
@@ -420,7 +507,7 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
       goto free_vfrag;
     }
 
-    for(i=0 ; i<pkt_nbr ; i++)
+    for(i = 0 ; i < pkt_nbr ; i++)
     {
       cmp_packet = (unsigned char *) pcap_next(cmp_handle, &cmp_header);
       if(cmp_packet == NULL)
@@ -447,7 +534,7 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
     }
     gse_free_vfrag(&dup_vfrag);
 
-    for(i=0 ; i<pkt_nbr ; i++)
+    for(i = 0 ; i < pkt_nbr ; i++)
     {
       if(vfrag_pkt[i] != NULL)
       {
@@ -464,7 +551,7 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
   is_failure = 0;
 
 free_vfrag:
-  for(i=0 ; i<pkt_nbr ; i++)
+  for(i = 0 ; i < pkt_nbr ; i++)
   {
     if(vfrag_pkt[i] != NULL)
     {
@@ -583,3 +670,34 @@ static int compare_packets(int verbose,
 skip:
   return valid;
 }
+
+static int ext_cb(unsigned char *ext,
+                  size_t *length,
+                  uint16_t *extension_type,
+                  uint16_t protocol_type,
+                  void *opaque)
+{
+  ext_data_t *ext_info = (ext_data_t *)opaque;
+
+  if(ext_info->length > *length)
+  {
+    DEBUG(ext_info->verbose, "Not enough space for extensions:\n"
+          "available: %u, necessary: %u\n", *length, ext_info->length);
+    goto error;
+  }
+  if(protocol_type != PROTOCOL)
+  {
+    DEBUG(ext_info->verbose, "Wrong protocol type %u\n", protocol_type);
+    goto error;
+  }
+  
+  memcpy(ext, ext_info->data, ext_info->length);
+
+  *extension_type = ext_info->extension_type;
+  *length = ext_info->length;
+  return ext_info->length;
+error:
+  return -1;
+}
+
+
