@@ -72,7 +72,8 @@ static char *gse_status_string[GSE_STATUS_MAX] =
   [0x0206] = "Incorrect pointers in fragment",
   [0x0207] = "The specified offset are too long for the virtual buffer",
   [0x0208] = "The specified length for buffer is null",
-  [0x0209 ... 0x02FF] = "Unknown status",
+  [0x0209] = "The offsets values are invalid",
+  [0x020A ... 0x02FF] = "Unknown status",
   [0x0300] = "Warning or error on FIFO management",
   [0x0301] = "FIFO is full",
   [0x0302] = "FIFO is empty",
@@ -92,7 +93,11 @@ static char *gse_status_string[GSE_STATUS_MAX] =
   [0x0504] = "Header extensions are not supported",
   [0x0505] = "Label is invalid",
   [0x0506] = "Header format is invalid",
-  [0x0507 ... 0x05FF] = "Unknown status",
+  [0x0507] = "The desired protocol is not an EtherType, its value should be > 1535",
+  [0x0508] = "The extension callback returned an error",
+  [0x0509] = "Cannot add extension because this is a fragment or there are already extensions in the GSE packet",
+  [0x050A] = "Extensions are not valid",
+  [0x050B ... 0x05FF] = "Unknown status",
   [0x0600] = "Warning or error on deencapsulation",
   [0x0601] = "Subsequent fragment of PDU received while first fragment is missing: packet dropped",
   [0x0602] = "Timeout, PDU was not completely received in 256 BBFrames: PDU dropped",
@@ -114,6 +119,8 @@ static char *gse_status_string[GSE_STATUS_MAX] =
   [0x0A00] = "Warning or error when retrieving a header field value",
   [0x0A01] = "The GSE packet does not contain the requested field",
   [0x0A02 ... 0x0AFF] = "Unknown status",
+  [0x0B01] = "The CRC has been updated but this was not the last fragment, update the next packet in the fifo",
+  [0x0B02 ... 0x0BFF] = "Unknown status",
 };
 
 char *gse_get_status(gse_status_t status)

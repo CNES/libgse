@@ -95,6 +95,8 @@ typedef enum
   GSE_STATUS_OFFSET_TOO_HIGH          = 0x0207,
   /** Specified length for buffer is null */
   GSE_STATUS_BUFF_LENGTH_NULL         = 0x0208,
+  /** Offsets values are invalid */
+  GSE_STATUS_BAD_OFFSETS              = 0x0209,
 
   /* FIFO status */
 
@@ -134,6 +136,15 @@ typedef enum
   GSE_STATUS_INVALID_LABEL            = 0x0505,
   /** Header is not valid */
   GSE_STATUS_INVALID_HEADER           = 0x0506,
+  /** The desired protocol is not an EtherType */
+  GSE_STATUS_WRONG_PROTOCOL           = 0x0507,
+  /** The extension vallback returned an error */
+  GSE_STATUS_EXTENSION_CB_FAILED      = 0x508,
+  /** Cannot add extension because this is a fragment or there
+   *  are already extensions */
+  GSE_STATUS_EXTENSION_UNAVAILABLE    = 0x509,
+  /** Extensions are not valid */
+  GSE_STATUS_INVALID_EXTENSIONS       = 0x50A,
 
   /* Deencapsulation context error/warning status */
 
@@ -176,7 +187,13 @@ typedef enum
   /** The GSE packet does not contain the requested field */
   GSE_STATUS_FIELD_ABSENT             = 0x0A01,
 
-  GSE_STATUS_MAX                      = 0x0B00,
+  /* CRC updating code (should not be treated as error) */
+
+  /** The CRC has been updated but this was not the last fragment,
+   *  update the next packet in the fifo */
+  GSE_STATUS_PARTIAL_CRC              = 0x0B01,
+
+  GSE_STATUS_MAX                      = 0x0C00,
 } gse_status_t;
 
 /****************************************************************************

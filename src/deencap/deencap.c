@@ -53,9 +53,7 @@
 #include "constants.h"
 #include "header.h"
 #include "crc.h"
-
-/** Get the minimum between two values */
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
+#include "header_fields.h"
 
 
 /****************************************************************************
@@ -70,6 +68,7 @@ typedef struct
   gse_vfrag_t *partial_pdu;    /**< Virtual buffer containing the PDU chunks */
   gse_label_t label;           /**< Label field value */
   uint16_t total_length;       /**< Total length field value */
+  size_t tot_ext_length;       /**< The length of extensions */
   uint16_t protocol_type;      /**< Protocol type field value */
   gse_label_type_t label_type; /**< Label type field value */
   unsigned int bbframe_nbr;    /**< Number of BB Frames since the reception of
@@ -87,6 +86,9 @@ struct gse_deencap_s
                                        returned PDU (default: 0) */
   uint8_t qos_nbr;                /**< Size of the deencapsulation context table,
                                        number of potential Frag ID */
+  /**> Callback to read header extensions */
+  gse_deencap_read_header_ext_cb_t read_header_ext;
+  void *opaque;                   /**< User specific data for extension callback */
 };
 
 
@@ -186,11 +188,13 @@ static gse_status_t gse_deencap_add_last_frag(gse_vfrag_t *data,
  *
  *  @param   total_length   The total length field of the GSE packet
  *  @param   label_type     The type of label
+ *  @param   tot_ext_length The total extension length
  *
  *  @return                 The PDU Length
  */
 static size_t gse_deencap_compute_pdu_length(uint16_t total_length,
-                                             gse_label_type_t label_type);
+                                             gse_label_type_t label_type,
+                                             size_t tot_ext_length);
 
 /**
  *  @brief   Compute the CRC32
@@ -227,7 +231,7 @@ gse_status_t gse_deencap_init(uint8_t qos_nbr, gse_deencap_t **deencap)
   }
 
   /* Allocate memory for the deencapsulation structure */
-  *deencap = malloc(sizeof(gse_deencap_t));
+  *deencap = calloc(1, sizeof(gse_deencap_t));
   if(*deencap == NULL)
   {
     status = GSE_STATUS_MALLOC_FAILED;
@@ -327,8 +331,8 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
   size_t head_offset;
   size_t field_length;
   uint16_t data_length;
-  uint32_t crc = GSE_CRC_INIT;
   int label_length;
+  uint32_t crc = GSE_CRC_INIT;
   gse_vfrag_t *packet;
 
   if((data == NULL) || (deencap == NULL) || (label_type == NULL) ||
@@ -463,11 +467,53 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
     /* GSE packet carrying a complete PDU */
     case GSE_PDU_COMPLETE:
     {
-      /* Discard packet if it contains header extensions */
+      size_t tot_ext_length = 0;
+
+      /* read header extensions */
       if(ntohs(header.complete_s.protocol_type) < GSE_MIN_ETHER_TYPE)
       {
-        status = GSE_STATUS_EXTENSION_NOT_SUPPORTED;
-        goto free_packet;
+        int ret;
+        uint16_t protocol_type;
+        uint16_t extension_type = *protocol;
+
+        if(deencap->read_header_ext == NULL)
+        {
+          status = GSE_STATUS_EXTENSION_NOT_SUPPORTED;
+          goto free_packet;
+        }
+
+        tot_ext_length = packet->length;
+        ret = deencap->read_header_ext(packet->start, &(tot_ext_length),
+                                       &protocol_type, extension_type,
+                                       deencap->opaque);
+        if(ret < 0)
+        {
+          status = GSE_STATUS_EXTENSION_CB_FAILED;
+          goto free_packet;
+        }
+        *protocol = protocol_type;
+
+        /* check extensions validity */
+        status = gse_check_header_extension_validity(packet->start,
+                                                     &tot_ext_length,
+                                                     extension_type,
+                                                     &protocol_type);
+        if(status != GSE_STATUS_OK)
+        {
+          goto free_packet;
+        }
+        if(protocol_type != *protocol)
+        {
+          status = GSE_STATUS_INVALID_EXTENSIONS;
+          goto free_packet;
+        }
+
+        /* move PDU start after extensions */
+        status = gse_shift_vfrag(packet, tot_ext_length, 0);
+        if(status != GSE_STATUS_OK)
+        {
+          goto free_packet;
+        }
       }
       *label_type = header.lt;
       memcpy(label, header.complete_s.label.six_bytes_label,
@@ -532,7 +578,13 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
       /*  Create a new fragment in order to free context */
       ctx = &(deencap->deencap_ctx[header.subs_frag_s.frag_id]);
       *label_type = ctx->label_type;
-      memcpy(label, &(ctx->label), gse_get_label_length(ctx->label_type));
+      label_length = gse_get_label_length(ctx->label_type);
+      if(label_length < 0)
+      {
+        status = GSE_STATUS_INVALID_LT;
+        goto error;
+      }
+      memcpy(label, &(ctx->label), label_length);
       *protocol = ctx->protocol_type;
 
       /* Create the virtual buffer containing the PDU with appropriated offsets */
@@ -587,6 +639,21 @@ gse_status_t gse_deencap_new_bbframe(gse_deencap_t *deencap)
   return GSE_STATUS_OK;
 }
 
+gse_status_t gse_deencap_set_extension_callback(gse_deencap_t *deencap,
+                                                gse_deencap_read_header_ext_cb_t callback,
+                                                void *opaque)
+{
+  if(deencap == NULL)
+  {
+    return GSE_STATUS_NULL_PTR;
+  }
+
+  deencap->read_header_ext = callback;
+  deencap->opaque = opaque;
+
+  return GSE_STATUS_OK;
+}
+
 
 /****************************************************************************
  *
@@ -619,8 +686,9 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
     goto free_partial_pdu;
   }
 
-  /* Discard packet if it contains header extensions */
-  if(ntohs(header.first_frag_s.protocol_type) < GSE_MIN_ETHER_TYPE)
+  /* check Protocol Type */
+  if(ntohs(header.first_frag_s.protocol_type) < GSE_MIN_ETHER_TYPE &&
+     deencap->read_header_ext == NULL)
   {
     status = GSE_STATUS_EXTENSION_NOT_SUPPORTED;
     goto free_partial_pdu;
@@ -640,7 +708,8 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
   }
   ctx->label_type = header.lt;
   ctx->total_length = ntohs(header.first_frag_s.total_length);
-  pdu_length = gse_deencap_compute_pdu_length(ctx->total_length, header.lt);
+  pdu_length = gse_deencap_compute_pdu_length(ctx->total_length, header.lt,
+                                              ctx->tot_ext_length);
 
   /* Compute offset from start of buffer to partial PDU start */
   partial_pdu_start_offset = partial_pdu->start - partial_pdu->vbuf->start;
@@ -810,8 +879,58 @@ static gse_status_t gse_deencap_add_last_frag(gse_vfrag_t *partial_pdu,
     goto error;
   }
 
+  /* read header extensions (when entire data is received because extensions
+   * can be fragmented */
+  ctx->tot_ext_length = 0;
+  if(ctx->protocol_type < GSE_MIN_ETHER_TYPE)
+  {
+    int ret;
+    uint16_t protocol_type;
+    uint16_t extension_type = ctx->protocol_type;
+
+    if(deencap->read_header_ext == NULL)
+    {
+      status = GSE_STATUS_EXTENSION_NOT_SUPPORTED;
+      goto free_ctx;
+    }
+
+    ctx->tot_ext_length = partial_pdu->length;
+    ret = deencap->read_header_ext(partial_pdu->start, &(ctx->tot_ext_length),
+                                   &protocol_type, extension_type,
+                                   deencap->opaque);
+    if(ret < 0)
+    {
+      status = GSE_STATUS_EXTENSION_CB_FAILED;
+      goto free_ctx;
+    }
+    ctx->protocol_type = protocol_type;
+
+    /* check extensions validity */
+    status = gse_check_header_extension_validity(partial_pdu->start,
+                                                 &ctx->tot_ext_length,
+                                                 extension_type,
+                                                 &protocol_type);
+    if(status != GSE_STATUS_OK)
+    {
+      goto free_ctx;
+    }
+    if(protocol_type != ctx->protocol_type)
+    {
+      status = GSE_STATUS_INVALID_EXTENSIONS;
+      goto free_ctx;
+    }
+
+    /* move PDU start after extensions */
+    status = gse_shift_vfrag(partial_pdu, ctx->tot_ext_length, 0);
+    if(status != GSE_STATUS_OK)
+    {
+      goto free_ctx;
+    }
+  }
+
   /* Chek PDU length according to Total Length */
-  if(gse_deencap_compute_pdu_length(ctx->total_length, ctx->label_type)
+  if(gse_deencap_compute_pdu_length(ctx->total_length, ctx->label_type,
+                                    ctx->tot_ext_length)
      != ctx->partial_pdu->length)
   {
     status = GSE_STATUS_INVALID_DATA_LENGTH;
@@ -835,11 +954,12 @@ error:
 }
 
 static size_t gse_deencap_compute_pdu_length(uint16_t total_length,
-                                             gse_label_type_t label_type)
+                                             gse_label_type_t label_type,
+                                             size_t tot_ext_length)
 {
   uint16_t pdu_length;
   pdu_length = total_length - gse_get_label_length(label_type)
-               - GSE_PROTOCOL_TYPE_LENGTH;
+               - GSE_PROTOCOL_TYPE_LENGTH - tot_ext_length;
   return pdu_length;
 }
 

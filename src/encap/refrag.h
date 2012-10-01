@@ -107,8 +107,10 @@
  *                           - \ref GSE_STATUS_MULTIPLE_VBUF_ACCESS
  *                           - \ref GSE_STATUS_DATA_TOO_LONG
  *                           - \ref GSE_STATUS_PTR_OUTSIDE_BUFF
- *                           - \ref GSE_STATUS_FRAG_PTRS
  *                           - \ref GSE_STATUS_INVALID_QOS
+ *                           - \ref GSE_STATUS_EXTENSION_UNAVAILABLE
+ *                           - \ref GSE_STATUS_EXTENSION_CB_FAILED
+ *                           - \ref GSE_STATUS_INVALID_CRC_TYPE
  *
  *  @ingroup gse_refrag
  */

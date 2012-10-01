@@ -51,6 +51,7 @@
 #include <stdint.h>
 
 #include "virtual_fragment.h"
+#include "encap_header_ext.h"
 
 struct gse_encap_s;
 /** Encapsulation structure type definition */
@@ -133,6 +134,11 @@ gse_status_t gse_encap_set_offsets(gse_encap_t *encap,
 /**
  *  @brief   Receive a PDU which is stored in a virtual buffer
  *
+ *
+ *  In the zero copy case the header offset of the virtual fragment (PDU)
+ *  should be large enough for user offset (no GSE data) + header length +
+ *  extensions
+ *
  *  @warning In case of warning or error, the PDU is destroyed.
  *
  *  @param   pdu            The PDU to encapsulate
@@ -150,10 +156,10 @@ gse_status_t gse_encap_set_offsets(gse_encap_t *encap,
  *                            - \ref GSE_STATUS_NULL_PTR
  *                            - \ref GSE_STATUS_INVALID_LT
  *                            - \ref GSE_STATUS_PDU_LENGTH
- *                            - \ref GSE_STATUS_EXTENSION_NOT_SUPPORTED
  *                            - \ref GSE_STATUS_INVALID_QOS
  *                            - \ref GSE_STATUS_PTHREAD_MUTEX
  *                            - \ref GSE_STATUS_FIFO_FULL
+ *                            - \ref GSE_STATUS_WRONG_PROTOCOL
  *
  *  @ingroup gse_encap
  */
@@ -194,6 +200,7 @@ gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
  *                             - \ref GSE_STATUS_MALLOC_FAILED
  *                             - \ref GSE_STATUS_EMPTY_FRAG
  *                             - \ref GSE_STATUS_FRAG_NBR
+ *                             - \ref GSE_STATUS_EXTENSION_CB_FAILED
  *
  *  @ingroup gse_encap
  */
@@ -234,10 +241,30 @@ gse_status_t gse_encap_get_packet(gse_vfrag_t **packet, gse_encap_t *encap,
  *                             - \ref GSE_STATUS_MALLOC_FAILED
  *                             - \ref GSE_STATUS_EMPTY_FRAG
  *                             - \ref GSE_STATUS_FRAG_NBR
+ *                             - \ref GSE_STATUS_EXTENSION_CB_FAILED
  *
  *  @ingroup gse_encap
  */
 gse_status_t gse_encap_get_packet_copy(gse_vfrag_t **packet, gse_encap_t *encap,
                                        size_t desired_length, uint8_t qos);
+
+/**
+ *  @brief  Set the callback that build header extensions
+ *
+ *  @param  encap     The encapsulation context
+ *  @param  callback  The callback
+ *
+ *  @return
+ *                           - success/informative code among:
+ *                             - \ref GSE_STATUS_OK
+ *                           - warning/error code among:
+ *                             - \ref GSE_STATUS_NULL_PTR
+ *
+ *  @ingroup gse_ext
+ */
+gse_status_t gse_encap_set_extension_callback(gse_encap_t *encap,
+                                              gse_encap_build_header_ext_cb_t callback,
+                                              void *opaque);
+
 
 #endif

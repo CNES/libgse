@@ -10,7 +10,8 @@ SUBDIRS = . \
 noinst_LTLIBRARIES = libgse_deencap.la
 
 sources = \
-	deencap.c
+	deencap.c \
+	deencap_header_ext.c
 
 headers = \
 	deencap.h

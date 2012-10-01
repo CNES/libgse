@@ -28,5 +28,6 @@ libgse_include_HEADERS = \
 	common/header_fields.h \
 	encap/encap.h \
 	encap/refrag.h \
-	deencap/deencap.h
+	deencap/deencap.h \
+	deencap/deencap_header_ext.h
 

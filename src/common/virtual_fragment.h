@@ -52,6 +52,9 @@
 
 #include "status.h"
 
+/** Get the minimum between two values */
+#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
+
 /**
  * @defgroup gse_virtual_fragment GSE virtual fragment API
  */
@@ -94,8 +97,8 @@ typedef struct
  *  max_length + head_offset + trail_offset.\n
  *  All length are expressed in bytes.\n
  *  For a GSE encapsulation usage, the header offset should at least be the
- *  maximum header length and the trailer offset should at least be the CRC
- *  length.\n
+ *  maximum header length + maximum extension length and the trailer offset
+ *  should at least be the CRC length.\n
  *
  *  @param   vfrag         OUT: The virtual fragment on success,
  *                              NULL on error
@@ -352,5 +355,38 @@ size_t gse_get_vfrag_available_head(gse_vfrag_t *vfrag);
  *  @return         The trailer offset
  */
 size_t gse_get_vfrag_available_trail(gse_vfrag_t *vfrag);
+
+/**
+ *  @brief   Reallocate a virtual fragment internal buffer to increase
+ *           its available length
+ *
+ *  The length of the virtual buffer containing the fragment will be
+ *  max_length + head_offset + trail_offset.\n
+ *  All length are expressed in bytes.\n
+ *
+ *  @param   vfrag         IN: The virtual fragment to reallocate
+ *                         OUT: The virtual fragment with buffer reallocated
+ *                              on success, the old virtual fragment otherwise
+ *  @param   start_offset  The offset where data should start
+ *                         (should be greater or equal to head_offset)
+ *  @param   max_length    The maximum length of the fragment
+ *  @param   head_offset   The offset applied before the fragment
+ *  @param   trail_offset  The offset applied after the fragment
+ *
+ *  @return
+ *                         - success/informative code among:
+ *                           - \ref GSE_STATUS_OK
+ *                         - warning/error code among:
+ *                           - \ref GSE_STATUS_NULL_PTR
+ *                           - \ref GSE_STATUS_BUFF_LENGTH_NULL
+ *                           - \ref GSE_STATUS_MALLOC_FAILED
+ *                           - \ref GSE_STATUS_BAD_OFFSETS
+ *
+ *  @ingroup gse_virtual_fragment
+ */
+gse_status_t gse_reallocate_vfrag(gse_vfrag_t *vfrag,
+                                  size_t start_offset, size_t max_length,
+                                  size_t head_offset, size_t trail_offset);
+
 
 #endif

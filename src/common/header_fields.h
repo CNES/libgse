@@ -49,12 +49,38 @@
 #define HEADER_FIELD_H
 
 #include <stdint.h>
+#include <endian.h>
 
 #include "virtual_fragment.h"
 
 /**
  * @defgroup gse_head_access GSE header fields access API
  */
+
+/****************************************************************************
+ *
+ *   STRUCTURES AND TYPES
+ *
+ ****************************************************************************/
+
+/**> The extension header Type field */
+typedef struct
+{
+#if __BYTE_ORDER == __BIG_ENDIAN
+  uint8_t null_1:4; /**< unused bits */
+  uint8_t null_2:1; /**< unused bits */
+  uint8_t h_len:3;  /**< H-LEN field */
+  uint8_t h_type;   /**< H-TYPE field */
+#elif __BYTE_ORDER == __LITTLE_ENDIAN
+  uint8_t h_len:3;  /**< H-LEN field */
+  uint8_t null_2:1; /**< unused bits */
+  uint8_t null_1:4; /**< unused bits */
+  uint8_t h_type;   /**< H-TYPE field */
+#else
+#error "Please fix <bits/endian.h>"
+#endif
+} gse_ext_type_t;
+
 
 /****************************************************************************
  *
@@ -205,5 +231,29 @@ gse_status_t gse_get_protocol_type(unsigned char *packet,
  *  @ingroup gse_head_access
  */
 gse_status_t gse_get_label(unsigned char *packet, uint8_t label[6]);
+
+/**
+ *  @brief   Check header extensions validity and get the last type field
+ *
+ *  @param   extension      The extensions data
+ *  @param   ext_length     IN: at least the extensions length
+ *                          OUT: the real extension length 
+ *  @param   extension_type The type of the first extension
+ *  @param   protocol_type  OUT: The protocol type carried by the last extension
+ *                               Type field
+ *
+ *  @return
+ *                   - success/informative code among:
+ *                     - \ref GSE_STATUS_OK
+ *                   - warning/error code among:
+ *                     - \ref GSE_STATUS_NULL_PTR
+ *                     - \ref GSE_STATUS_INVALID_EXTENSIONS
+ *
+ *  @ingroup gse_head_access
+ */
+gse_status_t gse_check_header_extension_validity(unsigned char *extension,
+                                                 size_t *ext_length,
+                                                 uint16_t extension_type,
+                                                 uint16_t *protocol_type);
 
 #endif

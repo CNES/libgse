@@ -12,7 +12,8 @@ noinst_LTLIBRARIES = libgse_encap.la
 sources = \
 	fifo.c \
 	encap.c \
-	refrag.c
+	refrag.c \
+	encap_header_ext.c
 
 headers = \
 	fifo.h \

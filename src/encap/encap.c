@@ -53,10 +53,8 @@
 #include "constants.h"
 #include "fifo.h"
 #include "crc.h"
+#include "header_fields.h"
 
-
-/** Get the minimum between two values */
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 /****************************************************************************
  *
@@ -84,6 +82,9 @@ struct gse_encap_s
                               GSE packet (in bytes)
                               (default: 0) */
   uint8_t qos_nbr;       /**< Number of QoS values */
+  /**> Callback to build header extensions */
+  gse_encap_build_header_ext_cb_t build_header_ext;
+  void *opaque;          /**< User specific data for extension callback */
 };
 
 
@@ -100,10 +101,10 @@ struct gse_encap_s
  *  CRC is only created in the case of a first fragment, it is written at the
  *  end of the PDU.
  *
- *  @param   pdu_type    Type of payload (GSE_PDU_COMPLETE, GSE_PDU_SUBS_FRAG,
- *                                        GSE_PDU_FIRST_FRAG, GSE_PDU_LAST_FRAG)
- *  @param   encap_ctx   Encapsulation context of the PDU
- *  @param   length      Length of the GSE packet (in bytes)
+ *  @param   pdu_type       Type of payload (GSE_PDU_COMPLETE, GSE_PDU_SUBS_FRAG,
+ *                                           GSE_PDU_FIRST_FRAG, GSE_PDU_LAST_FRAG)
+ *  @param   encap_ctx      Encapsulation context of the PDU
+ *  @param   length         Length of the GSE packet (in bytes)
  *
  *  @return
  *                       - success/informative code among:
@@ -119,9 +120,9 @@ static gse_status_t gse_encap_create_header_and_crc(gse_payload_type_t payload_t
 /**
  *  @brief   Compute the GSE packet Total Length header field
  *
- *  @param   encap_ctx    Encapsulation encap_ctx
+ *  @param   encap_ctx     Encapsulation context
  *
- *  @return               The total Length (in bytes)
+ *  @return                The total Length (in bytes)
  */
 static uint16_t gse_encap_compute_total_length(gse_encap_ctx_t *const encap_ctx);
 
@@ -200,6 +201,7 @@ static uint32_t gse_encap_compute_crc(gse_vfrag_t *vfrag);
  *                              - \ref GSE_STATUS_MALLOC_FAILED
  *                              - \ref GSE_STATUS_EMPTY_FRAG
  *                              - \ref GSE_STATUS_FRAG_NBR
+ *                              - \ref GSE_STATUS_EXTENSION_CB_FAILED
  */
 static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
                                                 gse_encap_t *encap,
@@ -238,7 +240,7 @@ gse_status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
     status = GSE_STATUS_FIFO_SIZE_NULL;
     goto error;
   }
-  *encap = malloc(sizeof(gse_encap_t));
+  *encap = calloc(1, sizeof(gse_encap_t));
   if(*encap == NULL)
   {
     status = GSE_STATUS_MALLOC_FAILED;
@@ -360,11 +362,13 @@ gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
     status = GSE_STATUS_PDU_LENGTH;
     goto free_pdu;
   }
+  /* Check if we got a good protocol */
   if(protocol < GSE_MIN_ETHER_TYPE)
   {
-    status = GSE_STATUS_EXTENSION_NOT_SUPPORTED;
+    status = GSE_STATUS_WRONG_PROTOCOL;
     goto free_pdu;
   }
+  /* Check if QoS value is supported */
   if(qos >= encap->qos_nbr)
   {
     status = GSE_STATUS_INVALID_QOS;
@@ -379,6 +383,7 @@ gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
   memcpy(&(ctx_elts.label), label, label_length);
   ctx_elts.frag_nbr = 0;
   ctx_elts.total_length = gse_encap_compute_total_length(&ctx_elts);
+
   /* Push FIFO */
   encap_ctx = NULL;
   status = gse_push_fifo(&encap->fifo[qos], &encap_ctx, ctx_elts);
@@ -404,6 +409,21 @@ gse_status_t gse_encap_get_packet_copy(gse_vfrag_t **packet, gse_encap_t *encap,
                                        size_t length, uint8_t qos)
 {
   return gse_encap_get_packet_common(1, packet, encap, length, qos);
+}
+
+gse_status_t gse_encap_set_extension_callback(gse_encap_t *encap,
+                                              gse_encap_build_header_ext_cb_t callback,
+                                              void *opaque)
+{
+  if(encap == NULL)
+  {
+    return GSE_STATUS_NULL_PTR;
+  }
+
+  encap->build_header_ext = callback;
+  encap->opaque = opaque;
+
+  return GSE_STATUS_OK;
 }
 
 
@@ -434,7 +454,7 @@ static gse_status_t gse_encap_create_header_and_crc(gse_payload_type_t payload_t
   switch(payload_type)
   {
     /* GSE packet carrying a complete PDU */
-    /* Header fields are S | E | LT | GSE Length | Protocol Type | Label */
+    /* Header fields are S | E | LT | GSE Length | Protocol Type | Label | Ext */
     case GSE_PDU_COMPLETE:
       gse_header->s = 0x1;
       gse_header->e = 0x1;
@@ -446,7 +466,7 @@ static gse_status_t gse_encap_create_header_and_crc(gse_payload_type_t payload_t
 
     /* GSE packet carrying a first fragment of PDU */
     /* Header fields are
-     * S | E | LT | GSE Length | FragID | Total Length | Protocol Type | Label */
+     * S | E | LT | GSE Length | FragID | Total Length | Protocol Type | Label | Ext */
     case GSE_PDU_FIRST_FRAG:
       gse_header->s = 0x1;
       gse_header->e = 0x0;
@@ -501,7 +521,7 @@ static uint16_t gse_encap_compute_total_length(gse_encap_ctx_t *const encap_ctx)
   total_length = gse_get_label_length(encap_ctx->label_type)
                  + GSE_PROTOCOL_TYPE_LENGTH
                  + encap_ctx->vfrag->length;
-  return  htons(total_length);
+  return htons(total_length);
 }
 
 static gse_status_t gse_encap_set_gse_length(size_t packet_length,
@@ -517,7 +537,7 @@ static gse_status_t gse_encap_set_gse_length(size_t packet_length,
   /* GSE Length field contain 12 bits */
   if(gse_length > 0xFFF)
   {
-    status = GSE_STATUS_INVALID_GSE_LENGTH;
+    status = GSE_STATUS_LENGTH_TOO_HIGH;
     goto error;
   }
 
@@ -536,7 +556,7 @@ static size_t gse_encap_compute_packet_length(size_t desired_length,
 
   packet_length = MIN(desired_length, GSE_MAX_PACKET_LENGTH);
   packet_length = MIN(desired_length, remaining_data_length + header_length);
-  /* Avoid fragmentation of CRC field vetween 2 GSE fragments:
+  /* Avoid fragmentation of CRC field between 2 GSE fragments:
    * if the computed packet length is too short by less than 4 bytes to contain
    * the whole remaining part of the PDU and the CRC, then reduce the packet
    * length so that the 4-bytes CRC is left for the next fragment */
@@ -576,7 +596,7 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
   if(packet == NULL)
   {
     status = GSE_STATUS_NULL_PTR;
-    goto packet_null;
+    goto error;
   }
 
   size_t remaining_data_length;
@@ -584,6 +604,8 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
   int elt_nbr;
   gse_encap_ctx_t* encap_ctx;
   gse_payload_type_t payload_type;
+  unsigned char *extensions = NULL;
+  size_t tot_ext_length;
 
   /* Check parameters */
   if(encap == NULL)
@@ -645,6 +667,68 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
   /* There is a complete PDU in the context */
   if(encap_ctx->frag_nbr == 0)
   {
+    tot_ext_length = 0;
+    /* Check if we need extensions */
+    if(encap->build_header_ext != NULL)
+    {
+      int ret;
+      uint16_t ext_type;
+      uint16_t proto;
+
+      extensions = calloc(GSE_MAX_EXT_LENGTH, sizeof(unsigned char));
+      if(extensions == NULL)
+      {
+        status = GSE_STATUS_MALLOC_FAILED;
+        goto packet_null;
+      }
+      tot_ext_length = GSE_MAX_EXT_LENGTH;
+      ret = encap->build_header_ext(extensions, &tot_ext_length, &ext_type,
+                                    ntohs(encap_ctx->protocol_type),
+                                    encap->opaque);
+      if(ret < 0)
+      {
+        status = GSE_STATUS_EXTENSION_CB_FAILED;
+        goto packet_null;
+      }
+
+      status = gse_check_header_extension_validity(extensions,
+                                                   &tot_ext_length,
+                                                   ext_type,
+                                                   &proto);
+      if(status != GSE_STATUS_OK)
+      {
+        goto packet_null;
+      }
+      if(proto != ntohs(encap_ctx->protocol_type))
+      {
+        status = GSE_STATUS_INVALID_EXTENSIONS;
+        goto packet_null;
+      }
+
+      /* update the context protocol type with the extension type */
+      encap_ctx->protocol_type = htons(ext_type);
+      encap_ctx->total_length = gse_encap_compute_total_length(encap_ctx);
+    }
+
+    /* Total length field shall be < 65536 */
+    if(encap_ctx->total_length + tot_ext_length > GSE_MAX_PDU_LENGTH)
+    {
+      status = GSE_STATUS_PDU_LENGTH;
+      goto packet_null;
+    }
+    /* update total_length value */
+    encap_ctx->total_length += tot_ext_length;
+    /* update remaining data length (consider extensions as data) */
+    remaining_data_length += tot_ext_length;
+    /* move the start pointer in the buffer and add extensions */
+
+    status = gse_shift_vfrag(encap_ctx->vfrag, tot_ext_length * -1, 0);
+    if(status != GSE_STATUS_OK)
+    {
+      goto packet_null;
+    }
+    memcpy(encap_ctx->vfrag->start, extensions, tot_ext_length);
+
     /* Can the PDU be completely encapsulated ? */
     header_length = gse_compute_header_length(GSE_PDU_COMPLETE, encap_ctx->label_type);
     if(header_length == 0)
@@ -716,6 +800,8 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
    * GSE packet is a first fragment - for the CRC at the end of the PDU data */
   if(payload_type == GSE_PDU_FIRST_FRAG)
   {
+    /* TODO reallocate if not enough space due to extensions instead of 
+     *      an error ? */
     status = gse_shift_vfrag(encap_ctx->vfrag, header_length * -1,
                              GSE_MAX_TRAILER_LENGTH);
   }
@@ -727,7 +813,6 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
   {
     goto packet_null;
   }
-
 
   status = gse_encap_create_header_and_crc(payload_type, encap_ctx, desired_length);
   if(status != GSE_STATUS_OK)
@@ -786,6 +871,11 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
 free_packet:
   gse_free_vfrag(packet);
 packet_null:
+  if(extensions != NULL)
+  {
+    free(extensions);
+  }
+error:
   *packet = NULL;
   return status;
 }

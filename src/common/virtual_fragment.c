@@ -49,8 +49,6 @@
 #include <stdlib.h>
 #include <assert.h>
 
-/** Get the minimum between two values */
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
 /****************************************************************************
  *
@@ -163,7 +161,7 @@ error:
 
 gse_status_t gse_create_vfrag_with_data(gse_vfrag_t **vfrag, size_t max_length,
                                         size_t head_offset, size_t trail_offset,
-                                        unsigned char const* data,
+                                        unsigned char const *data,
                                         size_t data_length)
 {
   gse_status_t status = GSE_STATUS_OK;
@@ -187,7 +185,7 @@ error:
   return status;
 }
 
-gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const* data,
+gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const *data,
                            size_t data_length)
 {
   gse_status_t status = GSE_STATUS_OK;
@@ -497,20 +495,89 @@ error:
   return status;
 }
 
-size_t rohc_get_vfrag_available_head(gse_vfrag_t *vfrag)
+size_t gse_get_vfrag_available_head(gse_vfrag_t *vfrag)
 {
   assert(vfrag != NULL);
 
   return (vfrag->start - vfrag->vbuf->start);
 }
 
-size_t rohc_get_vfrag_available_trail(gse_vfrag_t *vfrag)
+size_t gse_get_vfrag_available_trail(gse_vfrag_t *vfrag)
 {
   assert(vfrag != NULL);
 
   return (vfrag->vbuf->end - vfrag->end);
 }
 
+
+gse_status_t gse_reallocate_vfrag(gse_vfrag_t *vfrag, size_t start_offset,
+                                  size_t max_length, size_t head_offset,
+                                  size_t trail_offset)
+{
+  gse_status_t status = GSE_STATUS_OK;
+
+  size_t length_buf;
+  unsigned char *new_ptr;
+
+  if(vfrag == NULL)
+  {
+    status = GSE_STATUS_NULL_PTR;
+    goto error;
+  }
+
+  /* start offset is the start of data, it shall be greater that head_offset */
+  if(start_offset < head_offset || start_offset > (head_offset + max_length))
+  {
+    status = GSE_STATUS_BAD_OFFSETS;
+    goto error;
+  }
+
+  /* The length of the buffer contining the fragment is the fragment length
+     plus the offsets */
+  length_buf = max_length + head_offset + trail_offset;
+  if(length_buf == 0)
+  {
+    status = GSE_STATUS_BUFF_LENGTH_NULL;
+    goto error;
+  }
+
+  /* increase the length of the global buffer */
+  new_ptr = calloc(length_buf, sizeof(unsigned char));
+  if(new_ptr == NULL)
+  {
+    status = GSE_STATUS_MALLOC_FAILED;
+    goto error;
+  }
+  /* move the previous data in the new buffer */
+  memcpy(new_ptr + start_offset, vfrag->start,
+         MIN(max_length + head_offset - start_offset, vfrag->length));
+
+  free(vfrag->vbuf->start);
+  /* update the buffer */
+  vfrag->vbuf->start = new_ptr;
+  /* update the virtual buffer length and end pointer */
+  vfrag->vbuf->length = length_buf;
+  vfrag->vbuf->end = vfrag->vbuf->start + vfrag->vbuf->length;
+
+  /* update the virtual fragment start and end pointers,
+   * length is only modified if new available length is smaller */
+  vfrag->start = (vfrag->vbuf->start + start_offset);
+  vfrag->length = MIN(vfrag->length, max_length - start_offset);
+  vfrag->end = vfrag->start + vfrag->length;
+
+  assert((vfrag->end) <= (vfrag->vbuf->end));
+  assert((vfrag->end) >= (vfrag->vbuf->start));
+  if((vfrag->end) > (vfrag->vbuf->end) ||
+     (vfrag->end) < (vfrag->vbuf->start))
+  {
+    status = GSE_STATUS_INTERNAL_ERROR;
+    goto error;
+  }
+
+error:
+  return status;
+
+}
 
 /****************************************************************************
  *

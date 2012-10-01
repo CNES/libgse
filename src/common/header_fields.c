@@ -252,3 +252,87 @@ gse_status_t gse_get_label(unsigned char *packet, uint8_t label[6])
 error:
   return status;
 }
+
+gse_status_t gse_check_header_extension_validity(unsigned char *extension,
+                                                 size_t *ext_length,
+                                                 uint16_t extension_type,
+                                                 uint16_t *protocol_type)
+{
+  gse_status_t status = GSE_STATUS_OK;
+
+  gse_ext_type_t current_type;
+  size_t current_length = 0;
+
+  current_type.null_1 = (extension_type >> 12) & 0xF;
+  current_type.null_2 = (extension_type >> 8) & 0x08;
+  current_type.h_len = (extension_type >> 8) & 0x07;
+  current_type.h_type = extension_type & 0xFF;
+
+  while(current_length < *ext_length)
+  {
+    if(current_type.null_1 != 0 || current_type.null_2 != 0)
+    {
+    	/* got protocol_type, end of extensions */
+    	break;
+    }
+
+    switch(current_type.h_len)
+    {
+      case(0x0):
+        /* TODO mandatory header extension */
+        status = GSE_STATUS_INVALID_EXTENSIONS;
+        goto error;
+        break;
+
+      case(0x1):
+        current_length += 2;
+        break;
+
+      case(0x2):
+        current_length += 4;
+        break;
+
+      case(0x3):
+        current_length += 6;
+        break;
+
+      case(0x4):
+        current_length += 8;
+        break;
+
+      case(0x5):
+        current_length += 10;
+        break;
+
+      default:
+        status = GSE_STATUS_INVALID_EXTENSIONS;
+        goto error;
+    }
+    if(current_length <= *ext_length)
+    {
+      memcpy(&current_type, extension + current_length - 2, sizeof(gse_ext_type_t));
+    }
+    else
+    {
+      status = GSE_STATUS_INVALID_EXTENSIONS;
+      goto error;
+    }
+  }
+
+  *protocol_type = (current_type.null_1 & 0xF) << 12 |
+                   (current_type.null_2 & 0x08) << 8 |
+                   (current_type.h_len & 0x07) << 8 |
+                   (current_type.h_type & 0xFF);
+  if(*protocol_type < GSE_MIN_ETHER_TYPE)
+  {
+    status = GSE_STATUS_INVALID_EXTENSIONS;
+    goto error;
+  }
+
+  *ext_length = current_length;
+
+error:
+  return status;
+}
+
+ 

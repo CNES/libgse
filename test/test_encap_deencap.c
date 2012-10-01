@@ -39,7 +39,7 @@
  *
  *   @brief         GSE encapsulation and deencapsulation test
  *                  This test is used to test maximum PDU size encapsulation
- *                  and deencapsulation beacause it would have been too long to
+ *                  and deencapsulation because it would have been too long to
  *                  create a comparison file
  *
  *   @author        Julien BERNARD / Viveris Technologies

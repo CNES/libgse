@@ -54,9 +54,6 @@
 #include "crc.h"
 
 
-/** Get the minimum between two values */
-#define MIN(x, y)  (((x) < (y)) ? (x) : (y))
-
 
 /****************************************************************************
  *
@@ -79,7 +76,7 @@
  *                           - \ref GSE_STATUS_OK
  *                         - warning/error code among:
  *                           - \ref GSE_STATUS_INVALID_GSE_LENGTH
- *                           - \ref GSE_STATUS_INTERNAL_ERROR;
+ *                           - \ref GSE_STATUS_INTERNAL_ERROR
  */
 static gse_status_t gse_refrag_modify_header(gse_vfrag_t *packet,
                                              gse_header_t header,
@@ -112,7 +109,7 @@ static size_t gse_refrag_compute_header_length(gse_payload_type_t payload_type,
  *                            - \ref GSE_STATUS_OK
  *                          - warning/error code among:
  *                            - \ref GSE_STATUS_INVALID_GSE_LENGTH
- *                            - \ref GSE_STATUS_INTERNAL_ERROR;
+ *                            - \ref GSE_STATUS_INTERNAL_ERROR
  */
 static gse_status_t gse_refrag_compute_gse_length(gse_payload_type_t payload_type,
                                                   gse_label_type_t label_type,
@@ -136,7 +133,7 @@ static gse_status_t gse_refrag_compute_gse_length(gse_payload_type_t payload_typ
  *                            - \ref GSE_STATUS_OK\n
  *                          - warning/error code among:
  *                            - \ref GSE_STATUS_INVALID_GSE_LENGTH
- *                            - \ref GSE_STATUS_INTERNAL_ERROR;
+ *                            - \ref GSE_STATUS_INTERNAL_ERROR
  */
 static gse_status_t gse_refrag_create_header(gse_vfrag_t *packet,
                                              gse_payload_type_t payload_type,

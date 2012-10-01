@@ -50,6 +50,8 @@
 
 #include <stdint.h>
 
+#include "status.h"
+
 /**
  * @defgroup gse_common GSE common API
  */
@@ -81,6 +83,13 @@
  *  @ingroup gse_common
  */
 #define GSE_MAX_REFRAG_HEAD_OFFSET 3
+
+/** The maximum extension size (fixed by the library)
+ *
+ * @ingroup gse_ext
+ */
+#define GSE_MAX_EXT_LENGTH 1024
+
 
 /** Type of label
  *
