@@ -43,8 +43,8 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
   gse_header_t *header;
   size_t ext_shift = 0;
   gse_label_type_t lt;
+  uint16_t extension_type;
   uint16_t protocol_type;
-  uint16_t ext_type;
   uint16_t gse_length;
   size_t max_ext_length;
   gse_payload_type_t payload_type;
@@ -77,7 +77,7 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
       payload_type = GSE_PDU_COMPLETE;
       /* add the Protocol Type lentgh for extension shift */
       ext_shift += GSE_PROTOCOL_TYPE_LENGTH;
-      protocol_type = ntohs(header->complete_s.protocol_type);
+      extension_type = ntohs(header->complete_s.protocol_type);
     }
     else
     {
@@ -86,7 +86,7 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
       ext_shift += GSE_FRAG_ID_LENGTH + GSE_TOTAL_LENGTH_LENGTH;
       /* add the Protocol Type lentgh for extension shift */
       ext_shift += GSE_PROTOCOL_TYPE_LENGTH;
-      protocol_type = ntohs(header->first_frag_s.protocol_type);
+      extension_type = ntohs(header->first_frag_s.protocol_type);
     }
   }
   else
@@ -96,7 +96,7 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
     goto error;
   }
 
-  if(protocol_type >= GSE_MIN_ETHER_TYPE)
+  if(extension_type >= GSE_MIN_ETHER_TYPE)
   {
       /* no header extension */
       status = GSE_STATUS_EXTENSION_UNAVAILABLE;
@@ -120,8 +120,8 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
   max_ext_length = gse_length - (ext_shift - GSE_MANDATORY_FIELDS_LENGTH);
 
   /* read the extensions */
-  ret = callback(packet + ext_shift, &max_ext_length, &ext_type,
-                 protocol_type, opaque);
+  ret = callback(packet + ext_shift, &max_ext_length, &protocol_type,
+                 extension_type, opaque);
   if(ret < 0)
   {
     status = GSE_STATUS_EXTENSION_CB_FAILED;
