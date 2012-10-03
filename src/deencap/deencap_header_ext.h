@@ -82,29 +82,4 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
                                         void *opaque);
 
 
-/**
- *  @brief   Read header extensions from a GSE2 packet
- *
- *  @param  packet     The GSE packet without extension
- *  @param  dflt_proto The default protocol type
- *  @param  callback   The callback used to build extensions
- *  @param  opaque     The user specific data used by the callback
- *
- *  @return
- *                         - success/informative code among:
- *                           - \ref GSE_STATUS_OK
- *                           - \ref GSE_STATUS_EXTENSION_UNAVAILABLE
- *                         - warning/error code among:
- *                           - \ref GSE_STATUS_NULL_PTR
- *                           - \ref GSE_STATUS_INTERNAL_ERROR;
- *                           - \ref GSE_STATUS_INVALID_LT
- *                           - \ref GSE_STATUS_EXTENSION_CB_FAILED
- *
- *  @ingroup gse_ext
- */
-gse_status_t gse2_deencap_get_header_ext(unsigned char *packet,
-                                         uint16_t dflt_proto,
-                                         gse_deencap_read_header_ext_cb_t callback,
-                                         void *opaque);
-
 #endif

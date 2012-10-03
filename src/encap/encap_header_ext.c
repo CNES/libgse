@@ -116,7 +116,6 @@ restart:
     goto error;
   }
 
-
   tot_ext_length = GSE_MAX_EXT_LENGTH;
   /* get the extensions in order to use their length as soon as possible */
   ret = callback(extensions, &tot_ext_length, &ext_type, protocol_type, opaque);
@@ -140,7 +139,7 @@ restart:
   }
 
   /* compute the length for fragment shifting */
-  header_shift = GSE_PROTOCOL_TYPE_LENGTH + tot_ext_length;
+  header_shift = tot_ext_length;
 
   available_space = packet->vbuf->length - head_offset - trail_offset;
   new_packet_length = packet->length + header_shift;
@@ -149,8 +148,15 @@ restart:
 
   /* the maximum length should be at least the packet length but
    * at most the GSE maximum packet length */
-  max_packet_length = MAX(max_packet_length, packet->length);
-  max_packet_length = MIN(GSE_MAX_PACKET_LENGTH, max_packet_length);
+  if(max_packet_length > 0)
+  {
+    max_packet_length = MAX(max_packet_length, packet->length);
+    max_packet_length = MIN(GSE_MAX_PACKET_LENGTH, max_packet_length);
+  }
+  else
+  {
+    max_packet_length = GSE_MAX_PACKET_LENGTH;
+  }
 
   gse_length = ((uint16_t)header->gse_length_hi << 8) |
                header->gse_length_lo;
@@ -223,7 +229,7 @@ restart:
 
     /* modify the Protocol Type and GSE Length fields */
     header->gse_length_hi = ((gse_length + header_shift) >> 8)
-                                        & 0x0F;
+                            & 0x0F;
     header->gse_length_lo = (gse_length + header_shift) & 0xFF;
     header->complete_s.protocol_type = htons(ext_type);
   }
@@ -315,7 +321,7 @@ restart:
 
     /* modify the Protocol Type, GSE Length and Total Length fields */
     header->gse_length_hi = ((gse_length + header_shift) >> 8)
-                                         & 0x0F;
+                            & 0x0F;
     header->first_frag_s.total_length = htons(total_length + header_shift);
     header->gse_length_lo = (gse_length + header_shift) & 0xFF;
     header->first_frag_s.protocol_type = htons(ext_type);

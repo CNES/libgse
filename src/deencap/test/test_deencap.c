@@ -557,6 +557,7 @@ static int ext_cb(unsigned char *ext,
   ext_verif_t *ext_info = (ext_verif_t *)opaque;
   gse_ext_type_t current_type;
   size_t current_length = 0;
+  printf("HAHA %p %u %u %u\n", ext, *length, *protocol_type, extension_type);
 
   current_type.null_1 = (extension_type >> 12) & 0xF;
   current_type.null_2 = (extension_type >> 8) & 0x08;

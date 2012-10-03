@@ -53,3 +53,4 @@ debian/libgse
 debian/libgse-dbg
 debian/libgse-dev
 debian/tmp
+src/encap/test/test_add_ext

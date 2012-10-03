@@ -468,9 +468,10 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
     case GSE_PDU_COMPLETE:
     {
       size_t tot_ext_length = 0;
-
+      
+      *protocol = ntohs(header.complete_s.protocol_type);
       /* read header extensions */
-      if(ntohs(header.complete_s.protocol_type) < GSE_MIN_ETHER_TYPE)
+      if(*protocol < GSE_MIN_ETHER_TYPE)
       {
         int ret;
         uint16_t protocol_type;
@@ -483,7 +484,7 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
         }
 
         tot_ext_length = packet->length;
-        ret = deencap->read_header_ext(packet->start, &(tot_ext_length),
+        ret = deencap->read_header_ext(packet->start, &tot_ext_length,
                                        &protocol_type, extension_type,
                                        deencap->opaque);
         if(ret < 0)

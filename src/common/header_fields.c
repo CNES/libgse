@@ -272,8 +272,8 @@ gse_status_t gse_check_header_extension_validity(unsigned char *extension,
   {
     if(current_type.null_1 != 0 || current_type.null_2 != 0)
     {
-    	/* got protocol_type, end of extensions */
-    	break;
+      /* got protocol_type, end of extensions */
+      break;
     }
 
     switch(current_type.h_len)

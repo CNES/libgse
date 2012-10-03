@@ -472,7 +472,7 @@ static gse_status_t gse_encap_create_header_and_crc(gse_payload_type_t payload_t
       gse_header->e = 0x0;
       gse_header->lt = encap_ctx->label_type;
       gse_header->first_frag_s.frag_id = encap_ctx->qos;
-      gse_header->first_frag_s.total_length = encap_ctx->total_length;
+      gse_header->first_frag_s.total_length = htons(encap_ctx->total_length);
       gse_header->first_frag_s.protocol_type = encap_ctx->protocol_type;
       memcpy(&(gse_header->first_frag_s.label), &(encap_ctx->label),
              gse_get_label_length(encap_ctx->label_type));
@@ -521,7 +521,7 @@ static uint16_t gse_encap_compute_total_length(gse_encap_ctx_t *const encap_ctx)
   total_length = gse_get_label_length(encap_ctx->label_type)
                  + GSE_PROTOCOL_TYPE_LENGTH
                  + encap_ctx->vfrag->length;
-  return htons(total_length);
+  return total_length;
 }
 
 static gse_status_t gse_encap_set_gse_length(size_t packet_length,

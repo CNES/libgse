@@ -110,7 +110,6 @@
  *                           - \ref GSE_STATUS_INVALID_QOS
  *                           - \ref GSE_STATUS_EXTENSION_UNAVAILABLE
  *                           - \ref GSE_STATUS_EXTENSION_CB_FAILED
- *                           - \ref GSE_STATUS_INVALID_CRC_TYPE
  *
  *  @ingroup gse_refrag
  */
