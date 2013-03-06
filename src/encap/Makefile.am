@@ -19,7 +19,8 @@ headers = \
 	fifo.h \
 	encap.h \
 	refrag.h \
-	encap_ctx.h
+	encap_ctx.h \
+	encap_header_ext.h
 
 
 libgse_encap_la_SOURCES = $(sources) $(headers)
