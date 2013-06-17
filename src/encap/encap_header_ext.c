@@ -48,7 +48,7 @@ gse_status_t gse_encap_add_header_ext(gse_vfrag_t *packet,
                                       void *opaque)
 {
   gse_status_t status = GSE_STATUS_OK;
-  gse_header_t *header;
+  gse_header_t header[GSE_MAX_HEADER_LENGTH];
   size_t header_length = 0;
   gse_label_type_t lt;
   uint16_t protocol_type;
@@ -82,7 +82,8 @@ restart:
     goto error;
   }
 
-  header = (gse_header_t *)(packet->start);
+  /* copy header because we will need it after packet modifications */
+  memcpy(header, packet->start, MIN(packet->length, GSE_MAX_EXT_LENGTH));
 
   /* Determine the type of payload of the GSE packet being refragmented with
    * the values of the S and E fields.
@@ -170,6 +171,8 @@ restart:
   /* handle complete PDU */
   if(payload_type == GSE_PDU_COMPLETE)
   {
+    gse_header_t *new_header;
+
     /* packet + extensions to long to carry a complete PDU  => fragment it */
     if(new_packet_length > max_packet_length)
     {
@@ -222,16 +225,16 @@ restart:
     }
     /* move the header data */
     memmove(packet->start, header, header_length);
-    header = (gse_header_t *)(packet->start);
+    new_header = (gse_header_t *)(packet->start);
 
     /* add extensions */
     memcpy(packet->start + header_length, extensions, tot_ext_length);
 
     /* modify the Protocol Type and GSE Length fields */
-    header->gse_length_hi = ((gse_length + header_shift) >> 8)
+    new_header->gse_length_hi = ((gse_length + header_shift) >> 8)
                             & 0x0F;
-    header->gse_length_lo = (gse_length + header_shift) & 0xFF;
-    header->complete_s.protocol_type = htons(ext_type);
+    new_header->gse_length_lo = (gse_length + header_shift) & 0xFF;
+    new_header->complete_s.protocol_type = htons(ext_type);
   }
 
   if(iter > 2)
@@ -245,6 +248,7 @@ restart:
   if(payload_type == GSE_PDU_FIRST_FRAG)
   {
     uint16_t total_length;
+    gse_header_t *new_header;
 
     total_length = ntohs(header->first_frag_s.total_length);
 
@@ -314,17 +318,17 @@ restart:
     }
     /* move the header data */
     memmove(packet->start, header, header_length);
-    header = (gse_header_t *)(packet->start);
+    new_header = (gse_header_t *)(packet->start);
 
     /* add extensions */
     memcpy(packet->start + header_length, extensions, tot_ext_length);
 
     /* modify the Protocol Type, GSE Length and Total Length fields */
-    header->gse_length_hi = ((gse_length + header_shift) >> 8)
+    new_header->gse_length_hi = ((gse_length + header_shift) >> 8)
                             & 0x0F;
-    header->first_frag_s.total_length = htons(total_length + header_shift);
-    header->gse_length_lo = (gse_length + header_shift) & 0xFF;
-    header->first_frag_s.protocol_type = htons(ext_type);
+    new_header->first_frag_s.total_length = htons(total_length + header_shift);
+    new_header->gse_length_lo = (gse_length + header_shift) & 0xFF;
+    new_header->first_frag_s.protocol_type = htons(ext_type);
   }
 
   /* if we got a first fragment, compute the temporary CRC;
