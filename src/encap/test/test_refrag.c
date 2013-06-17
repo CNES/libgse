@@ -302,7 +302,7 @@ static int test_refrag(int verbose, size_t frag_length,
     /* check that the refragmented packet has the correct length */
     if(vfrag->length != frag_length)
     {
-      DEBUG(verbose, "The refragmented packet length (%u) does not match the desired one (%u)\n",
+      DEBUG(verbose, "The refragmented packet length (%zu) does not match the desired one (%zu)\n",
             vfrag->length, frag_length);
       goto free_vfrag;
     }

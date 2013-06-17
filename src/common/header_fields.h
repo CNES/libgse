@@ -79,7 +79,7 @@ typedef struct
 #else
 #error "Please fix <bits/endian.h>"
 #endif
-} gse_ext_type_t;
+} __attribute__((packed)) gse_ext_type_t;
 
 
 /****************************************************************************

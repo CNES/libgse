@@ -220,7 +220,7 @@ static int test_vfrag(int verbose)
     DEBUG(verbose, "'.\n");
   }
 
-  DEBUG(verbose, "\tIts size is %d, the virtual buffer size is %d\n"
+  DEBUG(verbose, "\tIts size is %zu, the virtual buffer size is %zu\n"
         "\tIts start address is %p, the virtual buffer start address is %p\n"
         "\tIts end address is %p, the virtual buffer end address is %p\n"
         "\tNumber of fragments is %d\n"
@@ -270,7 +270,7 @@ static int test_vfrag(int verbose)
   }
 
   DEBUG(verbose, "The virtual fragment was reallocated:\n");
-  DEBUG(verbose, "\tIts size is %d, the virtual buffer size is %d\n"
+  DEBUG(verbose, "\tIts size is %zu, the virtual buffer size is %zu\n"
         "\tIts start address is %p, the virtual buffer start address is %p\n"
         "\tIts end address is %p, the virtual buffer end address is %p\n"
         "\tNumber of fragments is %d\n",
@@ -318,7 +318,7 @@ static int test_vfrag(int verbose)
     goto free_zero;
   }
 
-  DEBUG(verbose, "\tIts size is %d, the virtual buffer size is %d\n"
+  DEBUG(verbose, "\tIts size is %zu, the virtual buffer size is %zu\n"
         "\tIts start address is %p, the virtual buffer start address is %p\n"
         "\tIts end address is %p, the virtual buffer end address is %p\n"
         "\tNumber of fragments is %d\n"
@@ -363,12 +363,12 @@ static int test_vfrag(int verbose)
   }
   DEBUG(verbose, "'.\n");
 
-  DEBUG(verbose, "\tIts size is %d, the virtual buffer size is %d\n"
+  DEBUG(verbose, "\tIts size is %zu, the virtual buffer size is %zu\n"
          "\tIts start address is %p, the virtual buffer start address is %p\n"
          "\tIts end address is %p, the virtual buffer end address is %p\n"
          "\tNumber of fragments is %d\n"
          "\nThe initial virtual fragment start address is now %p\n"
-         "and its length %d\n",
+         "and its length %zu\n",
           dup_vfrag->length, dup_vfrag->vbuf->length,
           dup_vfrag->start, dup_vfrag->vbuf->start,
           dup_vfrag->end, dup_vfrag->vbuf->end,
@@ -431,7 +431,7 @@ static int test_vfrag(int verbose)
           gse_get_status(status));
     goto free_vfrag;
   }
-  DEBUG(verbose, "Its length is %d:\n'", length);
+  DEBUG(verbose, "Its length is %zu:\n'", length);
   if(vfrag->length != VFRAG_LENGTH)
   {
     DEBUG(verbose, "ERROR: incorrect length value\n");
@@ -512,12 +512,12 @@ static int test_vfrag(int verbose)
     }
     DEBUG(verbose, "'.\n");
 
-    DEBUG(verbose, "\tIts size is %d, the virtual buffer size is %d\n"
+    DEBUG(verbose, "\tIts size is %zu, the virtual buffer size is %zu\n"
            "\tIts start address is %p, the virtual buffer start address is %p\n"
            "\tIts end address is %p, the virtual buffer end address is %p\n"
            "\tNumber of fragments in this buffer is %d\n"
            "\nThe duplicated virtual fragment start address is %p, its end address is %p\n"
-           "and its length %d\n",
+           "and its length %zu\n",
            created_vfrag->length, created_vfrag->vbuf->length,
            created_vfrag->start, created_vfrag->vbuf->start,
            created_vfrag->end, created_vfrag->vbuf->end,

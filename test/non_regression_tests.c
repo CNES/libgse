@@ -237,7 +237,6 @@ int main(int argc, char *argv[])
   char *refrag_filename = NULL;
   char *label_type = 0;
   int save = 0;
-  int refrag = 0;
   int failure = 1;
   int verbose = 0;
   int ref;
@@ -316,7 +315,6 @@ int main(int argc, char *argv[])
         fprintf(stderr, TEST_USAGE);
         goto quit;
       }
-      refrag = 1;
       refrag_filename = argv[2];
       argv += 2;
       argc -= 2;

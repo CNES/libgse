@@ -557,7 +557,7 @@ static int ext_cb(unsigned char *ext,
   ext_verif_t *ext_info = (ext_verif_t *)opaque;
   gse_ext_type_t current_type;
   size_t current_length = 0;
-  printf("HAHA %p %u %u %u\n", ext, *length, *protocol_type, extension_type);
+  printf("HAHA %p %zu %u %u\n", ext, *length, *protocol_type, extension_type);
 
   current_type.null_1 = (extension_type >> 12) & 0xF;
   current_type.null_2 = (extension_type >> 8) & 0x08;
@@ -625,7 +625,7 @@ static int ext_cb(unsigned char *ext,
   if(ext_info->length1 != *length && ext_info->length2 != *length)
   {
     DEBUG(ext_info->verbose, "Extensions length are incorrect: "
-          "%u instead of %u or %u\n",
+          "%zu instead of %zu or %zu\n",
           *length, ext_info->length1, ext_info->length2);
     goto error;
   }

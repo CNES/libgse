@@ -649,14 +649,14 @@ int main(int argc, char *argv[])
   {
     (void)pthread_join(th_get_pkt[i], &ret_th);
     fprintf(stderr, "\tget packet thread %u terminated\n", i);
-    if((int)ret_th == 1)
+    if((long)ret_th == 1)
     {
       fprintf(stderr, "FAILURE on get_packet thread %u\n", i);
       failure = 1;
     }
     (void)pthread_join(th_encap[i], &ret_th);
     fprintf(stderr, "\tencapsulation thread %u terminated\n", i);
-    if((int)ret_th == 1)
+    if((long)ret_th == 1)
     {
       fprintf(stderr, "FAILURE on encapulsation thread %u\n", i);
       failure = 1;
@@ -664,7 +664,7 @@ int main(int argc, char *argv[])
   }
   (void)pthread_join(th_deencap, &ret_th);
   fprintf(stderr, "\tde-encapsulation thread terminated\n");
-  if((int)ret_th == 1)
+  if((long)ret_th == 1)
   {
     fprintf(stderr, "FAILURE on de-encapulsation thread\n");
     failure = 1;
@@ -794,7 +794,7 @@ int read_from_tun(int fd, gse_vfrag_t *vfrag, int timeout, sigset_t sigmask)
       goto error;
     }
 
-    DEBUG(is_debug, stderr, "read %u bytes on fd %d\n", gse_get_vfrag_length(vfrag), fd);
+    DEBUG(is_debug, stderr, "read %zu bytes on fd %d\n", gse_get_vfrag_length(vfrag), fd);
   }
 
   pthread_mutex_unlock(&tun_mutex);
@@ -957,7 +957,7 @@ int read_from_udp(int sock, gse_vfrag_t *vfrag, int timeout, sigset_t sigmask)
       goto error;
     }
 
-    DEBUG(is_debug, stderr, "read one %u-byte GSE packet on UDP sock %d\n",
+    DEBUG(is_debug, stderr, "read one %zu-byte GSE packet on UDP sock %d\n",
           gse_get_vfrag_length(vfrag) - 2, sock);
 
     if(read_length == 0)
@@ -1134,7 +1134,7 @@ void *tun2udp_thread(void *argv)
       gse_free_vfrag(&vfrag_pdu);
     }
     /* Encapsulate the IP packet */
-    DEBUG(is_debug, stderr, "THREAD ENCAP %u: encapsulate PDU #%u (%u bytes |  protocol %#.4x )\n",
+    DEBUG(is_debug, stderr, "THREAD ENCAP %u: encapsulate PDU #%u (%zu bytes |  protocol %#.4x )\n",
           arg->qos, local_pdu, gse_get_vfrag_length(vfrag_pdu), protocol);
 
     ret = gse_encap_receive_pdu(vfrag_pdu, arg->encap, label, label_type, protocol, arg->qos);
@@ -1510,7 +1510,7 @@ void *udp2tun_thread(void *argv)
     }
 
     /* de-encapsulate the GSE packet */
-    DEBUG(is_debug, stderr, "de-encapsulate GSE packet #%u (%u bytes)\n",
+    DEBUG(is_debug, stderr, "de-encapsulate GSE packet #%u (%zu bytes)\n",
             new_seq, gse_get_vfrag_length(vfrag_pkt));
 
     ret = gse_deencap_packet(vfrag_pkt, arg->deencap, &label_type, label, &protocol,

@@ -301,7 +301,7 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
   gse_status_t status;
   uint8_t qos = 0;
 
-  DEBUG(verbose, "Maximum length of fragments is: %d\n", frag_length);
+  DEBUG(verbose, "Maximum length of fragments is: %zu\n", frag_length);
   /* open the source dump file */
   handle = pcap_open_offline(src_filename, errbuf);
   if(handle == NULL)
@@ -638,7 +638,7 @@ static int ext_cb(unsigned char *ext,
   if(ext_info->length > *length)
   {
     DEBUG(ext_info->verbose, "Not enough space for extensions:\n"
-          "available: %u, necessary: %u\n", *length, ext_info->length);
+          "available: %zu, necessary: %zu\n", *length, ext_info->length);
     goto error;
   }
   if(protocol_type != PROTOCOL)
@@ -651,7 +651,7 @@ static int ext_cb(unsigned char *ext,
 
   *extension_type = ext_info->extension_type;
   *length = ext_info->length;
-  DEBUG(ext_info->verbose, "Extension length: %u\n", ext_info->length);
+  DEBUG(ext_info->verbose, "Extension length: %zu\n", ext_info->length);
   return ext_info->length;
 error:
   return -1;

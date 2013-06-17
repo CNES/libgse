@@ -47,7 +47,6 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
   uint16_t protocol_type;
   uint16_t gse_length;
   size_t max_ext_length;
-  gse_payload_type_t payload_type;
   int label_length;
 
   int ret;
@@ -74,14 +73,12 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
   {
     if(header->e == 0x1)
     {
-      payload_type = GSE_PDU_COMPLETE;
       /* add the Protocol Type lentgh for extension shift */
       ext_shift += GSE_PROTOCOL_TYPE_LENGTH;
       extension_type = ntohs(header->complete_s.protocol_type);
     }
     else
     {
-      payload_type = GSE_PDU_FIRST_FRAG;
       /* add the FragID and Total Length fields lentgh for extension shift */
       ext_shift += GSE_FRAG_ID_LENGTH + GSE_TOTAL_LENGTH_LENGTH;
       /* add the Protocol Type lentgh for extension shift */

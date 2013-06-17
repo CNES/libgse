@@ -682,7 +682,7 @@ static int ext_cb(unsigned char *ext,
   if(ext_info->length > *length)
   {
     DEBUG(ext_info->verbose, "Not enough space for extensions:\n"
-          "available: %u, necessary: %u\n", *length, ext_info->length);
+          "available: %zu, necessary: %zu\n", *length, ext_info->length);
     goto error;
   }
   if(protocol_type != PROTOCOL)

@@ -680,7 +680,7 @@ int read_from_tun(int fd, gse_vfrag_t *vfrag)
     goto error;
   }
 
-  DEBUG(is_debug, stderr, "read %u bytes on fd %d\n", gse_get_vfrag_length(vfrag), fd);
+  DEBUG(is_debug, stderr, "read %zu bytes on fd %d\n", gse_get_vfrag_length(vfrag), fd);
 
   return 0;
 
@@ -711,7 +711,7 @@ int write_to_tun(int fd, gse_vfrag_t *vfrag)
     goto error;
   }
 
-  DEBUG(is_debug, stderr, "%u bytes written on fd %d\n", ret, fd);
+  DEBUG(is_debug, stderr, "%d bytes written on fd %d\n", ret, fd);
 
   return 0;
 
@@ -817,7 +817,7 @@ int read_from_udp(int sock, gse_vfrag_t *vfrag)
     goto error;
   }
 
-  DEBUG(is_debug, stderr, "read one %u-byte GSE packet on UDP sock %d\n",
+  DEBUG(is_debug, stderr, "read one %zu-byte GSE packet on UDP sock %d\n",
         gse_get_vfrag_length(vfrag) - 2, sock);
 
 quit:
@@ -870,7 +870,7 @@ int write_to_udp(int sock, struct in_addr raddr, int port,
     goto error;
   }
 
-  DEBUG(is_debug, stderr, "%u bytes written on socket %d\n", length, sock);
+  DEBUG(is_debug, stderr, "%d bytes written on socket %d\n", length, sock);
 
   return 0;
 
@@ -1006,7 +1006,7 @@ int tun2udp(gse_encap_t *encap,
   }
 
   /* Encapsulate the IP packet */
-  DEBUG(is_debug, stderr, "encapsulate packet #%u (%u bytes |  protocol %#.4x )\n",
+  DEBUG(is_debug, stderr, "encapsulate packet #%u (%zu bytes |  protocol %#.4x )\n",
         seq, gse_get_vfrag_length(vfrag_pdu), protocol);
 
 
@@ -1315,7 +1315,7 @@ int udp2tun(gse_deencap_t *deencap, int from, int to)
   }
 
   /* de-encapsulate the GSE packet */
-  DEBUG(is_debug, stderr, "de-encapsulate GSE packet #%u (%u bytes)\n",
+  DEBUG(is_debug, stderr, "de-encapsulate GSE packet #%u (%zu bytes)\n",
           new_seq, gse_get_vfrag_length(vfrag_pkt));
 
   ret = gse_deencap_packet(vfrag_pkt, deencap, &label_type, label, &protocol,

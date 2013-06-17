@@ -72,7 +72,7 @@ usage: test [--verbose (-v)] [-l frag_length] [--ext ext_nbr] -c cmp_file -i inp
 
 typedef struct
 {
-  unsigned char *data;
+  unsigned char data[EXT_LEN];
   size_t length;
   uint16_t extension_type;
   int verbose;
@@ -243,7 +243,7 @@ static int test_add_ext(int verbose, size_t frag_length,
   gse_status_t status;
   uint8_t qos = 0;
   ext_data_t opaque;
-    int update_crc = 0;
+  int update_crc = 0;
 
   DEBUG(verbose, "\n\n\t\t***************\nSource: '%s' Comparison: '%s'\n",
         src_filename, cmp_filename);
@@ -331,19 +331,18 @@ static int test_add_ext(int verbose, size_t frag_length,
       }
       /* second extension type field */
       /* PROTOCOL */
-      data[12] = 0x23;
-      data[13] = 0x45;
+      data[12] = (PROTOCOL >> 8) & 0xFF;
+      data[13] = PROTOCOL & 0xFF;
       opaque.length += 10;
     }
     else
     {
       /* first extension type field */
-      /* H-LEN */
+      /* PROTOCOL */
       data[2] = (PROTOCOL >> 8) & 0xFF;
-      /* H-TYPE */
       data[3] = PROTOCOL & 0xFF;
     }
-    opaque.data = data;
+    memcpy(opaque.data, data, opaque.length);
     /* 00000 | H-LEN | H-TYPE
      * 00000 |  010  |  0xAB  */
     opaque.extension_type = 0x02AB;
@@ -629,7 +628,7 @@ static int ext_cb(unsigned char *ext,
   if(ext_info->length > *length)
   {
     DEBUG(ext_info->verbose, "Not enough space for extensions:\n"
-          "available: %u, necessary: %u\n", *length, ext_info->length);
+          "available: %zu, necessary: %zu\n", *length, ext_info->length);
     goto error;
   }
   if(protocol_type != PROTOCOL)
