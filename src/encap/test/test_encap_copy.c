@@ -107,7 +107,7 @@ usage: test [--verbose (-v)] [--label-type lt] [-l frag_length] [--ext ext_nbr] 
 
 typedef struct
 {
-  unsigned char *data;
+  unsigned char data[EXT_LEN];
   size_t length;
   uint16_t extension_type;
   int verbose;
@@ -300,6 +300,7 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
   int i;
   gse_status_t status;
   uint8_t qos = 0;
+  ext_data_t opaque;
   gse_vfrag_t *dup_vfrag = NULL;
 
   /* open the source dump file */
@@ -369,7 +370,6 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
   /* handle extensions */
   if(ext_nbr > 0)
   {
-    ext_data_t opaque;
     unsigned char data[EXT_LEN];
 
     opaque.length = 4;
@@ -395,19 +395,17 @@ static int test_encap(int verbose, uint8_t label_type, size_t frag_length,
       }
       /* second extension type field */
       /* PROTOCOL */
-      data[12] = 0x23;
-      data[13] = 0x45;
+      data[12] = (PROTOCOL >> 8) & 0xFF;
+      data[13] = PROTOCOL & 0xFF;
       opaque.length += 10;
     }
     else
     {
       /* first extension type field */
-      /* H-LEN */
       data[2] = (PROTOCOL >> 8) & 0xFF;
-      /* H-TYPE */
       data[3] = PROTOCOL & 0xFF;
     }
-    opaque.data = data;
+    memcpy(opaque.data, data, opaque.length);
     /* 00000 | H-LEN | H-TYPE
      * 00000 |  010  |  0xAB  */
     opaque.extension_type = 0x02AB;
