@@ -1,7 +1,7 @@
 Summary:        Generic Stream Encapsulation (GSE) library
 Name:           libgse
 Version:        1.x.x.bzr+50
-Release:        tas.1.1.el6%{?ci_flag}
+Release:        tas.2.1.el6%{?ci_flag}
 License:        LGPLv3
 Group:          System Environment/Libraries
 URL:            https://code.launchpad.net/libgse
@@ -14,12 +14,12 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-%{release}-root
 GSE (Generic Stream Encapsulation) library.
 
 %package devel
-Requires:   gse = %{version}
+Requires:   libgse = %{version}-%{release}
 Summary:    Include and pkgconfig files for the GSE library
 Group:      Development/Libraries
 
 %description devel
-Include and pkgconfig files for the GSE library
+Include and pkgconfig files for the GSE library.
 
 %prep
 %setup
@@ -57,5 +57,7 @@ rm -rf %{buildroot}
 %doc %{_defaultdocdir}/gse
 
 %changelog
+* Wed Aug 21 2013 Audric Schiltknecht <audric.schiltknecht@external.thalesaleniaspace.com> 1.x.x.bzr+50-tas.2
+- Fix version dependency for libgse-devel.
 * Wed Aug 21 2013 Audric Schiltknecht <audric.schiltknecht@external.thalesaleniaspace.com> 1.x.x.bzr+50
 - Initial RPM release.
