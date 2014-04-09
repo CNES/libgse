@@ -33,6 +33,8 @@ cscope.out
 *.egg-info
 app/tunnel/gsetunnel
 app/tunnel/gsetunnel_thread
+app/performance/eval_gse_trunk
+app/performance/eval_gse_no_alloc
 src/common/test/test_header_access
 src/common/test/test_vfrag
 src/common/test/test_vfrag_robust
