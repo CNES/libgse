@@ -5,12 +5,6 @@
  * @version  1.0
  * @brief    Evaluate libgse encapsulation performance
  */
-
-#include <gse/constants.h>
-#include <gse/encap.h>
-#include <gse/virtual_fragment.h>
-#include <gse/header_fields.h>
-
 #include <strings.h>
 #include <string.h>
 #include <stdio.h>
@@ -18,6 +12,11 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <time.h>
+
+#include "constants.h"
+#include "encap.h"
+#include "virtual_fragment.h"
+#include "header_fields.h"
 
 #define MIN(x, y)  (((x) < (y)) ? (x) : (y))
 
