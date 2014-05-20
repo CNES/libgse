@@ -12,6 +12,7 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/time.h>
 
 #include "constants.h"
 #include "encap.h"
@@ -42,6 +43,15 @@ unsigned char buffer[IP_PAYLOAD_LENGTH + GSE_MAX_HEADER_LENGTH + GSE_MAX_TRAILER
 
 uint8_t label[6] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
 
+static double
+_unix_time(void)
+{
+	struct timeval timev;
+
+	gettimeofday(&timev, NULL);
+	return (double)timev.tv_sec + (((double)timev.tv_usec) / 1000000);
+}
+
 int main(void)
 {
 	gse_encap_t *encap_context;
@@ -58,7 +68,7 @@ int main(void)
 	uint8_t end_indicator;
 	bool is_end;
 
-	clock_t clock_start, total_tics;
+	double clock_start, total_tics;
 
 	// Defining payload
 	memset(ip_payload, 0x42, IP_PAYLOAD_LENGTH);
@@ -102,7 +112,8 @@ int main(void)
 	}
 
 	size = BBFRAME_LENGTH;
-	clock_start = clock();
+
+	clock_start = _unix_time();
 	for (iter = 0 ; iter < NB_ITER ; ++iter)
 	{
 		//printf("Iter #%d\n", iter);
@@ -179,7 +190,7 @@ int main(void)
 
 		} while (is_end != true);
 	}
-	total_tics = clock() - clock_start;
+	total_tics = _unix_time() - clock_start;
 
 	printf("NB iter: %e\n", NB_ITER);
 	printf("Nb fragment: %d\n", nb_fragment);
