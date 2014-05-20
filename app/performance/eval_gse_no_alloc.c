@@ -90,6 +90,17 @@ int main(void)
 		return 1;
 	}
 
+	/* sync disk to avoid io during test */
+	sync();
+	sync();
+	sync();
+
+	/* warm up the cpu with some spinning */
+	size = time(NULL);
+	for (;;) {
+		if ((time(NULL) - size) > 2) break;
+	}
+
 	size = BBFRAME_LENGTH;
 	clock_start = clock();
 	for (iter = 0 ; iter < NB_ITER ; ++iter)
