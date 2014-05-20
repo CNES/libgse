@@ -194,8 +194,10 @@ int main(void)
 
 	printf("NB iter: %e\n", NB_ITER);
 	printf("Nb fragment: %d\n", nb_fragment);
-	printf("Tics: %d - %e seconds\n", (int)total_tics, ((double)total_tics) / CLOCKS_PER_SEC);
-	printf("Tics / loop: %f - %e seconds\n", ((double)total_tics / NB_ITER), (((double)total_tics)/NB_ITER)/CLOCKS_PER_SEC);
+	printf("Tics: %e seconds\n", total_tics);
+	printf("Tics / loop: %e seconds\n", (total_tics / NB_ITER));
+	printf("PPS %.8f\n", (double)NB_ITER / total_tics);
+
 
 free_context:
 	status = gse_free_vfrag_no_alloc(&in_vfrag, 0, 0);
