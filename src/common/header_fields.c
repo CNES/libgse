@@ -264,7 +264,7 @@ gse_status_t gse_check_header_extension_validity(unsigned char *extension,
   size_t current_length = 0;
 
   current_type.null_1 = (extension_type >> 12) & 0xF;
-  current_type.null_2 = (extension_type >> 8) & 0x08;
+  current_type.null_2 = (extension_type >> 11) & 0x01;
   current_type.h_len = (extension_type >> 8) & 0x07;
   current_type.h_type = extension_type & 0xFF;
 
@@ -320,7 +320,7 @@ gse_status_t gse_check_header_extension_validity(unsigned char *extension,
   }
 
   *protocol_type = (current_type.null_1 & 0xF) << 12 |
-                   (current_type.null_2 & 0x08) << 8 |
+                   (current_type.null_2 & 0x01) << 11 |
                    (current_type.h_len & 0x07) << 8 |
                    (current_type.h_type & 0xFF);
   if(*protocol_type < GSE_MIN_ETHER_TYPE)

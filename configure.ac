@@ -97,7 +97,7 @@ AC_CONFIG_FILES([Makefile \
                  src/encap/test/Makefile \
                  src/deencap/Makefile \
                  src/deencap/test/Makefile \
-                 gse.pc \
+                 libgse.pc \
                  app/Makefile \
                  app/tunnel/Makefile \
                  test/Makefile \

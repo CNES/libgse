@@ -36,7 +36,7 @@ EXTRA_DIST = \
 	debian/rules
 
 pkgconfigdir = $(libdir)/pkgconfig
-pkgconfig_DATA = gse.pc
+pkgconfig_DATA = libgse.pc
 
 .PHONY: doc
 

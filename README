@@ -22,7 +22,7 @@ The sources are in the src subdirectory. The sources build an unique library
 that handle both encapsulation and de-encapsulation. See the INSTALL file to
 learn how to build the libraries.
 To compile an application using the GSE library use the following expression:
-gcc `pkg-config gse --cflags` `pkg-config gse --libs` -o myappli myappli.c
+gcc `pkg-config libgse --cflags` `pkg-config libgse --libs` -o myappli myappli.c
 
 
 Non-regression tests
