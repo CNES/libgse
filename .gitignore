@@ -18,6 +18,7 @@ missing
 *.pc
 .deps
 *.lo
+*.o
 *.la
 cscope.out
 *.deb
