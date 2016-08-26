@@ -5,6 +5,7 @@
 ################################################################################
 
 TESTS = \
+	$(top_builddir)/test/non_regression_tests_no_alloc.sh \
 	$(top_builddir)/test/non_regression_tests.sh
 
 TESTS_ENVIRONMENT = builddir=$(top_builddir)

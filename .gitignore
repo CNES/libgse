@@ -49,6 +49,7 @@ src/encap/test/test_refrag
 src/encap/test/test_refrag_robust
 test/non_regression_tests
 test/test_encap_deencap
+test/non_regression_tests_no_alloc
 debian/files
 debian/libgse
 debian/libgse-dbg

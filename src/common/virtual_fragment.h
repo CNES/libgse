@@ -205,6 +205,57 @@ gse_status_t gse_copy_data(gse_vfrag_t *vfrag, unsigned char const* data,
 gse_status_t gse_create_vfrag_from_buf(gse_vfrag_t **vfrag, unsigned char *buffer,
                                        unsigned int head_offset, unsigned int trail_offset,
                                        unsigned int data_length);
+/**
+ *  @brief   Create an empty virtual fragment - No allocation mode
+ *
+ *  @param   vfrag         OUT: The virtual fragment on success,
+ *                              NULL on error
+ *  @param   alloc_vbuf    Wheter to allocate the virtual buffer container or
+ *                         not (only the container, does not allocate the buffer
+ *                         itself).
+ *
+ *  @return
+ *                         - success/informative code among:
+ *                           - \ref GSE_STATUS_OK
+ *                         - warning/error code among:
+ *                           - \ref GSE_STATUS_NULL_PTR
+ *                           - \ref GSE_STATUS_BUFF_LENGTH_NULL
+ *                           - \ref GSE_STATUS_MALLOC_FAILED
+ *
+ *  @ingroup gse_virtual_fragment
+ */
+gse_status_t gse_allocate_vfrag(gse_vfrag_t **vfrag, int alloc_vbuf);
+
+/**
+ *  @brief   Affect a buffer to an allocated virtual fragment - No allocation
+ *  mode
+ *
+ *  The virtual buffer containing the fragment will contain the allocated
+ *  memory of the buffer.\n
+ *  The allocated space in the buffer must at least be
+ *  max_length + head_offset + trail_offset.\n
+ *  All length are expressed in bytes.\n
+ *
+ *  @param   vfrag        OUT: The virtual fragment on success,
+ *                             NULL on error
+ *  @param   buffer       The buffer to transform
+ *  @param   head_offset  The offset applied before the data in the buffer
+ *  @param   trail_offset The offset applied after the data in the buffer
+ *  @param   data_length  The length of the data in the buffer
+ *
+ *  @return
+ *                        - success/informative code among:
+ *                          - \ref GSE_STATUS_OK
+ *                        - warning/error code among:
+ *                          - \ref GSE_STATUS_NULL_PTR
+ *                          - \ref GSE_STATUS_MALLOC_FAILED
+ *                          - \ref GSE_STATUS_INTERNAL_ERROR
+ *
+ *  @ingroup gse_virtual_fragment
+ */
+gse_status_t gse_affect_buf_vfrag(gse_vfrag_t *vfrag, unsigned char *buffer,
+                                  unsigned int head_offset, unsigned int trail_offset,
+                                  unsigned int data_length);
 
 /**
  *  @brief   Free a virtual fragment
@@ -222,6 +273,26 @@ gse_status_t gse_create_vfrag_from_buf(gse_vfrag_t **vfrag, unsigned char *buffe
  *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag);
+
+/**
+ *  @brief   Free a virtual fragment - No allocation mode
+ *
+ *  @param   vfrag         IN: The virtual fragment that will be destroyed
+ *                         OUT: NULL
+ *  @param   reset         If true, only reset the virtual fragment, do not free
+ *                         allocated memory
+ *  @param   free_vbuf     If true, free allocated memory for the virtual
+ *                         buffer.
+ *  @return
+ *                         - success/informative code among:
+ *                           - \ref GSE_STATUS_OK
+ *                         - warning/error code among:
+ *                           - \ref GSE_STATUS_NULL_PTR
+ *                           - \ref GSE_STATUS_FRAG_NBR
+ *
+ *  @ingroup gse_virtual_fragment
+ */
+gse_status_t gse_free_vfrag_no_alloc(gse_vfrag_t **vfrag, int reset, int free_vbuf);
 
 /**
  *  @brief   Create a virtual fragment from an existing one
@@ -246,6 +317,32 @@ gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag);
  *  @ingroup gse_virtual_fragment
  */
 gse_status_t gse_duplicate_vfrag(gse_vfrag_t **vfrag, gse_vfrag_t *father, size_t length);
+
+/**
+ *  @brief   Create a virtual fragment from an existing one - No allocation mode
+ *
+ *  In case of warning or error, the virtual fragment is unchanged.
+ *  @warning If the father length is smaller than the wanted length, the length
+ *           of the duplicated fragment will be the father length.
+ *
+ *  @param   vfrag        The duplicated virtual fragment
+ *  @param   father       The virtual fragment which will be duplicated
+ *  @param   length       The length of the duplicated virtual fragment (in bytes)
+ *
+ *  @return
+ *                        - success/informative code among:
+ *                          - \ref GSE_STATUS_OK
+ *                        - warning/error code among:
+ *                          - \ref GSE_STATUS_NULL_PTR
+ *                          - \ref GSE_STATUS_EMPTY_FRAG
+ *                          - \ref GSE_STATUS_FRAG_NBR
+ *                          - \ref GSE_STATUS_MALLOC_FAILED
+ *
+ *  @ingroup gse_virtual_fragment
+ */
+gse_status_t gse_duplicate_vfrag_no_alloc(gse_vfrag_t **vfrag,
+                                          gse_vfrag_t *father,
+                                          size_t length);
 
 /**
  *  @brief   Shift the virtual fragment

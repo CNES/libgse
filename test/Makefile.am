@@ -8,7 +8,8 @@ SUBDIRS = . samples
 
 noinst_PROGRAMS = \
 	test_encap_deencap \
-	non_regression_tests
+	non_regression_tests \
+    non_regression_tests_no_alloc
 
 TESTS = \
 	test_encap_deencap.sh
@@ -16,7 +17,8 @@ TESTS = \
 EXTRA_DIST = \
 	encap_deencap_max_pdu_length.pcap \
 	test_encap_deencap.sh \
-	non_regression_tests.sh
+	non_regression_tests.sh \
+    non_regression_tests_no_alloc.sh
 
 INCLUDES = \
 	-I$(top_srcdir)/src/common \
@@ -34,3 +36,8 @@ non_regression_tests_SOURCES = non_regression_tests.c
 non_regression_tests_LDADD = \
 	$(top_builddir)/src/libgse.la \
 	-lpcap
+
+non_regression_tests_no_alloc_SOURCES = non_regression_tests_no_alloc.c
+non_regression_tests_no_alloc_LDADD = \
+   $(top_builddir)/src/libgse.la \
+   -lpcap

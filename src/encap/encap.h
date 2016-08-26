@@ -249,6 +249,49 @@ gse_status_t gse_encap_get_packet_copy(gse_vfrag_t **packet, gse_encap_t *encap,
                                        size_t desired_length, uint8_t qos);
 
 /**
+ *  @brief   Get a GSE packet from the encapsulation context structure -
+ *           No allocation mode
+ *
+ *  This function should not be called if the previous GSE packet has not
+ *  been destroyed (with gse_free_vfrag_no_alloc) except for the first packet.
+ *
+ *  @param   packet          OUT: The GSE packet on success,
+ *                                NULL on error or warning
+ *  @param   encap           The encapsulation context structure
+ *  @param   desired_length  The desired length for the packet (in bytes)
+ *  @param   qos             The QoS of the packet
+ *
+ *  @return
+ *                           - success/informative code among:
+ *                             - \ref GSE_STATUS_OK
+ *                           - warning/error code among:
+ *                             - \ref GSE_STATUS_NULL_PTR
+ *                             - \ref GSE_STATUS_INVALID_QOS
+ *                             - \ref GSE_STATUS_FIFO_EMPTY
+ *                             - \ref GSE_STATUS_PTHREAD_MUTEX
+ *                             - \ref GSE_STATUS_LENGTH_TOO_HIGH
+ *                             - \ref GSE_STATUS_LENGTH_TOO_SMALL
+ *                             - \ref GSE_STATUS_PTHREAD_MUTEX
+ *                             - \ref GSE_STATUS_INTERNAL_ERROR;
+ *                             - \ref GSE_STATUS_PTR_OUTSIDE_BUFF
+ *                             - \ref GSE_STATUS_FRAG_PTRS
+ *                             - \ref GSE_STATUS_INVALID_GSE_LENGTH
+ *                             - \ref GSE_STATUS_BUFF_LENGTH_NULL
+ *                             - \ref GSE_STATUS_MULTIPLE_VBUF_ACCESS
+ *                             - \ref GSE_STATUS_DATA_TOO_LONG
+ *                             - \ref GSE_STATUS_MALLOC_FAILED
+ *                             - \ref GSE_STATUS_EMPTY_FRAG
+ *                             - \ref GSE_STATUS_FRAG_NBR
+ *                             - \ref GSE_STATUS_EXTENSION_CB_FAILED
+ *
+ *  @ingroup gse_encap
+ */
+gse_status_t gse_encap_get_packet_no_alloc(gse_vfrag_t **packet, gse_encap_t *encap,
+                                           size_t desired_length, uint8_t qos);
+gse_status_t gse_encap_get_packet_no_alloc_old(gse_vfrag_t *packet, gse_encap_t *encap,
+                                           size_t desired_length, uint8_t qos);
+
+/**
  *  @brief  Set the callback that build header extensions
  *
  *  @param  encap     The encapsulation context
@@ -265,6 +308,5 @@ gse_status_t gse_encap_get_packet_copy(gse_vfrag_t **packet, gse_encap_t *encap,
 gse_status_t gse_encap_set_extension_callback(gse_encap_t *encap,
                                               gse_encap_build_header_ext_cb_t callback,
                                               void *opaque);
-
 
 #endif

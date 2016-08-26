@@ -87,6 +87,23 @@ struct gse_encap_s
   void *opaque;          /**< User specific data for extension callback */
 };
 
+/** Encapsulation mode
+ *
+ * Choose how to get the encapsulated packet:
+ * \li LEGACY:   legacy mode (duplicate the buffer into a newly created virtual
+ *               fragment).
+ * \li NO_COPY:  zero copy mode (share the buffer with a newly created
+ *               virtual fragment).
+ * \li NO_ALLOC: no allocation mode (share the buffer with a user provided,
+ *               already allocated, virtual fragment)
+ */
+enum encap_mode
+{
+  LEGACY,
+  NO_COPY,
+  NO_ALLOC
+};
+
 
 
 /****************************************************************************
@@ -173,7 +190,7 @@ static uint32_t gse_encap_compute_crc(gse_vfrag_t *vfrag);
 /**
  *  @brief   Get a GSE packet from the encapsulation context structure
  *
- *  @param   copy             Activate copy or not
+ *  @param   mode             The encapsulation mode.
  *  @param   packet           OUT: The GSE packet on success,
  *                                 NULL on error
  *  @param   encap            The encapsulation context structure
@@ -203,7 +220,7 @@ static uint32_t gse_encap_compute_crc(gse_vfrag_t *vfrag);
  *                              - \ref GSE_STATUS_FRAG_NBR
  *                              - \ref GSE_STATUS_EXTENSION_CB_FAILED
  */
-static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
+static gse_status_t gse_encap_get_packet_common(int mode, gse_vfrag_t **packet,
                                                 gse_encap_t *encap,
                                                 size_t desired_length,
                                                 uint8_t qos);
@@ -395,20 +412,26 @@ gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
 error:
   return status;
 free_pdu:
-  gse_free_vfrag(&pdu);
+  gse_free_vfrag_no_alloc(&pdu, 1, 0);
   return status;
 }
 
 gse_status_t gse_encap_get_packet(gse_vfrag_t **packet, gse_encap_t *encap,
                                   size_t length, uint8_t qos)
 {
-  return gse_encap_get_packet_common(0, packet, encap, length, qos);
+  return gse_encap_get_packet_common(NO_COPY, packet, encap, length, qos);
 }
 
 gse_status_t gse_encap_get_packet_copy(gse_vfrag_t **packet, gse_encap_t *encap,
                                        size_t length, uint8_t qos)
 {
-  return gse_encap_get_packet_common(1, packet, encap, length, qos);
+  return gse_encap_get_packet_common(LEGACY, packet, encap, length, qos);
+}
+
+gse_status_t gse_encap_get_packet_no_alloc(gse_vfrag_t **packet, gse_encap_t *encap,
+                                           size_t length, uint8_t qos)
+{
+  return gse_encap_get_packet_common(NO_ALLOC, packet, encap, length, qos);
 }
 
 gse_status_t gse_encap_set_extension_callback(gse_encap_t *encap,
@@ -586,7 +609,7 @@ static uint32_t gse_encap_compute_crc(gse_vfrag_t *vfrag)
   return htonl(crc);
 }
 
-static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
+static gse_status_t gse_encap_get_packet_common(int mode, gse_vfrag_t **packet,
                                                 gse_encap_t *encap,
                                                 size_t desired_length,
                                                 uint8_t qos)
@@ -727,7 +750,10 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
     {
       goto packet_null;
     }
-    memcpy(encap_ctx->vfrag->start, extensions, tot_ext_length);
+    if(tot_ext_length > 0)
+    {
+      memcpy(encap_ctx->vfrag->start, extensions, tot_ext_length);
+    }
 
     /* Can the PDU be completely encapsulated ? */
     header_length = gse_compute_header_length(GSE_PDU_COMPLETE, encap_ctx->label_type);
@@ -821,27 +847,28 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
   }
 
   /* Code depending on copy parameter */
-  if(copy)
+  switch(mode)
   {
-    /* Create a new fragment */
-    status = gse_create_vfrag_with_data(packet, desired_length,
-                                        encap->head_offset,
-                                        encap->trail_offset,
-                                        encap_ctx->vfrag->start,
-                                        desired_length);
-    if(status != GSE_STATUS_OK)
-    {
-      goto packet_null;
-    }
+    case LEGACY:
+      /* Create a new fragment */
+      status = gse_create_vfrag_with_data(packet, desired_length,
+                                          encap->head_offset,
+                                          encap->trail_offset,
+                                          encap_ctx->vfrag->start,
+                                          desired_length);
+      break;
+    case NO_COPY:
+      /* Duplicate the fragment */
+      status = gse_duplicate_vfrag(packet, encap_ctx->vfrag, desired_length);
+      break;
+    case NO_ALLOC:
+      /* Duplicate the fragment - no allocation */
+      status = gse_duplicate_vfrag_no_alloc(packet, encap_ctx->vfrag, desired_length);
+      break;
   }
-  else
+  if(status != GSE_STATUS_OK)
   {
-    /* Duplicate the fragment */
-    status = gse_duplicate_vfrag(packet, encap_ctx->vfrag, desired_length);
-    if(status != GSE_STATUS_OK)
-    {
-      goto packet_null;
-    }
+    goto packet_null;
   }
 
   encap_ctx->frag_nbr++;
@@ -855,7 +882,14 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
   /* Go to the next FIFO element if the initial fragment is empty */
   if(encap_ctx->vfrag->length <= 0)
   {
-    status = gse_free_vfrag(&(encap_ctx->vfrag));
+    if(mode == NO_ALLOC)
+    {
+      status = gse_free_vfrag_no_alloc(&(encap_ctx->vfrag), 1, 0);
+    }
+    else
+    {
+      status = gse_free_vfrag(&(encap_ctx->vfrag));
+    }
     if(status != GSE_STATUS_OK)
     {
       goto free_packet;
@@ -869,13 +903,23 @@ static gse_status_t gse_encap_get_packet_common(int copy, gse_vfrag_t **packet,
 
   return status;
 free_packet:
-  gse_free_vfrag(packet);
+  if(mode == NO_ALLOC)
+  {
+    gse_free_vfrag_no_alloc(packet, 1, 0);
+  }
+  else
+  {
+    gse_free_vfrag(packet);
+  }
 packet_null:
   if(extensions != NULL)
   {
     free(extensions);
   }
 error:
-  *packet = NULL;
+  if(mode != NO_ALLOC)
+  {
+    *packet = NULL;
+  }
   return status;
 }

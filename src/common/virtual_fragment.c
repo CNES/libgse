@@ -289,6 +289,91 @@ error:
   return status;
 }
 
+gse_status_t gse_allocate_vfrag(gse_vfrag_t **vfrag, int alloc_vbuf)
+{
+  int status = GSE_STATUS_OK;
+  gse_vbuf_t *vbuf = NULL;
+    
+  if(vfrag == NULL)
+  {
+    status = GSE_STATUS_NULL_PTR;
+    goto error;
+  }
+
+  if (alloc_vbuf)
+  {
+    vbuf = malloc(sizeof(gse_vbuf_t));
+    if(vbuf == NULL)
+    {
+      status = GSE_STATUS_MALLOC_FAILED;
+      goto error;
+    }
+
+    vbuf->vfrag_count = 0;
+  }
+  
+  *vfrag = malloc(sizeof(gse_vfrag_t));
+  if(*vfrag == NULL)
+  {
+    status = GSE_STATUS_MALLOC_FAILED;
+    goto free_vbuf;
+  }
+    
+  (*vfrag)->vbuf = vbuf;
+  
+  return status;
+    
+free_vbuf:
+  free(vbuf);
+error:
+  *vfrag = NULL;
+  return status;
+}
+
+gse_status_t gse_affect_buf_vfrag(gse_vfrag_t *vfrag, unsigned char *buffer,
+                                  unsigned int head_offset, unsigned int trail_offset,
+                                  unsigned int data_length)
+{
+  int status = GSE_STATUS_OK;
+  gse_vbuf_t *vbuf;           
+                               
+  if(vfrag == NULL || buffer == NULL)
+  {
+    status = GSE_STATUS_NULL_PTR;
+    goto error;
+  }
+
+  vbuf = vfrag->vbuf;
+  if(vbuf == NULL)
+  {
+    status = GSE_STATUS_NULL_PTR;
+    goto error;
+  }
+
+  vbuf->start = buffer;
+  vbuf->length = head_offset + data_length + trail_offset;
+  vbuf->end = vbuf->start + vbuf->length;
+  vbuf->vfrag_count = 0;
+
+  vfrag->start = (vbuf->start + head_offset);
+  vfrag->length = data_length;
+  vfrag->end = vfrag->start + vfrag->length;
+  assert((vfrag->end) <= (vfrag->vbuf->end));
+  assert((vfrag->end) >= (vfrag->vbuf->start));
+  assert((vbuf->end - vfrag->end) == (int)trail_offset);
+  if((vfrag->end) > (vfrag->vbuf->end) ||
+     (vfrag->end) < (vfrag->vbuf->start) ||
+     (vbuf->end - vfrag->end) != (int)trail_offset)
+  {
+    status = GSE_STATUS_INTERNAL_ERROR;
+    goto error;
+  }
+  vbuf->vfrag_count++;
+
+error:
+  return status;
+}
+
 gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag)
 {
   gse_status_t status = GSE_STATUS_OK;
@@ -322,6 +407,43 @@ free_vfrag:
 error:
   return status;
 }
+
+gse_status_t gse_free_vfrag_no_alloc(gse_vfrag_t **vfrag, int reset, int free_vbuf)
+{
+  gse_status_t status = GSE_STATUS_OK;
+
+  if(vfrag == NULL || *vfrag == NULL)
+  {
+    status = GSE_STATUS_NULL_PTR;
+    goto error;
+  }
+
+  if(reset)
+  {
+    if((*vfrag)->vbuf->vfrag_count == 0)
+    {
+      status = GSE_STATUS_FRAG_NBR;
+      goto error;
+    }
+ 
+    (*vfrag)->vbuf->vfrag_count--;
+  }
+  else
+  {
+    if(free_vbuf)
+    {
+      free((*vfrag)->vbuf);
+      (*vfrag)->vbuf = NULL;
+    }
+   
+    free(*vfrag);
+    *vfrag = NULL;
+  }
+   
+error:
+  return status;
+}
+
 
 gse_status_t gse_duplicate_vfrag(gse_vfrag_t **vfrag, gse_vfrag_t *father,
                                  size_t length)
@@ -376,6 +498,57 @@ free_vfrag:
   free(*vfrag);
 error:
   *vfrag = NULL;
+  return status;
+}
+
+gse_status_t gse_duplicate_vfrag_no_alloc(gse_vfrag_t **vfrag, gse_vfrag_t *father,
+                                          size_t length)
+{
+  gse_status_t status = GSE_STATUS_OK;
+
+  if(father == NULL || vfrag == NULL)
+  {
+    status = GSE_STATUS_NULL_PTR;
+    goto error;
+  }
+
+  if(father->vbuf == NULL)
+  {
+    status = GSE_STATUS_NULL_PTR;
+    goto error;
+  }
+
+  /* If the father is empty it is not duplicated */
+  if(father->length == 0)
+  {
+    status = GSE_STATUS_EMPTY_FRAG;
+    goto error;
+  }
+
+  /* There can be only two accesses to a virtual buffer to avoid multiple
+   * accesses from duplicated virtual fragments */
+  if(gse_get_vfrag_nbr(father) >= 2)
+  {
+    status = GSE_STATUS_FRAG_NBR;
+    goto error;
+  }
+
+  (*vfrag)->vbuf = father->vbuf;
+  (*vfrag)->start = father->start;
+  (*vfrag)->length = MIN(length, father->length);
+
+  (*vfrag)->end = (*vfrag)->start + (*vfrag)->length;
+  assert(((*vfrag)->end) <= ((*vfrag)->vbuf->end));
+  assert(((*vfrag)->end) >= ((*vfrag)->vbuf->start));
+  if(((*vfrag)->end) > ((*vfrag)->vbuf->end) ||
+     ((*vfrag)->end) < ((*vfrag)->vbuf->start))
+  {
+    status = GSE_STATUS_INTERNAL_ERROR;
+    goto error;
+  }
+  (*vfrag)->vbuf->vfrag_count++;
+
+error:
   return status;
 }
 
