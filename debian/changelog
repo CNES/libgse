@@ -1,3 +1,9 @@
+libgse (1.1.0) trusty; urgency=low
+
+  * Release 1.1.0
+
+ -- OpenSAND Maintainers <admin@opensand.org>  Thu, 29 Sep 2016 10:43:17 +0200
+
 libgse (1.0.1) lucid; urgency=low
 
   * Initial Release.

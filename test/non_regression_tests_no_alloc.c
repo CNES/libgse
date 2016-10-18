@@ -6,7 +6,7 @@
  * encapsulation/de-encapsulation capabilities to an application.
  *
  *
- * Copyright Â© 2011 TAS
+ * Copyright © 2016 TAS
  *
  *
  * This file is part of the GSE library.
@@ -29,7 +29,7 @@
 
 /****************************************************************************/
 /**
- *   @file          non_regression_tests.c
+ *   @file          non_regression_tests_no_alloc.c
  *
  *          Project:     GSE LIBRARY
  *
@@ -39,7 +39,8 @@
  *
  *   @brief         GSE non regression tests
  *
- *   @author        Julien BERNARD / Viveris Technologies
+ *   @author        Audric Schiltknecht / Viveris Technologies
+ *   @author        Joaquin Muguerza / Viveris Technologies
  *
  * Introduction
  * ------------

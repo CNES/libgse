@@ -44,7 +44,7 @@
  *
  * The modifications in this file are under the following copyright:
  *
- * Copyright © 2011 TAS
+ * Copyright © 2016 TAS
  *
  */
 

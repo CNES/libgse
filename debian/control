@@ -1,6 +1,6 @@
 Source: libgse
 Priority: optional
-Maintainer: Julien Bernard <jbernard@toulouse.viveris.com>
+Maintainer: OpenSAND Maintainers <admin@opensand.org>
 Build-Depends: debhelper (>= 7), autotools-dev, automake, libtool, libpcap-dev, pkg-config
 Standards-Version: 3.8.3
 Section: libs

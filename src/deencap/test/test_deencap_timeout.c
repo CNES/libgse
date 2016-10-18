@@ -6,7 +6,7 @@
  * encapsulation/de-encapsulation capabilities to an application.
  *
  *
- * Copyright © 2011 TAS
+ * Copyright © 2016 TAS
  *
  *
  * This file is part of the GSE library.
