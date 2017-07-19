@@ -1,14 +1,14 @@
 Source: libgse
 Priority: optional
 Maintainer: OpenSAND Maintainers <admin@opensand.org>
-Build-Depends: debhelper (>= 7), autotools-dev, automake, libtool, libpcap-dev, pkg-config
+Build-Depends: debhelper (>= 7), autotools-dev, automake, libtool, libpcap0.8-dev, pkg-config
 Standards-Version: 3.8.3
 Section: libs
 
 Package: libgse-dev
 Section: libdevel
 Architecture: any
-Depends: libgse (= ${binary:Version}), libpcap-dev
+Depends: libgse (= ${binary:Version}), libpcap0.8-dev
 Description: Generic Stream Encapsulation library and headers for Linux
   Implementation of Generic Stream Encapsulation for Linux 
   (or other Unix-compatible OS). The library can be used to add GSE
