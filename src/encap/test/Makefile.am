@@ -4,7 +4,7 @@
 #	Description: create the GSE encapsulation test program
 ################################################################################
 
-noinst_PROGRAMS = \
+check_PROGRAMS = \
 	test_encap \
 	test_encap_copy \
 	test_encap_robust \

@@ -4,7 +4,7 @@
 #	Description: create the GSE deencapsulation test program
 ################################################################################
 
-noinst_PROGRAMS = \
+check_PROGRAMS = \
 	test_deencap \
 	test_deencap_interleaving \
 	test_deencap_fault \
