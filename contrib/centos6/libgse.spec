@@ -29,6 +29,9 @@ Include and pkgconfig files for the GSE library.
 %configure
 make
 
+%check
+make check
+
 %install
 make DESTDIR=%{buildroot} install
 
