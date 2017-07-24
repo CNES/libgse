@@ -1,10 +1,40 @@
+/*
+ *
+ * This piece of software is an implementation of the Generic Stream
+ * Encapsulation (GSE) standard defined by ETSI for Linux (or other
+ * Unix-compatible OS). The library may be used to add GSE
+ * encapsulation/de-encapsulation capabilities to an application.
+ *
+ *
+ * Copyright © 2013 TAS
+ *
+ *
+ * This file is part of the GSE library.
+ *
+ *
+ * The GSE library is free software : you can redistribute it and/or modify it
+ * under the terms of the GNU Lesser General Public License as published by the
+ * Free Software Foundation, either version 3 of the License, or (at your
+ * option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY, without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this program. If not, see http://www.gnu.org/licenses/.
+ *
+ */
+
 /**
- * @file     eval_gse.c
+ * @file     eval_gse_no_alloc.c
  * @author   Audric Schiltknecht / Viveris Technologies
  * @date     01 mars 2013
  * @version  1.0
  * @brief    Evaluate libgse encapsulation performance
  */
+
 #include <strings.h>
 #include <string.h>
 #include <stdio.h>
@@ -201,17 +231,17 @@ int main(void)
 
 free_context:
 	status = gse_free_vfrag_no_alloc(&in_vfrag, 0, 0);
-			if (status != GSE_STATUS_OK)
-			{
-				fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
-				        gse_get_status(status));
-			}
+	if (status != GSE_STATUS_OK)
+	{
+		fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
+		        gse_get_status(status));
+	}
 	status = gse_free_vfrag_no_alloc(&out_vfrag, 0, 1);
-			if (status != GSE_STATUS_OK)
-			{
-				fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
-				        gse_get_status(status));
-			}
+	if (status != GSE_STATUS_OK)
+	{
+		fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
+		        gse_get_status(status));
+	}
 	// Release context
 	gse_encap_release(encap_context);
 
