@@ -61,3 +61,4 @@ test-suite.log
 *test*.log
 *.trs
 test-driver
+build
