@@ -157,7 +157,10 @@ free_vfrag:
 free_vbuf:
   gse_free_vbuf(vbuf);
 error:
-  *vfrag = NULL;
+  if(vfrag != NULL)
+  {
+    *vfrag = NULL;
+  }
   return status;
 }
 
@@ -287,7 +290,10 @@ free_vfrag:
 free_vbuf:
   free(vbuf);
 error:
-  *vfrag = NULL;
+  if(vfrag != NULL)
+  {
+    *vfrag = NULL;
+  }
   return status;
 }
 
@@ -328,7 +334,10 @@ gse_status_t gse_allocate_vfrag(gse_vfrag_t **vfrag, int alloc_vbuf)
 free_vbuf:
   free(vbuf);
 error:
-  *vfrag = NULL;
+  if(vfrag != NULL)
+  {
+    *vfrag = NULL;
+  }
   return status;
 }
 
@@ -378,7 +387,7 @@ error:
 
 gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag)
 {
-  gse_status_t status = GSE_STATUS_OK;
+  gse_status_t status;
 
   if(vfrag == NULL || *vfrag == NULL)
   {
@@ -402,6 +411,8 @@ gse_status_t gse_free_vfrag(gse_vfrag_t **vfrag)
       goto free_vfrag;
     }
   }
+
+  status = GSE_STATUS_OK;
 
 free_vfrag:
   free(*vfrag);
@@ -499,7 +510,10 @@ gse_status_t gse_duplicate_vfrag(gse_vfrag_t **vfrag, gse_vfrag_t *father,
 free_vfrag:
   free(*vfrag);
 error:
-  *vfrag = NULL;
+  if(vfrag != NULL)
+  {
+    *vfrag = NULL;
+  }
   return status;
 }
 

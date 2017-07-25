@@ -363,6 +363,11 @@ int main(int argc, char *argv[])
 
   /* get the tunnel name */
   tun_name = argv[1];
+  if(strlen(tun_name) >= IFNAMSIZ)
+  {
+    fprintf(stderr, "tunnel name is too long, %d characters max\n", IFNAMSIZ - 1);
+	 goto quit;
+  }
 
   /* get the remote IP address */
   if(strcmp(argv[2], "remote") != 0)
@@ -625,19 +630,19 @@ int main(int argc, char *argv[])
     get_packet_thread_param[i].copy = copy;
     get_packet_thread_param[i].qos = i;
 
-    if(pthread_create(&th_get_pkt[i], NULL, get_packet_thread, &get_packet_thread_param[i]) < 0)
+    if(pthread_create(&th_get_pkt[i], NULL, get_packet_thread, &get_packet_thread_param[i]) != 0)
     {
       fprintf (stderr, "pthread_create error for thread get_pkt %d\n", i);
       goto release_deencap;
     }
-    if(pthread_create(&th_encap[i], NULL, tun2udp_thread, &encap_thread_param[i]) < 0)
+    if(pthread_create(&th_encap[i], NULL, tun2udp_thread, &encap_thread_param[i]) != 0)
     {
       fprintf (stderr, "pthread_create error for thread encap\n");
       goto release_deencap;
     }
   }
 
-  if(pthread_create(&th_deencap, NULL, udp2tun_thread, &deencap_thread_param) < 0)
+  if(pthread_create(&th_deencap, NULL, udp2tun_thread, &deencap_thread_param) != 0)
   {
     fprintf (stderr, "pthread_create error for thread deencap\n");
     goto release_deencap;

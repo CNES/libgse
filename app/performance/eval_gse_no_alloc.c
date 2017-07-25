@@ -87,6 +87,7 @@ int main(void)
 	gse_encap_t *encap_context;
 	gse_vfrag_t *in_vfrag, *out_vfrag;
 	gse_status_t status;
+	int is_failure = 1;
 
 	int size;
 	size_t vfrag_length;
@@ -109,7 +110,7 @@ int main(void)
 	{
 		fprintf(stderr, "Fail to initialize encapsulation library: %s\n",
 		        gse_get_status(status));
-		return 1;
+		goto error;
 	}
 
 	// Initialize input vfrag
@@ -118,7 +119,7 @@ int main(void)
 	{
 		fprintf(stderr, "Fail to create input vfrag: %s\n",
 				gse_get_status(status));
-		return 1;
+		goto free_context;
 	}
 
 	// Initialize output vfrag
@@ -127,7 +128,7 @@ int main(void)
 	{
 		fprintf(stderr, "Fail to create input vfrag: %s\n",
 				gse_get_status(status));
-		return 1;
+		goto free_in_vfrag;
 	}
 
 	/* sync disk to avoid io during test */
@@ -159,7 +160,7 @@ int main(void)
 			fprintf(stderr, "Fail to copy data into input vfrag: %s\n",
 			        gse_get_status(status));
 			// in_vfrag is automatically freed in case of error
-			goto free_context;
+			goto free_out_vfrag;
 		}
 
 		// Put PDU into encap context
@@ -171,7 +172,7 @@ int main(void)
 			fprintf(stderr, "Fail to receive PDU: %s\n",
 			        gse_get_status(status));
 			// in_vfrag is automatically freed in case of error
-			goto free_context;
+			goto free_out_vfrag;
 		}
 
 		// Fill BBFrames until no more encapsulated PDU
@@ -183,7 +184,7 @@ int main(void)
 			{
 				fprintf(stderr, "Fail to retrieve GSE packet: %s\n",
 				        gse_get_status(status));
-				goto free_context;
+				goto free_out_vfrag;
 			}
 
 			vfrag_length = gse_get_vfrag_length(out_vfrag);
@@ -205,7 +206,7 @@ int main(void)
 			{
 				fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
 				        gse_get_status(status));
-				goto free_context;
+				goto free_out_vfrag;
 			}
 
 			// Is packet complete, or is it first fragment ?
@@ -228,22 +229,26 @@ int main(void)
 	printf("Tics / loop: %e seconds\n", (total_tics / NB_ITER));
 	printf("PPS %.8f\n", (double)NB_ITER / total_tics);
 
+	/* everything went fine */
+	is_failure = 0;
 
-free_context:
-	status = gse_free_vfrag_no_alloc(&in_vfrag, 0, 0);
-	if (status != GSE_STATUS_OK)
-	{
-		fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
-		        gse_get_status(status));
-	}
+free_out_vfrag:
 	status = gse_free_vfrag_no_alloc(&out_vfrag, 0, 1);
 	if (status != GSE_STATUS_OK)
 	{
 		fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
 		        gse_get_status(status));
 	}
+free_in_vfrag:
+	status = gse_free_vfrag_no_alloc(&in_vfrag, 0, 0);
+	if (status != GSE_STATUS_OK)
+	{
+		fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
+		        gse_get_status(status));
+	}
+free_context:
 	// Release context
 	gse_encap_release(encap_context);
-
-	return status;
+error:
+	return is_failure;
 }

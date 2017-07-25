@@ -239,7 +239,7 @@ static gse_status_t gse_encap_get_packet_common(int mode, gse_vfrag_t **packet,
 gse_status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
                             gse_encap_t **encap)
 {
-  gse_status_t status = GSE_STATUS_OK;
+  gse_status_t status;
 
   unsigned int i;
 
@@ -293,13 +293,17 @@ gse_status_t gse_encap_init(uint8_t qos_nbr, size_t fifo_size,
     goto free_fifo;
   }
 
-  return status;
+  return GSE_STATUS_OK;
+
 free_fifo:
   free((*encap)->fifo);
 free_encap:
   free(*encap);
 error:
-  *encap = NULL;
+  if(encap != NULL)
+  {
+    *encap = NULL;
+  }
   return status;
 }
 
@@ -466,6 +470,8 @@ static gse_status_t gse_encap_create_header_and_crc(gse_payload_type_t payload_t
 
   uint32_t crc;
   gse_header_t *gse_header;
+  size_t label_length;
+  int ret;
 
   assert(encap_ctx != NULL);
 
@@ -476,6 +482,13 @@ static gse_status_t gse_encap_create_header_and_crc(gse_payload_type_t payload_t
     goto error;
   }
 
+  ret = gse_get_label_length(encap_ctx->label_type);
+  if(ret < 0)
+  {
+    goto error;
+  }
+  label_length = (size_t) ret;
+
   switch(payload_type)
   {
     /* GSE packet carrying a complete PDU */
@@ -485,8 +498,7 @@ static gse_status_t gse_encap_create_header_and_crc(gse_payload_type_t payload_t
       gse_header->e = 0x1;
       gse_header->lt = encap_ctx->label_type;
       gse_header->complete_s.protocol_type = encap_ctx->protocol_type;
-      memcpy(&(gse_header->complete_s.label), &(encap_ctx->label),
-             gse_get_label_length(encap_ctx->label_type));
+      memcpy(&(gse_header->complete_s.label), &(encap_ctx->label), label_length);
       break;
 
     /* GSE packet carrying a first fragment of PDU */
@@ -499,8 +511,7 @@ static gse_status_t gse_encap_create_header_and_crc(gse_payload_type_t payload_t
       gse_header->first_frag_s.frag_id = encap_ctx->qos;
       gse_header->first_frag_s.total_length = htons(encap_ctx->total_length);
       gse_header->first_frag_s.protocol_type = encap_ctx->protocol_type;
-      memcpy(&(gse_header->first_frag_s.label), &(encap_ctx->label),
-             gse_get_label_length(encap_ctx->label_type));
+      memcpy(&(gse_header->first_frag_s.label), &(encap_ctx->label), label_length);
 
       /* CRC is computed with first fragment because the complete PDU and
        * some of its header elements are necessary */
@@ -580,7 +591,7 @@ static size_t gse_encap_compute_packet_length(size_t desired_length,
   size_t packet_length;
 
   packet_length = MIN(desired_length, GSE_MAX_PACKET_LENGTH);
-  packet_length = MIN(desired_length, remaining_data_length + header_length);
+  packet_length = MIN(packet_length, remaining_data_length + header_length);
   /* Avoid fragmentation of CRC field between 2 GSE fragments:
    * if the computed packet length is too short by less than 4 bytes to contain
    * the whole remaining part of the PDU and the CRC, then reduce the packet
@@ -919,7 +930,7 @@ packet_null:
     free(extensions);
   }
 error:
-  if(mode != NO_ALLOC)
+  if(mode != NO_ALLOC && packet != NULL)
   {
     *packet = NULL;
   }
