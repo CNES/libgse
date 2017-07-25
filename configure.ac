@@ -2,6 +2,7 @@
 AC_INIT(gse, 1.1.0, [https://launchpad.net/libgse])
 # Use tar-pax (POSIX 1003.1-2001) to handle filename longer than 99 characters
 AM_INIT_AUTOMAKE([1.9 tar-pax])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_CONFIG_SRCDIR([src])
 AM_CONFIG_HEADER([config.h])
 
