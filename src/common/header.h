@@ -56,8 +56,6 @@
 
 /**< Minimum length of a GSE packet (in Bytes) */
 #define GSE_MIN_PACKET_LENGTH 3
-/**< Minimum value for EtherTypes */
-#define GSE_MIN_ETHER_TYPE 1536
 /**< Length of the mandatory fields (in Bytes) (E, S, LT, GSE_Length) */
 #define GSE_MANDATORY_FIELDS_LENGTH 2
 /**< Length of Frag ID field (in Bytes) */

@@ -386,7 +386,7 @@ gse_status_t gse_encap_receive_pdu(gse_vfrag_t *pdu, gse_encap_t *encap,
     goto free_pdu;
   }
   /* Check if we got a good protocol */
-  if(protocol < GSE_MIN_ETHER_TYPE)
+  if(gse_is_ext_hdr(protocol))
   {
     status = GSE_STATUS_WRONG_PROTOCOL;
     goto free_pdu;

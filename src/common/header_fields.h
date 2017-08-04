@@ -50,6 +50,7 @@
 
 #include <stdint.h>
 #include <endian.h>
+#include <stdbool.h>
 
 #include "virtual_fragment.h"
 
@@ -81,6 +82,43 @@ typedef struct
 #endif
 } __attribute__((packed)) gse_ext_type_t;
 
+
+/**
+ * @brief The different values of extensions headers or LLC
+ *
+ * GSE extension headers work the same way as ULE extension headers. Protocol
+ * types below 1536 are either extension headers or LLC. The list of extension
+ * headers and LLC is maintained by the IANA.
+ *
+ * @see https://tools.ietf.org/html/rfc4326#section-4.4
+ * @see https://www.iana.org/assignments/ule-next-headers/ule-next-headers.xhtml
+ */
+enum gse_ext_type
+{
+	GSE_EXT_TEST_SNDU          = 0,    /**< RFC4326 */
+	GSE_EXT_BRIDGED_SNDU       = 1,    /**< RFC4326 */
+	GSE_EXT_TS_CONCAT          = 2,    /**< RFC5163 */
+	GSE_EXT_PDU_CONCAT         = 3,    /**< RFC5163 */
+	/* 4-128 	Unassigned */
+	GSE_EXT_LL_GSE_NCR         = 129,  /**< EN 301 545-2 [Hans-Peter_Lexow] */
+	GSE_EXT_LL_RCS_L2S         = 130,  /**< EN 301 545-2 [Hans-Peter_Lexow] */
+	GSE_EXT_LL_RCS_DCP         = 131,  /**< TS 101 545-3 [Hans-Peter_Lexow] */
+	GSE_EXT_LL_RCS_1           = 132,  /**< EN 301 545-2 [Gorry_Fairhurst] */
+	GSE_EXT_LL_RCS_TRANSEC_SYS = 133,  /**< EN 301 545-1 [Gorry_Fairhurst] */
+	GSE_EXT_LL_RCS_TRANSEC_PAY = 134,  /**< EN 301 545-1 [Gorry_Fairhurst] */
+	GSE_EXT_DVB_GSE_LLC        = 135,  /**< ETSI TS 102 606-2 [Alexander_Adolf] */
+	/* 136-143 	Unassigned */
+	/* 144-159 	Reserved for Private Use 	[RFC7280] */
+	/* 160-199 	Unassigned */
+	GSE_EXT_LL_RCS_FEC_FDT     = 200,  /**< EN 301 790 V1.5.1 [Laurence_Duquerroy] */
+	/* 201-255 	Unassigned */
+	GSE_EXT_PADDING            = 256,  /**< RFC4326 */
+	GSE_EXT_TIMESTAMP          = 257,  /**< RFC5163 */
+	/* 258-449 	Unassigned */
+	GSE_EXT_LL_RCS_FEC_ADT     = 450,  /**< EN 301 790 V1.5.1 [Laurence_Duquerroy] */
+	GSE_EXT_LL_CRC32           = 451,  /**< EN 301 790 V1.5.1 [Laurence_Duquerroy] */
+	/* 452-511 	Unassigned */
+};
 
 /****************************************************************************
  *
@@ -255,5 +293,29 @@ gse_status_t gse_check_header_extension_validity(unsigned char *extension,
                                                  size_t *ext_length,
                                                  uint16_t extension_type,
                                                  uint16_t *protocol_type);
+
+/**
+ *  @brief   Whether the protocol type is LLC or not
+ *
+ *  @param   protocol_type The type of the protocol
+ *
+ *  @return  true if protocol is some LLC, false otherwise
+ *
+ *  @ingroup gse_head_access
+ */
+bool gse_is_llc(const uint16_t protocol_type)
+	__attribute__((warn_unused_result));
+
+/**
+ *  @brief   Whether the protocol type is some extension header or not
+ *
+ *  @param   protocol_type The type of the protocol
+ *
+ *  @return  true if protocol is some extension header, false otherwise
+ *
+ *  @ingroup gse_head_access
+ */
+bool gse_is_ext_hdr(const uint16_t protocol_type)
+	__attribute__((warn_unused_result));
 
 #endif

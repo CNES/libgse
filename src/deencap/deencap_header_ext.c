@@ -22,7 +22,7 @@
 #include <assert.h>
 
 #include "header.h"
-//#include "header_fields.h"
+#include "header_fields.h"
 
 
 /** Get the minimum between two values */
@@ -93,7 +93,7 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
     goto error;
   }
 
-  if(extension_type >= GSE_MIN_ETHER_TYPE)
+  if(!gse_is_ext_hdr(extension_type))
   {
       /* no header extension */
       status = GSE_STATUS_EXTENSION_UNAVAILABLE;
