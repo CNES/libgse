@@ -222,7 +222,7 @@ static uint32_t gse_deencap_compute_crc(unsigned char *data,
 
 gse_status_t gse_deencap_init(uint8_t qos_nbr, gse_deencap_t **deencap)
 {
-  gse_status_t status = GSE_STATUS_OK;
+  gse_status_t status;
 
   if(deencap == NULL)
   {
@@ -263,7 +263,8 @@ gse_status_t gse_deencap_init(uint8_t qos_nbr, gse_deencap_t **deencap)
     goto free_deencap;
   }
 
-  return status;
+  return GSE_STATUS_OK;
+
 free_deencap:
   free(*deencap);
   *deencap = NULL;

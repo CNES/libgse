@@ -48,7 +48,8 @@ gse_status_t gse_encap_add_header_ext(gse_vfrag_t *packet,
                                       void *opaque)
 {
   gse_status_t status = GSE_STATUS_OK;
-  gse_header_t header[GSE_MAX_HEADER_LENGTH];
+  gse_header_t header_buf;
+  gse_header_t *header = &header_buf;
   size_t header_length = 0;
   gse_label_type_t lt;
   uint16_t protocol_type;
@@ -83,7 +84,7 @@ restart:
   }
 
   /* copy header because we will need it after packet modifications */
-  memcpy(header, packet->start, MIN(packet->length, GSE_MAX_EXT_LENGTH));
+  memcpy(header, packet->start, MIN(packet->length, sizeof(gse_header_t)));
 
   /* Determine the type of payload of the GSE packet being refragmented with
    * the values of the S and E fields.

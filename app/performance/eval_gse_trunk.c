@@ -75,6 +75,7 @@ int main(void)
 	gse_encap_t *encap_context;
 	gse_vfrag_t *in_vfrag, *out_vfrag;
 	gse_status_t status;
+	int is_failure = 1;
 
 	int size;
 	size_t vfrag_length;
@@ -97,7 +98,7 @@ int main(void)
 	{
 		fprintf(stderr, "Fail to initialize encapsulation library: %s\n",
 		        gse_get_status(status));
-		return 1;
+		goto error;
 	}
 
 	size = BBFRAME_LENGTH;
@@ -122,7 +123,7 @@ int main(void)
 		{
 			fprintf(stderr, "Fail to create input vfrag: %s\n",
 					gse_get_status(status));
-			return 1;
+			goto free_context;
 		}
 
 		// Feed IP payload to GSE compressor
@@ -205,9 +206,12 @@ int main(void)
 	printf("Tics: %d - %e seconds\n", (int)total_tics, ((double)total_tics) / CLOCKS_PER_SEC);
 	printf("Tics / loop: %f - %e seconds\n", ((double)total_tics / NB_ITER), (((double)total_tics)/NB_ITER)/CLOCKS_PER_SEC);
 
+	/* everything went fine */
+	is_failure = 0;
+
 free_context:
 	// Release context
 	gse_encap_release(encap_context);
-
-	return status;
+error:
+	return is_failure;
 }

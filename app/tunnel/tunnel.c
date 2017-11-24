@@ -915,6 +915,7 @@ int tun2udp(gse_encap_t *encap,
   gse_vfrag_t *refrag_pkt = NULL;
   int frag_nbr;
 
+  int is_failure = 1;
   int ret;
   int err;
 
@@ -984,14 +985,14 @@ int tun2udp(gse_encap_t *encap,
   if(ret != GSE_STATUS_OK)
   {
     fprintf(stderr, "read_from_tun failed\n");
-    goto error;
+    goto free_vfrag_pdu;
   }
 
   protocol = ntohs(*(uint16_t*)(gse_get_vfrag_start(vfrag_pdu) + 2));
 
   if(gse_get_vfrag_length(vfrag_pdu) == 0)
   {
-    goto quit;
+    goto free_vfrag_pdu;
   }
 
   /* remove tun header from packet */
@@ -999,8 +1000,7 @@ int tun2udp(gse_encap_t *encap,
   if(ret > GSE_STATUS_OK)
   {
     fprintf(stderr, "Error when shifting PDU: %s\n", gse_get_status(ret));
-    gse_free_vfrag(&vfrag_pdu);
-    goto quit;
+    goto free_vfrag_pdu;
   }
 
   /* Encapsulate the IP packet */
@@ -1013,7 +1013,7 @@ int tun2udp(gse_encap_t *encap,
   {
     fprintf(stderr, "encapsulation of packet #%u failed (%s)\n",
             seq, gse_get_status(ret));
-    goto error;
+    goto free_vfrag_pdu;
   }
   pdu++;
 
@@ -1116,7 +1116,7 @@ int tun2udp(gse_encap_t *encap,
         if(ret != GSE_STATUS_OK)
         {
           fprintf(stderr, "write_to_udp failed\n");
-          goto error;
+          goto free_vfrag_pdu;
         }
       }
       frag_nbr++;
@@ -1185,7 +1185,7 @@ int tun2udp(gse_encap_t *encap,
           if(ret != GSE_STATUS_OK)
           {
             fprintf(stderr, "write_to_udp failed\n");
-            goto error;
+            goto free_vfrag_pdu;
           }
         }
         frag_nbr++;
@@ -1204,7 +1204,7 @@ int tun2udp(gse_encap_t *encap,
   if(err > 5)
   {
     fprintf(stderr, "Two many errors when getting packet\n");
-    goto error;
+    goto free_vfrag_pdu;
   }
   if(frag_nbr > 1)
   {
@@ -1216,12 +1216,13 @@ int tun2udp(gse_encap_t *encap,
     fprintf(stderr, "Send PDU #%u not fragmented\n", pdu - 1);
   }
 
+  /* everything went fine */
+  is_failure = 0;
 
-quit:
-  return 0;
-
+free_vfrag_pdu:
+  gse_free_vfrag(&vfrag_pdu);
 error:
-  return 1;
+  return is_failure;
 }
 
 /**
@@ -1266,11 +1267,15 @@ int udp2tun(gse_deencap_t *deencap, int from, int to)
   if(ret != GSE_STATUS_OK)
   {
     fprintf(stderr, "read_from_udp failed\n");
+    gse_free_vfrag(&vfrag_pkt);
     goto error;
   }
 
   if(gse_get_vfrag_length(vfrag_pkt) <= 2)
+  {
+    gse_free_vfrag(&vfrag_pkt);
     goto quit;
+  }
 
   /* find out if some GSE packets were lost between encapsulation and
    * de-encapsulation (use the tunnel sequence number) */
@@ -1281,6 +1286,7 @@ int udp2tun(gse_deencap_t *deencap, int from, int to)
   {
     fprintf(stderr, "Error when shifting reception fragment: %s\n",
             gse_get_status(ret));
+    gse_free_vfrag(&vfrag_pkt);
     goto error;
   }
   //dump_packet("RECEIVE", gse_get_vfrag_start(vfrag_pkt), gse_get_vfrag_length(vfrag_pkt));
