@@ -19,12 +19,18 @@ run()
 rm -f config.cache
 rm -f config.log
 
+OLD_PWD="$PWD"
+NEW_PWD="`dirname $0`"
+cd "${NEW_PWD}" >/dev/null
+
 run aclocal
 run libtoolize --force
 run autoconf
 run autoheader
 run automake --add-missing
 
-chmod +x ./configure
-./configure --enable-fail-on-warning $@
+cd "${OLD_PWD}" >/dev/null
+
+chmod +x ${NEW_PWD}/configure
+${NEW_PWD}/configure --enable-fail-on-warning $@
 

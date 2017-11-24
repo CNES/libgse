@@ -86,8 +86,6 @@
  *
  */
 
-#define _XOPEN_SOURCE 600
-#define _BSD_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -649,14 +647,14 @@ int main(int argc, char *argv[])
   {
     (void)pthread_join(th_get_pkt[i], &ret_th);
     fprintf(stderr, "\tget packet thread %u terminated\n", i);
-    if((long)ret_th == 1)
+    if(ret_th != NULL)
     {
       fprintf(stderr, "FAILURE on get_packet thread %u\n", i);
       failure = 1;
     }
     (void)pthread_join(th_encap[i], &ret_th);
     fprintf(stderr, "\tencapsulation thread %u terminated\n", i);
-    if((long)ret_th == 1)
+    if(ret_th != NULL)
     {
       fprintf(stderr, "FAILURE on encapulsation thread %u\n", i);
       failure = 1;
@@ -664,7 +662,7 @@ int main(int argc, char *argv[])
   }
   (void)pthread_join(th_deencap, &ret_th);
   fprintf(stderr, "\tde-encapsulation thread terminated\n");
-  if((long)ret_th == 1)
+  if(ret_th != NULL)
   {
     fprintf(stderr, "FAILURE on de-encapulsation thread\n");
     failure = 1;
@@ -1151,14 +1149,14 @@ void *tun2udp_thread(void *argv)
   }
 
   fprintf(stderr, "terminating encapsulation thread %u...\n", arg->qos);
-  pthread_exit(0);
+  pthread_exit(NULL);
 free_vfrag:
   gse_free_vfrag(&vfrag_pdu);
-  pthread_exit(0);
+  pthread_exit(NULL);
 error:
   gettimeofday(&last, NULL);
   alive = 0;
-  pthread_exit("1");
+  pthread_exit((void *) 1);
 }
 
 void *get_packet_thread(void *argv)
@@ -1390,7 +1388,7 @@ void *get_packet_thread(void *argv)
   }
 
   fprintf(stderr, "terminating get packet thread %u...\n", arg->qos);
-  pthread_exit(0);
+  pthread_exit(NULL);
 
 error:
   if(vfrag_pkt != NULL)
@@ -1403,7 +1401,7 @@ error:
   }
   gettimeofday(&last, NULL);
   alive = 0;
-  pthread_exit("1");
+  pthread_exit((void *) 1);
 }
 
 /**
@@ -1573,16 +1571,16 @@ void *udp2tun_thread(void *argv)
   }
 
   fprintf(stderr, "terminating de-encapsulation thread...\n");
-  pthread_exit(0);
+  pthread_exit(NULL);
 free_vfrag:
   gse_free_vfrag(&vfrag_pkt);
-  pthread_exit(0);
+  pthread_exit(NULL);
 free_pdu:
   gse_free_vfrag(&pdu);
 error:
   gettimeofday(&last, NULL);
   alive = 0;
-  pthread_exit("1");
+  pthread_exit((void *) 1);
 }
 
 
