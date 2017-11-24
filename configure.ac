@@ -101,6 +101,7 @@ AC_CONFIG_FILES([Makefile \
                  libgse.pc \
                  app/Makefile \
                  app/tunnel/Makefile \
+                 app/performance/Makefile \
                  test/Makefile \
                  test/samples/Makefile \
                  test/samples/ipv4/Makefile \
