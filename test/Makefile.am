@@ -6,7 +6,7 @@
 
 SUBDIRS = . samples
 
-noinst_PROGRAMS = \
+check_PROGRAMS = \
 	test_encap_deencap \
 	non_regression_tests \
     non_regression_tests_no_alloc

@@ -4,7 +4,7 @@
 #	Description: create the GSE virtual buffer test program
 ################################################################################
 
-noinst_PROGRAMS = \
+check_PROGRAMS = \
 	test_vfrag \
 	test_vfrag_robust \
 	test_header_access
