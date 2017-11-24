@@ -323,7 +323,7 @@ gse_status_t gse_check_header_extension_validity(unsigned char *extension,
                    (current_type.null_2 & 0x01) << 11 |
                    (current_type.h_len & 0x07) << 8 |
                    (current_type.h_type & 0xFF);
-  if(*protocol_type < GSE_MIN_ETHER_TYPE)
+  if(gse_is_ext_hdr(*protocol_type))
   {
     status = GSE_STATUS_INVALID_EXTENSIONS;
     goto error;
@@ -335,4 +335,37 @@ error:
   return status;
 }
 
- 
+bool gse_is_llc(const uint16_t protocol_type)
+{
+	bool is_llc;
+
+	switch(protocol_type)
+	{
+		case GSE_EXT_LL_GSE_NCR:
+		case GSE_EXT_LL_RCS_L2S:
+		case GSE_EXT_LL_RCS_DCP:
+		case GSE_EXT_LL_RCS_1:
+		case GSE_EXT_LL_RCS_TRANSEC_SYS:
+		case GSE_EXT_LL_RCS_TRANSEC_PAY:
+		case GSE_EXT_DVB_GSE_LLC:
+		case GSE_EXT_LL_RCS_FEC_FDT:
+		case GSE_EXT_LL_RCS_FEC_ADT:
+		case GSE_EXT_LL_CRC32:
+			is_llc = true;
+			break;
+		default:
+			is_llc = false;
+			break;
+	}
+
+	return is_llc;
+}
+
+bool gse_is_ext_hdr(const uint16_t protocol_type)
+{
+	const size_t min_ether_type = 1536; /**< Minimum value for EtherTypes */
+
+	/* protocol types below 1536 are extension headers except for LLC */
+	return (protocol_type < min_ether_type && !gse_is_llc(protocol_type));
+}
+

@@ -112,7 +112,7 @@ restart:
     status = GSE_STATUS_EXTENSION_UNAVAILABLE;
     goto error;
   }
-  if(protocol_type < GSE_MIN_ETHER_TYPE)
+  if(gse_is_ext_hdr(protocol_type))
   {
     status = GSE_STATUS_EXTENSION_UNAVAILABLE;
     goto error;

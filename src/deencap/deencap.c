@@ -471,8 +471,8 @@ gse_status_t gse_deencap_packet(gse_vfrag_t *data, gse_deencap_t *deencap,
       size_t tot_ext_length = 0;
       
       *protocol = ntohs(header.complete_s.protocol_type);
-      /* read header extensions */
-      if(*protocol < GSE_MIN_ETHER_TYPE)
+      /* read header extensions (but do not handle LLC as extension headers) */
+      if(gse_is_ext_hdr(*protocol))
       {
         int ret;
         uint16_t protocol_type;
@@ -689,7 +689,7 @@ static gse_status_t gse_deencap_create_ctx(gse_vfrag_t *partial_pdu, gse_deencap
   }
 
   /* check Protocol Type */
-  if(ntohs(header.first_frag_s.protocol_type) < GSE_MIN_ETHER_TYPE &&
+  if(gse_is_ext_hdr(ntohs(header.first_frag_s.protocol_type)) &&
      deencap->read_header_ext == NULL)
   {
     status = GSE_STATUS_EXTENSION_NOT_SUPPORTED;
@@ -884,7 +884,7 @@ static gse_status_t gse_deencap_add_last_frag(gse_vfrag_t *partial_pdu,
   /* read header extensions (when entire data is received because extensions
    * can be fragmented */
   ctx->tot_ext_length = 0;
-  if(ctx->protocol_type < GSE_MIN_ETHER_TYPE)
+  if(gse_is_ext_hdr(ctx->protocol_type))
   {
     int ret;
     uint16_t protocol_type;
