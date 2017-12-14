@@ -1,3 +1,9 @@
+libgse (1.2.0) xenial; urgency=low
+
+  * Release 1.2.0
+
+ -- OpenSAND Maintainers <admin@opensand.org>  Thu, 14 Dec 2017 16:37:00 +0200
+
 libgse (1.1.0) trusty; urgency=low
 
   * Release 1.1.0
