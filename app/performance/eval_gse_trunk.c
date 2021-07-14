@@ -108,7 +108,7 @@ int main(void)
 		//printf("Iter #%d\n", iter);
 
 		// Initialize input vfrag
-		// It currently cannot be done outside of the loop,
+		// It currently cannot be done outside the loop,
 		// since there is no other way to "reset" a vfrag,
 		// and calling gse_free_vfrag() release the allocated memory...
 		// One vfrag-allocation here:
@@ -154,7 +154,7 @@ int main(void)
 		{
 			// Get GSE packet
 			// One allocation here (out_vfrag)
-			// One copy (for extensions, even if there is none (memcpy(size=0))
+			// One copy (for extensions, even if there is none (memcpy(size=0)))
 			// One free here (in_vfrag if PDU is complete)
 			status = gse_encap_get_packet(&out_vfrag, encap_context, MIN(size, GSE_MAX_PACKET_LENGTH), QOS_VALUE);
 			if (status != GSE_STATUS_OK)

@@ -212,7 +212,7 @@ gse_status_t gse_create_vfrag_from_buf(gse_vfrag_t **vfrag, unsigned char *buffe
  *
  *  @param   vfrag         OUT: The virtual fragment on success,
  *                              NULL on error
- *  @param   alloc_vbuf    Wheter to allocate the virtual buffer container or
+ *  @param   alloc_vbuf    Whether to allocate the virtual buffer container or
  *                         not (only the container, does not allocate the buffer
  *                         itself).
  *

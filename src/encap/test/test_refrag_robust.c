@@ -178,7 +178,7 @@ quit:
  * @brief Test the GSE library with a flow of IP or GSE packets to refragment
  *
  * @param verbose       0 for no debug messages, 1 for debug
- * @param outpu_value   Expected output value
+ * @param output_value   Expected output value
  * @param frag_length   The length of the first refragment packet
  * @param src_filename  The name of the PCAP file that contains the source packets
  * @return              0 in case of success, 1 otherwise

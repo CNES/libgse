@@ -138,7 +138,7 @@ typedef enum
   GSE_STATUS_INVALID_HEADER           = 0x0506,
   /** The desired protocol is not an EtherType */
   GSE_STATUS_WRONG_PROTOCOL           = 0x0507,
-  /** The extension vallback returned an error */
+  /** The extension callback returned an error */
   GSE_STATUS_EXTENSION_CB_FAILED      = 0x508,
   /** Cannot add extension because this is a fragment or there
    *  are already extensions */
@@ -152,7 +152,7 @@ typedef enum
    *  fragment of PDU
    */
   GSE_STATUS_CTX_NOT_INIT             = 0x0601,
-  /** The PDU was not completly received in 256 BBFrames */
+  /** The PDU was not completely received in 256 BBFrames */
   GSE_STATUS_TIMEOUT                  = 0x0602,
   /** The packet is too long for the deencapsulation buffer */
   GSE_STATUS_NO_SPACE_IN_BUFF         = 0x0603,
@@ -165,7 +165,7 @@ typedef enum
   GSE_STATUS_INVALID_DATA_LENGTH      = 0x0701,
   /** CRC32 computed does not correspond to received CRC32 */
   GSE_STATUS_INVALID_CRC              = 0x0702,
-  /** Last packet containis less than 4 bytes after header */
+  /** Last packet contains less than 4 bytes after header */
   GSE_STATUS_CRC_FRAGMENTED           = 0x0703,
 
   /* Deencapsulation informative code (should not be treated as error) */

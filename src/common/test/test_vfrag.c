@@ -154,7 +154,7 @@ quit:
  * @brief Test the virtual buffer creation, duplication and release
  *
  * @param   verbose  Print debug if verbose is 1
- * @return  0 on sucess, 1 on failure
+ * @return  0 on success, 1 on failure
  */
 static int test_vfrag(int verbose)
 {
@@ -200,7 +200,7 @@ static int test_vfrag(int verbose)
 
   /******************************* TEST_FUNC_1 *******************************/
 
-  /* Create a fragment and print informations */
+  /* Create a fragment and print information */
   status = gse_create_vfrag_from_buf(&vfrag, orig_data, HEAD_LENGTH, 0, FIRST_DATA_LENGTH);
   if(status != GSE_STATUS_OK)
   {
@@ -248,7 +248,7 @@ static int test_vfrag(int verbose)
 
   /******************************* TEST_FUNC_2 *******************************/
 
-  /* Create a backup of the data to compareat the end because data will be freed */
+  /* Create a backup of the data to compare at the end because data will be freed */
   data_cmp = malloc(vfrag->length * sizeof(unsigned char)); 
   if(data_cmp == NULL)
   {
@@ -258,7 +258,7 @@ static int test_vfrag(int verbose)
   memcpy(data_cmp, vfrag->start, vfrag->length);
 
 
-  /* Reallocate the virtual fragment iwith data starting at head length + 1
+  /* Reallocate the virtual fragment with data starting at head length + 1
    * and print information */
   status = gse_reallocate_vfrag(vfrag, HEAD_LENGTH + 1, DATA_LENGTH, HEAD_LENGTH, 0);
   if(status != GSE_STATUS_OK)
@@ -346,7 +346,7 @@ static int test_vfrag(int verbose)
 
   /******************************* TEST_FUNC_4 *******************************/
 
-  /* Duplicate a fragment and print informations */
+  /* Duplicate a fragment and print information */
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status != GSE_STATUS_OK)
   {
@@ -455,7 +455,7 @@ static int test_vfrag(int verbose)
   }
   DEBUG(verbose, "'.\nThe data are copied in the virtual fragment...\n");
 
-  /* Copy the data and print informations */
+  /* Copy the data and print information */
   status = gse_copy_data(vfrag, orig_data, DATA_LENGTH);
   if(status != GSE_STATUS_OK)
   {
@@ -604,7 +604,7 @@ static int test_vfrag(int verbose)
 
   DEBUG(verbose, "\n***********************************************************\n\n");
 
-  /* Duplicate a fragment and print informations */
+  /* Duplicate a fragment and print information */
   status = gse_duplicate_vfrag(&dup_vfrag, vfrag, DUP_LENGTH);
   if(status != GSE_STATUS_OK)
   {
