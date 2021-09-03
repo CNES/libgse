@@ -37,7 +37,7 @@
  *
  *          Module name: VIRTUAL FRAGMENT
  *
- *   @brief         Virtual buffer and fragments mangement
+ *   @brief         Virtual buffer and fragments management
  *
  *   @author        Julien BERNARD / Viveris Technologies
  *   @author        Audric Schiltknecht / Viveris Technologies
@@ -116,7 +116,7 @@ gse_status_t gse_create_vfrag(gse_vfrag_t **vfrag, size_t max_length,
     goto error;
   }
 
-  /* The length of the buffer contining the fragment is the fragment length
+  /* The length of the buffer containing the fragment is the fragment length
      plus the offsets */
   length_buf = max_length + head_offset + trail_offset;
   if(length_buf == 0)
@@ -721,7 +721,7 @@ gse_status_t gse_reallocate_vfrag(gse_vfrag_t *vfrag, size_t start_offset,
     goto error;
   }
 
-  /* The length of the buffer contining the fragment is the fragment length
+  /* The length of the buffer containing the fragment is the fragment length
      plus the offsets */
   length_buf = max_length + head_offset + trail_offset;
   if(length_buf == 0)

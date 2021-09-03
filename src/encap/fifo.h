@@ -76,7 +76,7 @@ typedef struct
  ****************************************************************************/
 
 /* All these functions protect the access to the FIFO with a mutex.
- * The library is designed for an unique access when reading in a specific FIFO,
+ * The library is designed for a unique access when reading in a specific FIFO,
  * thus, when an element is got by a thread it is not protected afterwards */
 
 /**

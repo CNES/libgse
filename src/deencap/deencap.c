@@ -795,8 +795,8 @@ static gse_status_t gse_deencap_add_frag(gse_vfrag_t *partial_pdu,
     goto free_partial_pdu;
   }
 
-  /* Check if a timeout occured (ie. if the complete PDU had not been received
-   * in 256 BBFrames */
+  /* Check if a timeout occurred (i.e. if the complete PDU had not been received
+   * in 256 BBFrames) */
   if(ctx->bbframe_nbr > 255)
   {
     status = GSE_STATUS_TIMEOUT;
@@ -882,7 +882,7 @@ static gse_status_t gse_deencap_add_last_frag(gse_vfrag_t *partial_pdu,
   }
 
   /* read header extensions (when entire data is received because extensions
-   * can be fragmented */
+   * can be fragmented) */
   ctx->tot_ext_length = 0;
   if(gse_is_ext_hdr(ctx->protocol_type))
   {

@@ -655,7 +655,7 @@ static gse_status_t gse_encap_get_packet_common(int mode, gse_vfrag_t **packet,
     goto packet_null;
   }
 
-  /* Check if there is elements for the specified QoS */
+  /* Check if there are elements for the specified QoS */
   elt_nbr = gse_get_fifo_elt_nbr(&encap->fifo[qos]);
   if(elt_nbr == 0)
   {

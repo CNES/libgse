@@ -442,7 +442,7 @@ int main(int argc, char *argv[])
   }
   fprintf(stderr, "%s created, fd %d\n", tun_name, tun);
 
-  /* create an UDP socket */
+  /* create a UDP socket */
   udp = udp_create(laddr, port);
   if(udp < 0)
   {
@@ -463,7 +463,7 @@ int main(int argc, char *argv[])
   }
   if(is_debug)
   {
-    fprintf(stderr, "DEBUG acvivated\n");
+    fprintf(stderr, "DEBUG activated\n");
   }
 
 
@@ -738,7 +738,7 @@ int udp_create(struct in_addr laddr, int port)
   int ret;
   struct sockaddr_in addr;
 
-  /* create an UDP socket */
+  /* create a UDP socket */
   sock = socket(AF_INET, SOCK_DGRAM, PF_UNSPEC);
   if(sock < 0)
   {

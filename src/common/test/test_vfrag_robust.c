@@ -147,7 +147,7 @@ quit:
  * @brief Test the virtual buffer creation, duplication and release
  *
  * @param   verbose  Print debug if verbose is 1
- * @return           0 on sucess, 1 on failure
+ * @return           0 on success, 1 on failure
  */
 static int test_vfrag_robust(int verbose)
 {
@@ -328,7 +328,7 @@ static int test_vfrag_robust(int verbose)
   status = gse_free_vfrag(&dup_vfrag);
   if(status != GSE_STATUS_OK)
   {
-    DEBUG(verbose, "Error %#.4x when destroying the dumplicated fragment (%s)\n", status,
+    DEBUG(verbose, "Error %#.4x when destroying the duplicated fragment (%s)\n", status,
           gse_get_status(status));
     goto failure;
   }
