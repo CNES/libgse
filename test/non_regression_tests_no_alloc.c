@@ -154,15 +154,19 @@ usage: test [--verbose (-v) LEVEL] [-h] [-s] [--label-type LT] [-r REFRAG_FILENA
       printf(format, ##__VA_ARGS__); \
   } while(0)
 
+#define REFRAG 0
+
 static const size_t frag_length[20] = {
   128,  0,    1024, 256,  2048, 4096, 16,   64,   1024, 512,
   256,  512,  4096, 64,   128,  1024, 2048, 512,  256,  1024,
   };
 
+#if REFRAG
 static const size_t refrag_length[20] = {
   64,   1024, 512,  128,  32,   512,  16,   16,   256,  32,
   128,  128,  2048, 16,   64,   512,  16,   128,  128,  64,
   };
+#endif
 
 
 
@@ -190,7 +194,7 @@ static int get_gse_packets(int verbose,
                            int frag_length_idx,
                            uint8_t qos,
                            unsigned long pkt_nbr);
-#if 0
+#if REFRAG
 static int refrag(int verbose,
                   int save,
                   gse_vfrag_t **vfrag_pkt,
@@ -827,7 +831,7 @@ free_packet:
   return 1;
 }
 
-#if 0
+#if REFRAG
 /**
  * @brief Refragment a GSE packet and compare or save it
  *
