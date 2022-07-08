@@ -104,6 +104,7 @@ typedef enum
                               fragments '11' */
 } gse_label_type_t;
 
+
 /**
  *  @brief   Get the GSE label length depending on label type value
  *
@@ -140,5 +141,6 @@ static inline int gse_get_label_length(gse_label_type_t label_type)
       return -1;
   }
 }
+
 
 #endif
