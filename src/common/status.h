@@ -103,9 +103,9 @@ typedef enum
   /** FIFO is full, no more context can be created */
   GSE_STATUS_FIFO_FULL                = 0x0301,
   /** The FIFO is empty, try to get packet from another one */
-  GSE_STATUS_FIFO_SIZE_NULL           = 0x0303,
-  /** The FIFO size is 0 */
   GSE_STATUS_FIFO_EMPTY               = 0x0302,
+  /** The FIFO size is 0 */
+  GSE_STATUS_FIFO_SIZE_NULL           = 0x0303,
   /** There is no FIFO */
   GSE_STATUS_QOS_NBR_NULL             = 0x0304,
 
