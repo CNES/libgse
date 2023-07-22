@@ -73,15 +73,15 @@ gse_status_t gse_deencap_get_header_ext(unsigned char *packet,
   {
     if(header->e == 0x1)
     {
-      /* add the Protocol Type lentgh for extension shift */
+      /* add the Protocol Type length for extension shift */
       ext_shift += GSE_PROTOCOL_TYPE_LENGTH;
       extension_type = ntohs(header->complete_s.protocol_type);
     }
     else
     {
-      /* add the FragID and Total Length fields lentgh for extension shift */
+      /* add the FragID and Total Length fields length for extension shift */
       ext_shift += GSE_FRAG_ID_LENGTH + GSE_TOTAL_LENGTH_LENGTH;
-      /* add the Protocol Type lentgh for extension shift */
+      /* add the Protocol Type length for extension shift */
       ext_shift += GSE_PROTOCOL_TYPE_LENGTH;
       extension_type = ntohs(header->first_frag_s.protocol_type);
     }

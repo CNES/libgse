@@ -56,7 +56,7 @@
 
 /**< Minimum length of a GSE packet (in Bytes) */
 #define GSE_MIN_PACKET_LENGTH 3
-/**< Length of the mandatory fields (in Bytes) (E, S, LT, GSE_Length) */
+/**< Length of the mandatory fields (in Bytes) (S, E, LT, GSE_Length) */
 #define GSE_MANDATORY_FIELDS_LENGTH 2
 /**< Length of Frag ID field (in Bytes) */
 #define GSE_FRAG_ID_LENGTH 1

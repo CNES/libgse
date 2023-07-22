@@ -86,7 +86,7 @@
  *   <li>a directory that contains the encapsulation functions</li>
  *   <li>a directory that contains the deencapsulation functions</li>
  *  </ul>
- * Each directory contains a test subdirectorie that contains nominal tests
+ * Each directory contains a test subdirectories that contains nominal tests
  * for the elements of the directory.
  * </p>
  * 

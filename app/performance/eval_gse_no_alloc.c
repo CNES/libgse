@@ -126,7 +126,7 @@ int main(void)
 	status = gse_allocate_vfrag(&out_vfrag, 0);
 	if (status != GSE_STATUS_OK)
 	{
-		fprintf(stderr, "Fail to create input vfrag: %s\n",
+		fprintf(stderr, "Fail to create output vfrag: %s\n",
 				gse_get_status(status));
 		goto free_in_vfrag;
 	}
@@ -236,14 +236,14 @@ free_out_vfrag:
 	status = gse_free_vfrag_no_alloc(&out_vfrag, 0, 1);
 	if (status != GSE_STATUS_OK)
 	{
-		fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
+		fprintf(stderr, "Fail to free out_vfrag: %s\n",
 		        gse_get_status(status));
 	}
 free_in_vfrag:
 	status = gse_free_vfrag_no_alloc(&in_vfrag, 0, 0);
 	if (status != GSE_STATUS_OK)
 	{
-		fprintf(stderr, "Fail to retrieve GSE end indicator: %s\n",
+		fprintf(stderr, "Fail to free in_vfrag: %s\n",
 		        gse_get_status(status));
 	}
 free_context:
