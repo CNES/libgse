@@ -73,7 +73,7 @@
 
 /** The program usage */
 #define TEST_USAGE \
-"GSE test application: test the GSE header acces with a flow of packets\n\n\
+"GSE test application: test the GSE header access with a flow of packets\n\n\
 usage: test [verbose] src_file \n\
   verbose         Print DEBUG information\n\
   src_file        the flow of packets\n"
@@ -158,7 +158,7 @@ quit:
  *****************************************************************************/
 
 /**
- * @brief Test the haeder access in a flow of GSE packets
+ * @brief Test the header access in a flow of GSE packets
  *
  * @param verbose       0 for no debug messages, 1 for debug
  * @param src_filename  The name of the PCAP file that contains 4 source packets

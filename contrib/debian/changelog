@@ -1,3 +1,9 @@
+libgse (1.2.1) focal; urgency=low
+
+  * Release 1.2.1
+
+ -- OpenSAND Maintainers <admin@opensand.org>  Mon, 24 Jul 2023 15:39:45 +0200
+
 libgse (1.2.0) xenial; urgency=low
 
   * Release 1.2.0

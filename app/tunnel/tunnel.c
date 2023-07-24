@@ -180,7 +180,7 @@ int alive;
 /**
  * @brief Catch the INT, TERM and KILL signals to properly shutdown the tunnel
  *
- * @param sig  The signal catched: SIGINT, SIGTERM or SIGKILL
+ * @param sig  The signal caught: SIGINT, SIGTERM or SIGKILL
  */
 void sighandler(int sig)
 {
