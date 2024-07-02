@@ -227,8 +227,8 @@ static int test_deencap(int verbose, char *src_filename, char *cmp_filename)
   uint8_t label[6];
   uint8_t ref_label[6];
   gse_vfrag_t *pdu = NULL;
-  uint8_t label_type;
-  uint16_t protocol;
+  uint8_t label_type = 0;
+  uint16_t protocol = 0;
   uint16_t gse_length;
   gse_status_t status;
   int i;

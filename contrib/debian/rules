@@ -16,4 +16,4 @@ override_dh_auto_configure:
 	./autogen.sh --host=$(DEB_TARGET_GNU_TYPE) --prefix=/usr/
 
 override_dh_strip:
-	dh_strip --dbg-package=libgse-dbg
+	dh_strip --dbgsym-migration='libgse-dbg (<< 1.2.2~)'

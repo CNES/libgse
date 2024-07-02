@@ -1,5 +1,5 @@
 # Process this file with autoconf to produce a configure script.
-AC_INIT(gse, 1.2.0, [https://launchpad.net/libgse])
+AC_INIT(gse, 1.2.2, [https://launchpad.net/libgse])
 # Use tar-pax (POSIX 1003.1-2001) to handle filename longer than 99 characters
 AM_INIT_AUTOMAKE([1.9 tar-pax])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
